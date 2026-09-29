@@ -655,8 +655,8 @@ let state = {
 /* ================= SUPABASE v2 =================
    Configura tus credenciales abajo. Si dejas el placeholder,
    la app funciona 100% en local (modo demo, sin guardar). */
-const SUPABASE_URL = 'https://ohwpygbkwwxgrnwwli.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_8XgevCS-yPUy1qI2AJvZVW_pOXoSGEQ...';
+const SUPABASE_URL = 'https://ohwpygbkwwOxgrnwwli.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_8XgevCS-yPUy1ql2AJvZVW_pOXoSGEQ';
 let sb = null;
 try {
   if (window.supabase && SUPABASE_URL.indexOf('TU_PROYECTO') === -1) {
@@ -1720,7 +1720,7 @@ function printTicket(id){
         const cv=document.createElement('canvas');
         cv.width=140; cv.height=140;
         cv.style.width='110px'; cv.style.height='110px';
-        new QRious({element:cv, value:'https://TU-TPV-PUNTO-VERDE.vercel.app/valorar.html?p='+p.id, size:140, level:'M'});
+        new QRious({element:cv, value:'https://tpv-punto-verde.vercel.app/valorar.html?p='+p.id, size:140, level:'M'});
         slot.appendChild(cv);
         const t=document.createElement('div');
         t.className='tsmall'; t.style.marginTop='4px';
