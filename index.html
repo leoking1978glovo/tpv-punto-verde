@@ -655,8 +655,8 @@ let state = {
 /* ================= SUPABASE v2 =================
    Configura tus credenciales abajo. Si dejas el placeholder,
    la app funciona 100% en local (modo demo, sin guardar). */
-const SUPABASE_URL = 'https://TU_PROYECTO.supabase.co';
-const SUPABASE_ANON_KEY = 'TU_ANON_KEY';
+const SUPABASE_URL = 'https://ohwpygbkwwoxgrnwwli.supabase.co';
+const SUPABASE_ANON_KEY = sb_publishable_8XgevCS-yPUy1ql2AJvZVw_pOXoSGEQ
 let sb = null;
 try {
   if (window.supabase && SUPABASE_URL.indexOf('TU_PROYECTO') === -1) {
@@ -1389,7 +1389,7 @@ function renderCatalog(filter=''){
     const col=catColor(CATEGORIES[ci]?CATEGORIES[ci].name:'',ci);
     const agotado=p.stock!==null&&p.stock<=0;
     const pocas=!agotado&&p.stock!==null&&p.stock<=5;
-    const qtyB=(p.stock!==null&&!agotado)?'<span class="tile-badge qty">'+p.stock+' uds</span>':'';
+    const qtyB=(p.stock!==null&&p.stock!==undefined&&!isNaN(p.stock))&&!agotado)?'<span class="tile-badge qty">'+p.stock+' uds</span>':'';
     const badges=qtyB+(agotado?'<span class="tile-badge agot">AGOTADO</span>':'')+(pocas?'<span class="tile-badge ult">&#218;LTIMAS UDS.</span>':'');
     const img=p.image
       ? '<img src="'+esc(p.image)+'" onerror="this.style.display=\'none\'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;'+(agotado?'filter:grayscale(1) brightness(.75);':'')+'">'

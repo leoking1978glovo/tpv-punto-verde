@@ -42,8 +42,8 @@
 </div>
 <script>
 // ==== CREDENCIALES DEL PROYECTO PROPIO DE PUNTO VERDE ====
-const SUPABASE_URL='https://TU_PROYECTO.supabase.co';
-const SUPABASE_ANON_KEY='TU_ANON_KEY';
+const SUPABASE_URL='https://ohwpygbkwwoxgrnwwli.supabase.co';
+const SUPABASE_ANON_KEY=sb_publishable_8XgevCS-yPUy1ql2AJvZVw_pOXoSGEQ
 const sb=window.supabase?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
 const orderId=new URLSearchParams(location.search).get('p');
 if(orderId){ document.getElementById('subtitle').textContent='¿Cómo fue tu pedido #'+orderId+'?'; }
