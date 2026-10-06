@@ -10,7 +10,6 @@
 </head>
 <body>
 
-    <!-- LOGIN -->
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
             <h2>🌿 TPV Punto Verde</h2>
@@ -24,7 +23,6 @@
         </div>
     </div>
 
-    <!-- APP PRINCIPAL -->
     <div id="main-app" style="display: none;">
         <nav class="sidebar">
             <div class="sidebar-header">
@@ -35,8 +33,12 @@
                     <span class="nav-icon">🛒</span>
                     <span>Caja</span>
                 </li>
+                <li class="nav-item" data-view="tables">
+                    <span class="nav-icon"></span>
+                    <span>Mesas</span>
+                </li>
                 <li class="nav-item" data-view="kitchen">
-                    <span class="nav-icon">‍🍳</span>
+                    <span class="nav-icon">👨‍</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="cash">
@@ -58,6 +60,10 @@
                 <header class="view-header">
                     <h1>Caja - Punto de Venta</h1>
                     <div class="header-actions">
+                        <div class="current-table-badge" id="current-table-badge" style="display:none;">
+                            🪑 Mesa <span id="current-table-number">-</span>
+                            <button class="clear-table-btn" id="btn-clear-table">✕</button>
+                        </div>
                         <button class="notification-bell" id="btn-notifications">
                             🔔
                             <span class="notification-badge" id="notif-badge">0</span>
@@ -74,7 +80,7 @@
                     <div class="cart-section">
                         <div class="cart-header">
                             <span>Pedido Actual</span>
-                            <span class="clear-btn" id="btn-clear">️ Limpiar</span>
+                            <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
                         </div>
                         <div class="cart-items" id="cart-items">
                             <div class="empty-cart">Añade productos para empezar</div>
@@ -89,6 +95,18 @@
                 </div>
             </section>
 
+            <section id="view-tables" class="view">
+                <header class="view-header">
+                    <h1>Mapa de Mesas</h1>
+                    <div class="tables-legend">
+                        <span class="legend-item"><span class="legend-dot libre"></span>Libre</span>
+                        <span class="legend-item"><span class="legend-dot ocupada"></span>Ocupada</span>
+                        <span class="legend-item"><span class="legend-dot pendiente"></span>Pendiente pago</span>
+                    </div>
+                </header>
+                <div class="tables-grid" id="tables-grid"></div>
+            </section>
+
             <section id="view-kitchen" class="view">
                 <header class="view-header">
                     <h1>Cocina - Pedidos en Tiempo Real</h1>
@@ -99,9 +117,9 @@
                     <div class="stat"><span class="stat-number" id="count-listo">0</span><span class="stat-label">Listos</span></div>
                 </div>
                 <div class="kitchen-container">
-                    <div class="column"><h2 class="column-header status-nuevo"> Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
+                    <div class="column"><h2 class="column-header status-nuevo">🔴 Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
                     <div class="column"><h2 class="column-header status-cocina">🟠 En Cocina</h2><div class="orders-list" id="orders-cocina"></div></div>
-                    <div class="column"><h2 class="column-header status-listo">🟢 Listos</h2><div class="orders-list" id="orders-listo"></div></div>
+                    <div class="column"><h2 class="column-header status-listo"> Listos</h2><div class="orders-list" id="orders-listo"></div></div>
                 </div>
             </section>
 
@@ -129,7 +147,7 @@
                 <h3>🔔 Notificaciones</h3>
                 <div class="notif-header-actions">
                     <button class="clear-notifs" id="btn-clear-notifs">Limpiar</button>
-                    <button class="close-notifs" id="btn-close-notifs">✕</button>
+                    <button class="close-notifs" id="btn-close-notifs"></button>
                 </div>
             </div>
             <div class="notif-list" id="notif-list">
@@ -160,6 +178,7 @@
                         <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
                         <button class="type-btn" data-type="recogida">📦 Recogida</button>
                         <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
+                        <button class="type-btn" data-type="mesa">🪑 Mesa</button>
                     </div>
                 </div>
                 <div class="payment-method">
@@ -167,7 +186,7 @@
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum"> Bizum</button>
+                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
                 <div class="cash-input" id="cash-section">

@@ -12,6 +12,8 @@ let currentSession = null;
 let kitchenOrders = [];
 let notifications = [];
 let unreadNotifs = 0;
+let activeTableId = null;
+let tables = [];
 
 // ============ INICIO ============
 async function init() {
@@ -32,6 +34,7 @@ function showApp() {
     document.getElementById('main-app').style.display = 'flex';
     document.getElementById('user-name').textContent = currentUser.email;
     loadProducts();
+    loadTables();
     loadCashStatus();
     setupPOSEvents();
     setupRealtimeGlobal();
@@ -61,10 +64,51 @@ function setupNavigation() {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             item.classList.add('active');
             document.getElementById(`view-${item.dataset.view}`).classList.add('active');
+            
             if (item.dataset.view === 'kitchen') loadKitchenOrders();
             if (item.dataset.view === 'cash') loadCashStatus();
+            if (item.dataset.view === 'tables') loadTables();
         });
     });
+
+    document.getElementById('btn-back-to-tables').addEventListener('click', () => {
+        activeTableId = null;
+        document.getElementById('active-table-display').style.display = 'none';
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.querySelector('[data-view="tables"]').classList.add('active');
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-tables').classList.add('active');
+        loadTables();
+    });
+}
+
+// ============ MAPA DE MESAS ============
+async function loadTables() {
+    const { data, error } = await supabaseClient.from('tables').select('*').order('id');
+    if (error) return;
+    tables = data || [];
+    renderTables();
+}
+
+function renderTables() {
+    const grid = document.getElementById('tables-grid');
+    grid.innerHTML = tables.map(table => `
+        <div class="table-card status-${table.status}" onclick="selectTable(${table.id}, '${table.name}')">
+            <div class="table-name">${table.name}</div>
+            <div class="table-status">${table.status}</div>
+        </div>
+    `).join('');
+}
+
+function selectTable(id, name) {
+    activeTableId = id;
+    document.getElementById('active-table-display').textContent = `Mesa: ${name}`;
+    document.getElementById('active-table-display').style.display = 'inline-block';
+    
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelector('[data-view="pos"]').classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-pos').classList.add('active');
 }
 
 // ============ SISTEMA DE NOTIFICACIONES ============
@@ -89,13 +133,7 @@ function setupNotificationsPanel() {
 }
 
 function addNotification(tipo, title, message) {
-    const notif = {
-        id: Date.now(),
-        tipo,
-        title,
-        message,
-        time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-    };
+    const notif = { id: Date.now(), tipo, title, message, time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) };
     notifications.unshift(notif);
     if (notifications.length > 50) notifications.pop();
     unreadNotifs++;
@@ -103,7 +141,6 @@ function addNotification(tipo, title, message) {
     showToast(tipo, title, message);
     playNotifSound();
     renderNotifications();
-    
     const bell = document.getElementById('btn-notifications');
     bell.classList.remove('has-notifs');
     void bell.offsetWidth;
@@ -118,10 +155,7 @@ function updateNotifBadge() {
 
 function renderNotifications() {
     const list = document.getElementById('notif-list');
-    if (notifications.length === 0) {
-        list.innerHTML = '<div class="notif-empty">No hay notificaciones</div>';
-        return;
-    }
+    if (notifications.length === 0) { list.innerHTML = '<div class="notif-empty">No hay notificaciones</div>'; return; }
     list.innerHTML = notifications.map(n => `
         <div class="notif-item tipo-${n.tipo}">
             <div class="notif-title">${n.title}</div>
@@ -137,17 +171,13 @@ function showToast(tipo, title, message) {
     toast.className = `toast tipo-${tipo}`;
     toast.innerHTML = `<div class="toast-title">${title}</div><div class="toast-message">${message}</div>`;
     container.appendChild(toast);
-    setTimeout(() => {
-        toast.classList.add('removing');
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 4000);
 }
 
 function playNotifSound() {
     try {
         const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGS57OihUBELTKXh8bllHAU2j9Xvz3kpBSh+zPDajzsKFWC06emrWBUIQ5zd8sFuJAUuhM/z24k2CBhku+zooVASCkyk4PC5ZRwFNo/V7895KQUofsz');
-        audio.volume = 0.3;
-        audio.play();
+        audio.volume = 0.3; audio.play();
     } catch(e) {}
 }
 
@@ -167,9 +197,7 @@ function renderCategories() {
     cats.forEach(cat => {
         if (cat) {
             const btn = document.createElement('button');
-            btn.className = 'cat-btn';
-            btn.dataset.cat = cat;
-            btn.textContent = cat;
+            btn.className = 'cat-btn'; btn.dataset.cat = cat; btn.textContent = cat;
             bar.appendChild(btn);
         }
     });
@@ -287,14 +315,25 @@ async function confirmPayment() {
         if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente');
     }
     try {
-        const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, source: 'tpv', user_email: currentUser?.email }]).select().single();
+        const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ 
+            type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, 
+            source: 'tpv', user_email: currentUser?.email, table_id: activeTableId 
+        }]).select().single();
         if (orderError) throw orderError;
+        
         const orderItems = cart.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty }));
         const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
         if (itemsError) throw itemsError;
+
+        // Actualizar estado de la mesa a 'ocupada' si hay mesa seleccionada
+        if (activeTableId) {
+            await supabaseClient.from('tables').update({ status: 'ocupada', current_order_id: order.id }).eq('id', activeTableId);
+        }
+
         printTicket(order, cart);
         addNotification('pago', `✓ Pedido #${order.id} cobrado`, `Total: $${Math.round(total).toLocaleString()} | ${payMethod.toUpperCase()}`);
         cart = []; renderCart(); closeModal('pay-modal');
+        
         const cashView = document.getElementById('view-cash');
         if (cashView.classList.contains('active')) loadCashStatus();
     } catch (error) { alert('Error: ' + error.message); }
@@ -304,8 +343,9 @@ function printTicket(order, items) {
     const printArea = document.getElementById('ticket-print-area');
     const date = new Date().toLocaleString('es-ES');
     const qrUrl = `${window.location.origin}/valorar.html?p=${order.id}`;
+    const tableText = order.table_id ? ` | Mesa: ${order.table_id}` : '';
     printArea.innerHTML = `
-        <div class="ticket-header"><h3>TPV PUNTO VERDE</h3><p>${date}</p><p>Pedido #${order.id}</p><p>Cajero: ${currentUser?.email || 'N/A'}</p></div>
+        <div class="ticket-header"><h3>TPV PUNTO VERDE</h3><p>${date}</p><p>Pedido #${order.id}${tableText}</p><p>Cajero: ${currentUser?.email || 'N/A'}</p></div>
         <div class="ticket-divider"></div>
         ${items.map(i => `<div class="ticket-item"><span>${i.qty}x ${i.name.substring(0, 20)}</span><span>$${Math.round(i.price * i.qty).toLocaleString()}</span></div>`).join('')}
         <div class="ticket-divider"></div>
@@ -336,12 +376,13 @@ function renderKitchenOrders() {
         if (orders.length === 0) { container.innerHTML = '<div class="empty-cart">No hay pedidos</div>'; return; }
         container.innerHTML = orders.map(order => {
             const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
             const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join('');
             let actionBtn = '';
             if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`;
             else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`;
             else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`;
-            return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">🕐 ${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`;
+            return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">🕐 ${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`;
         }).join('');
     });
 }
@@ -355,7 +396,16 @@ function updateKitchenStats() {
 async function updateOrderStatus(orderId, newStatus) {
     const { error } = await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId);
     if (error) { alert('Error: ' + error.message); }
-    else { loadKitchenOrders(); }
+    else { 
+        loadKitchenOrders(); 
+        // Si se entrega, liberar la mesa
+        if (newStatus === 'entregado') {
+            const order = kitchenOrders.find(o => o.id === orderId);
+            if (order && order.table_id) {
+                await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', order.table_id);
+            }
+        }
+    }
 }
 
 // ============ REALTIME GLOBAL ============
@@ -363,28 +413,29 @@ function setupRealtimeGlobal() {
     supabaseClient.channel('orders-global')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
-            addNotification('nuevo', `🆕 Nuevo Pedido #${order.id}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
+            const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
+            addNotification('nuevo', `🆕 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
+            loadTables(); // Actualizar mapa de mesas
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const oldStatus = payload.old.status;
             const newStatus = order.status;
-            
             let tipo = '', title = '', message = '';
-            if (oldStatus === 'nuevo' && newStatus === 'cocina') {
-                tipo = 'cocina'; title = ` Pedido #${order.id} en preparación`; message = 'La cocina está preparando el pedido';
-            } else if (oldStatus === 'cocina' && newStatus === 'listo') {
-                tipo = 'listo'; title = `✅ Pedido #${order.id} listo`; message = 'El pedido está listo para entregar';
-            } else if (newStatus === 'entregado') {
-                tipo = 'pago'; title = `✓ Pedido #${order.id} entregado`; message = 'Pedido completado';
-            }
+            const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
+            
+            if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = `🔥 Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
+            else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; }
+            else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); }
             
             if (title) addNotification(tipo, title, message);
-            
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => {
+            loadTables();
         })
         .subscribe();
 }
@@ -403,7 +454,7 @@ async function loadCashStatus() {
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
             <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
-            <button class="action-btn btn-close" onclick="closeCashSession()"> Cerrar Caja</button>
+            <button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>
         `;
         await loadCashSummary();
     }
@@ -439,8 +490,7 @@ async function loadCashSummary() {
 document.getElementById('btn-confirm-open').addEventListener('click', async () => {
     const fund = parseFloat(document.getElementById('opening-fund').value) || 0;
     const { error } = await supabaseClient.from('cash_sessions').insert([{ fondo: fund, user_email: currentUser.email }]);
-    if (error) { alert('Error: ' + error.message); }
-    else { closeModal('modal-open-cash'); loadCashStatus(); }
+    if (error) { alert('Error: ' + error.message); } else { closeModal('modal-open-cash'); loadCashStatus(); }
 });
 
 document.getElementById('btn-confirm-movement').addEventListener('click', async () => {
@@ -450,8 +500,7 @@ document.getElementById('btn-confirm-movement').addEventListener('click', async 
     const note = document.getElementById('movement-note').value;
     if (!currentSession) return alert('Caja no abierta');
     const { error } = await supabaseClient.from('cash_movements').insert([{ session_id: currentSession.id, tipo: type, metodo: method, importe: amount, nota: note }]);
-    if (error) { alert('Error: ' + error.message); }
-    else { closeModal('modal-movement'); document.getElementById('movement-amount').value = ''; document.getElementById('movement-note').value = ''; loadCashStatus(); }
+    if (error) { alert('Error: ' + error.message); } else { closeModal('modal-movement'); document.getElementById('movement-amount').value = ''; document.getElementById('movement-note').value = ''; loadCashStatus(); }
 });
 
 document.querySelectorAll('.bill-count').forEach(input => {
@@ -475,16 +524,14 @@ document.getElementById('btn-confirm-count').addEventListener('click', async () 
     const esperado = currentSession.fondo + ventasEfectivo + entradas - salidas;
     const diferencia = counted - esperado;
     const { error } = await supabaseClient.from('cash_arqueos').insert([{ session_id: currentSession.id, fondo: currentSession.fondo, esperado, contado: counted, dif: diferencia, v_efectivo: ventasEfectivo, entradas, salidas, kind: 'X' }]);
-    if (error) { alert('Error: ' + error.message); }
-    else { closeModal('modal-count'); alert(`Arqueo registrado\nEsperado: $${esperado.toLocaleString()}\nContado: $${counted.toLocaleString()}\nDiferencia: $${diferencia.toLocaleString()}`); loadCashStatus(); }
+    if (error) { alert('Error: ' + error.message); } else { closeModal('modal-count'); alert(`Arqueo registrado\nEsperado: $${esperado.toLocaleString()}\nContado: $${counted.toLocaleString()}\nDiferencia: $${diferencia.toLocaleString()}`); loadCashStatus(); }
 });
 
 async function closeCashSession() {
     if (!currentSession) return alert('Caja no abierta');
     if (!confirm('¿Cerrar caja?')) return;
     const { error } = await supabaseClient.from('cash_sessions').update({ closed_at: new Date().toISOString() }).eq('id', currentSession.id);
-    if (error) { alert('Error: ' + error.message); }
-    else { loadCashStatus(); }
+    if (error) { alert('Error: ' + error.message); } else { loadCashStatus(); }
 }
 
 // ============ UTILIDADES ============
