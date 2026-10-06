@@ -257,10 +257,11 @@ function setupPOSEvents() {
         if (card) addToCart(Number(card.dataset.id));
     });
     document.getElementById('categories-bar').addEventListener('click', e => {
-        if (e.target.classList.contains('cat-btn')) {
+        const btn = e.target.closest('.cat-btn');
+        if (btn) {
             document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            currentCategory = e.target.dataset.cat;
+            btn.classList.add('active');
+            currentCategory = btn.dataset.cat;
             renderProducts();
         }
     });
@@ -399,7 +400,7 @@ function setupRealtimeGlobal() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            addNotification('nuevo', `🆕 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
+            addNotification('nuevo', ` Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
             loadTables();
@@ -410,7 +411,7 @@ function setupRealtimeGlobal() {
             const newStatus = order.status;
             let tipo = '', title = '', message = '';
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = `🔥 Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
+            if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = ` Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
             else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; }
             else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); }
             if (title) addNotification(tipo, title, message);
@@ -434,7 +435,7 @@ async function loadCashStatus() {
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
             <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
-            <button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>
+            <button class="action-btn btn-close" onclick="closeCashSession()"> Cerrar Caja</button>
         `;
         await loadCashSummary();
     }
@@ -462,7 +463,7 @@ async function loadCashSummary() {
         </div>
         <div class="movements-section">
             <h4>Movimientos registrados: ${movements.length}</h4>
-            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
         </div>
     `;
 }
