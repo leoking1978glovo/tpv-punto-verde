@@ -1,7 +1,9 @@
 // ============ CONFIG SUPABASE ============
 const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Crear cliente con nombre único para evitar conflictos
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============ ESTADO ============
 let cart = [];
@@ -22,7 +24,7 @@ async function init() {
 
 // ============ PRODUCTOS ============
 async function loadProducts() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('products')
         .select('*')
         .eq('active', true)
@@ -154,7 +156,6 @@ function setupEvents() {
     document.getElementById('btn-pay').addEventListener('click', () => {
         if (cart.length === 0) return alert('El carrito está vacío');
         alert('¡Pedido listo para procesar! (Aquí irá el modal de pago)');
-        // Aquí llamaremos a la función para guardar en Supabase (orders)
     });
 }
 
