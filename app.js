@@ -15,7 +15,6 @@ let unreadNotifs = 0;
 let activeTableId = null;
 let tables = [];
 
-// ============ INICIO ============
 async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) { currentUser = session.user; showApp(); } else { showLogin(); }
@@ -56,7 +55,6 @@ function setupLoginEvents() {
     });
 }
 
-// ============ NAVEGACIÓN ============
 function setupNavigation() {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -64,7 +62,6 @@ function setupNavigation() {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             item.classList.add('active');
             document.getElementById(`view-${item.dataset.view}`).classList.add('active');
-            
             if (item.dataset.view === 'kitchen') loadKitchenOrders();
             if (item.dataset.view === 'cash') loadCashStatus();
             if (item.dataset.view === 'tables') loadTables();
@@ -82,7 +79,6 @@ function setupNavigation() {
     });
 }
 
-// ============ MAPA DE MESAS ============
 async function loadTables() {
     const { data, error } = await supabaseClient.from('tables').select('*').order('id');
     if (error) return;
@@ -104,14 +100,12 @@ function selectTable(id, name) {
     activeTableId = id;
     document.getElementById('active-table-display').textContent = `Mesa: ${name}`;
     document.getElementById('active-table-display').style.display = 'inline-block';
-    
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelector('[data-view="pos"]').classList.add('active');
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-pos').classList.add('active');
 }
 
-// ============ SISTEMA DE NOTIFICACIONES ============
 function setupNotificationsPanel() {
     document.getElementById('btn-notifications').addEventListener('click', () => {
         const panel = document.getElementById('notifications-panel');
@@ -181,7 +175,6 @@ function playNotifSound() {
     } catch(e) {}
 }
 
-// ============ VISTA: CAJA (TPV) ============
 async function loadProducts() {
     const { data, error } = await supabaseClient.from('products').select('*').eq('active', true).order('position');
     if (error) return;
@@ -320,20 +313,15 @@ async function confirmPayment() {
             source: 'tpv', user_email: currentUser?.email, table_id: activeTableId 
         }]).select().single();
         if (orderError) throw orderError;
-        
         const orderItems = cart.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty }));
         const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
         if (itemsError) throw itemsError;
-
-        // Actualizar estado de la mesa a 'ocupada' si hay mesa seleccionada
         if (activeTableId) {
             await supabaseClient.from('tables').update({ status: 'ocupada', current_order_id: order.id }).eq('id', activeTableId);
         }
-
         printTicket(order, cart);
         addNotification('pago', `✓ Pedido #${order.id} cobrado`, `Total: $${Math.round(total).toLocaleString()} | ${payMethod.toUpperCase()}`);
         cart = []; renderCart(); closeModal('pay-modal');
-        
         const cashView = document.getElementById('view-cash');
         if (cashView.classList.contains('active')) loadCashStatus();
     } catch (error) { alert('Error: ' + error.message); }
@@ -360,7 +348,6 @@ function printTicket(order, items) {
     }, 100);
 }
 
-// ============ VISTA: COCINA ============
 async function loadKitchenOrders() {
     const { data, error } = await supabaseClient.from('orders').select('*, order_items(*)').neq('status', 'entregado').order('created_at', { ascending: false });
     if (error) return;
@@ -382,7 +369,7 @@ function renderKitchenOrders() {
             if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`;
             else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`;
             else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`;
-            return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">🕐 ${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`;
+            return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time"> ${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`;
         }).join('');
     });
 }
@@ -398,7 +385,6 @@ async function updateOrderStatus(orderId, newStatus) {
     if (error) { alert('Error: ' + error.message); }
     else { 
         loadKitchenOrders(); 
-        // Si se entrega, liberar la mesa
         if (newStatus === 'entregado') {
             const order = kitchenOrders.find(o => o.id === orderId);
             if (order && order.table_id) {
@@ -408,7 +394,6 @@ async function updateOrderStatus(orderId, newStatus) {
     }
 }
 
-// ============ REALTIME GLOBAL ============
 function setupRealtimeGlobal() {
     supabaseClient.channel('orders-global')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
@@ -417,7 +402,7 @@ function setupRealtimeGlobal() {
             addNotification('nuevo', `🆕 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
-            loadTables(); // Actualizar mapa de mesas
+            loadTables();
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
@@ -425,22 +410,17 @@ function setupRealtimeGlobal() {
             const newStatus = order.status;
             let tipo = '', title = '', message = '';
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            
             if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = `🔥 Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
             else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; }
             else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); }
-            
             if (title) addNotification(tipo, title, message);
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
         })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => {
-            loadTables();
-        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); })
         .subscribe();
 }
 
-// ============ VISTA: ARQUEOS ============
 async function loadCashStatus() {
     const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single();
     if (error || !session) {
@@ -534,7 +514,6 @@ async function closeCashSession() {
     if (error) { alert('Error: ' + error.message); } else { loadCashStatus(); }
 }
 
-// ============ UTILIDADES ============
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
