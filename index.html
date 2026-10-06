@@ -3,138 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPV Punto Verde | Caja</title>
+    <title>TPV Punto Verde</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon-192.png">
 </head>
 <body>
 
-    <!-- OVERLAY DE LOGIN -->
+    <!-- LOGIN -->
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
-            <div class="login-header">
-                <h2>🌿 TPV Punto Verde</h2>
-                <p>Inicia sesión para continuar</p>
-            </div>
+            <h2>🌿 TPV Punto Verde</h2>
+            <p>Inicia sesión para continuar</p>
             <form id="login-form">
-                <div class="input-group">
-                    <label>Correo electrónico</label>
-                    <input type="email" id="login-email" placeholder="ejemplo@correo.com" required>
-                </div>
-                <div class="input-group">
-                    <label>Contraseña</label>
-                    <input type="password" id="login-password" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="login-btn">Entrar</button>
+                <input type="email" id="login-email" placeholder="Correo electrónico" required>
+                <input type="password" id="login-password" placeholder="Contraseña" required>
+                <button type="submit">Entrar</button>
                 <p id="login-error" class="error-msg"></p>
             </form>
         </div>
     </div>
 
-    <!-- APLICACIÓN PRINCIPAL (Oculta hasta hacer login) -->
+    <!-- APP PRINCIPAL -->
     <div id="main-app" style="display: none;">
-        <header>
-            <div class="brand">🌿 TPV Punto Verde</div>
-            <div class="user-info">
-                <span id="user-name">Cargando...</span>
-                <span class="badge" id="user-role">Caja</span>
-                <button class="icon-btn" id="btn-logout" title="Cerrar sesión">🚪</button>
+        <!-- SIDEBAR -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>🌿 TPV</h2>
             </div>
-        </header>
-
-        <div class="main-container">
-            <div class="products-section">
-                <div class="categories" id="categories-bar">
-                    <button class="cat-btn active" data-cat="all">Todos</button>
+            <ul class="nav-menu">
+                <li class="nav-item active" data-view="pos">
+                    <span class="nav-icon"></span>
+                    <span>Caja</span>
+                </li>
+                <li class="nav-item" data-view="kitchen">
+                    <span class="nav-icon">👨‍</span>
+                    <span>Cocina</span>
+                </li>
+                <li class="nav-item" data-view="cash">
+                    <span class="nav-icon">💰</span>
+                    <span>Arqueos</span>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <span id="user-name">Usuario</span>
                 </div>
-                <div class="product-grid" id="product-grid"></div>
+                <button id="btn-logout" class="logout-btn">🚪 Salir</button>
             </div>
+        </nav>
 
-            <div class="cart-section">
-                <div class="cart-header">
-                    <span>Pedido Actual</span>
-                    <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
-                </div>
-                <div class="cart-items" id="cart-items">
-                    <div class="empty-cart">Añade productos para empezar</div>
-                </div>
-                <div class="cart-footer">
-                    <div class="summary-row"><span>Subtotal</span><span id="subtotal">$0</span></div>
-                    <div class="summary-row"><span>IVA</span><span id="tax">$0</span></div>
-                    <div class="summary-row total"><span>TOTAL</span><span id="total">$0</span></div>
-                    <button class="pay-btn" id="btn-pay">COBRAR ($0)</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Panel de pedidos activos -->
-        <div class="active-orders-panel" id="active-orders-panel">
-            <div class="panel-header">
-                <h3>📋 Pedidos en Curso</h3>
-                <button class="close-panel" id="btn-close-panel">✕</button>
-            </div>
-            <div class="active-orders-list" id="active-orders-list"></div>
-        </div>
-
-        <button class="floating-btn" id="btn-active-orders">
-            📋 <span class="badge-count" id="badge-count">0</span>
-        </button>
-
-        <!-- Modal de Cobro -->
-        <div id="pay-modal" class="modal-overlay">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Finalizar Pedido</h2>
-                    <button class="close-btn" id="btn-close-modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="order-summary">
-                        <h3>Resumen</h3>
-                        <div id="modal-cart-items"></div>
-                        <div class="modal-totals">
-                            <div class="summary-row"><span>Subtotal</span><span id="modal-subtotal">$0</span></div>
-                            <div class="summary-row"><span>IVA</span><span id="modal-tax">$0</span></div>
-                            <div class="summary-row total"><span>TOTAL</span><span id="modal-total">$0</span></div>
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+            
+            <!-- VISTA: CAJA (TPV) -->
+            <section id="view-pos" class="view active">
+                <header class="view-header">
+                    <h1>Caja - Punto de Venta</h1>
+                </header>
+                <div class="pos-container">
+                    <div class="products-section">
+                        <div class="categories" id="categories-bar">
+                            <button class="cat-btn active" data-cat="all">Todos</button>
                         </div>
+                        <div class="product-grid" id="product-grid"></div>
                     </div>
-                    <div class="order-type">
-                        <h3>Tipo de Pedido</h3>
-                        <div class="type-buttons">
-                            <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
-                            <button class="type-btn" data-type="recogida">📦 Recogida</button>
-                            <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
+                    <div class="cart-section">
+                        <div class="cart-header">
+                            <span>Pedido Actual</span>
+                            <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
                         </div>
-                    </div>
-                    <div class="payment-method">
-                        <h3>Método de Pago</h3>
-                        <div class="method-buttons">
-                            <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                            <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                            <button class="method-btn" data-method="bizum">📱 Bizum</button>
+                        <div class="cart-items" id="cart-items">
+                            <div class="empty-cart">Añade productos para empezar</div>
                         </div>
-                    </div>
-                    <div class="cash-input" id="cash-section">
-                        <label>Efectivo recibido:</label>
-                        <input type="number" id="cash-received" placeholder="0" step="0.01">
-                        <div class="change-display">
-                            <span>Cambio:</span>
-                            <span id="change-amount" class="change-amount">$0</span>
+                        <div class="cart-footer">
+                            <div class="summary-row"><span>Subtotal</span><span id="subtotal">$0</span></div>
+                            <div class="summary-row"><span>IVA</span><span id="tax">$0</span></div>
+                            <div class="summary-row total"><span>TOTAL</span><span id="total">$0</span></div>
+                            <button class="pay-btn" id="btn-pay">COBRAR ($0)</button>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="cancel-btn" id="btn-cancel-pay">Cancelar</button>
-                    <button class="confirm-btn" id="btn-confirm-pay">✓ Confirmar Pago</button>
-                </div>
-            </div>
-        </div>
+            </section>
 
-        <div class="toast" id="toast"></div>
-        <div id="ticket-print-area"></div>
+            <!-- VISTA: COCINA -->
+            <section id="view-kitchen" class="view">
+                <header class="view-header">
+                    <h1>Cocina - Pedidos en Tiempo Real</h1>
+                </header>
+                <div class="kitchen-stats">
+                    <div class="stat"><span class="stat-number" id="count-nuevo">0</span><span class="stat-label">Nuevos</span></div>
+                    <div class="stat"><span class="stat-number" id="count-cocina">0</span><span class="stat-label">En Cocina</span></div>
+                    <div class="stat"><span class="stat-number" id="count-listo">0</span><span class="stat-label">Listos</span></div>
+                </div>
+                <div class="kitchen-container">
+                    <div class="column"><h2 class="column-header status-nuevo"> Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
+                    <div class="column"><h2 class="column-header status-cocina"> En Cocina</h2><div class="orders-list" id="orders-cocina"></div></div>
+                    <div class="column"><h2 class="column-header status-listo">🟢 Listos</h2><div class="orders-list" id="orders-listo"></div></div>
+                </div>
+            </section>
+
+            <!-- VISTA: ARQUEOS -->
+            <section id="view-cash" class="view">
+                <header class="view-header">
+                    <h1>Gestión de Caja</h1>
+                </header>
+                <div class="cash-container">
+                    <div class="status-card" id="status-card">
+                        <h3>Estado de Caja</h3>
+                        <div id="cash-status">Cargando...</div>
+                    </div>
+                    <div class="action-buttons" id="action-buttons"></div>
+                </div>
+            </section>
+
+        </main>
     </div>
 
-    <!-- Librerías externas -->
+    <!-- MODAL COBRO -->
+    <div id="pay-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Finalizar Pedido</h2>
+                <button class="close-btn" id="btn-close-modal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="order-summary">
+                    <h3>Resumen</h3>
+                    <div id="modal-cart-items"></div>
+                    <div class="modal-totals">
+                        <div class="summary-row"><span>Subtotal</span><span id="modal-subtotal">$0</span></div>
+                        <div class="summary-row"><span>IVA</span><span id="modal-tax">$0</span></div>
+                        <div class="summary-row total"><span>TOTAL</span><span id="modal-total">$0</span></div>
+                    </div>
+                </div>
+                <div class="order-type">
+                    <h3>Tipo de Pedido</h3>
+                    <div class="type-buttons">
+                        <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
+                        <button class="type-btn" data-type="recogida">📦 Recogida</button>
+                        <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
+                    </div>
+                </div>
+                <div class="payment-method">
+                    <h3>Método de Pago</h3>
+                    <div class="method-buttons">
+                        <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
+                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
+                        <button class="method-btn" data-method="bizum"> Bizum</button>
+                    </div>
+                </div>
+                <div class="cash-input" id="cash-section">
+                    <label>Efectivo recibido:</label>
+                    <input type="number" id="cash-received" placeholder="0" step="0.01">
+                    <div class="change-display"><span>Cambio:</span><span id="change-amount" class="change-amount">$0</span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-pay">Cancelar</button>
+                <button class="confirm-btn" id="btn-confirm-pay">✓ Confirmar Pago</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL APERTURA CAJA -->
+    <div id="modal-open-cash" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Abrir Caja</h3>
+            <div class="input-group">
+                <label>Fondo inicial ($):</label>
+                <input type="number" id="opening-fund" placeholder="0" step="0.01">
+            </div>
+            <button class="btn-primary" id="btn-confirm-open">Confirmar Apertura</button>
+            <button class="btn-secondary" onclick="closeModal('modal-open-cash')">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL MOVIMIENTO -->
+    <div id="modal-movement" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Registrar Movimiento</h3>
+            <div class="input-group">
+                <label>Tipo:</label>
+                <select id="movement-type">
+                    <option value="entrada">Entrada</option>
+                    <option value="salida">Salida</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Método:</label>
+                <select id="movement-method">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="bizum">Bizum</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Importe ($):</label>
+                <input type="number" id="movement-amount" placeholder="0" step="0.01">
+            </div>
+            <div class="input-group">
+                <label>Nota:</label>
+                <input type="text" id="movement-note" placeholder="Concepto">
+            </div>
+            <button class="btn-primary" id="btn-confirm-movement">Registrar</button>
+            <button class="btn-secondary" onclick="closeModal('modal-movement')">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL ARQUEO CIEGO -->
+    <div id="modal-count" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Arqueo Ciego - Contar Efectivo</h3>
+            <div class="count-grid">
+                <div class="count-item"><label>Billetes $100.000:</label><input type="number" class="bill-count" data-value="100000" placeholder="0"></div>
+                <div class="count-item"><label>Billetes $50.000:</label><input type="number" class="bill-count" data-value="50000" placeholder="0"></div>
+                <div class="count-item"><label>Billetes $20.000:</label><input type="number" class="bill-count" data-value="20000" placeholder="0"></div>
+                <div class="count-item"><label>Billetes $10.000:</label><input type="number" class="bill-count" data-value="10000" placeholder="0"></div>
+                <div class="count-item"><label>Billetes $5.000:</label><input type="number" class="bill-count" data-value="5000" placeholder="0"></div>
+                <div class="count-item"><label>Billetes $2.000:</label><input type="number" class="bill-count" data-value="2000" placeholder="0"></div>
+                <div class="count-item"><label>Billetes $1.000:</label><input type="number" class="bill-count" data-value="1000" placeholder="0"></div>
+                <div class="count-item"><label>Monedas:</label><input type="number" class="bill-count" data-value="1" placeholder="0"></div>
+            </div>
+            <div class="count-total"><span>Total contado:</span><span id="counted-total">$0</span></div>
+            <button class="btn-primary" id="btn-confirm-count">Confirmar Arqueo</button>
+            <button class="btn-secondary" onclick="closeModal('modal-count')">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ÁREA IMPRESIÓN -->
+    <div id="ticket-print-area"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="app.js"></script>
