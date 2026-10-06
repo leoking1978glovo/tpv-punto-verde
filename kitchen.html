@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPV Punto Verde | Cocina</title>
+    <link rel="stylesheet" href="kitchen.css">
+    <link rel="icon" href="icon-192.png">
+</head>
+<body>
+
+    <header>
+        <div class="brand">👨‍ Cocina - Punto Verde</div>
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-number" id="count-nuevo">0</span>
+                <span class="stat-label">Nuevos</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="count-cocina">0</span>
+                <span class="stat-label">En Cocina</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="count-listo">0</span>
+                <span class="stat-label">Listos</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="kitchen-container">
+        <!-- Pedidos Nuevos -->
+        <div class="column" id="col-nuevo">
+            <h2 class="column-header status-nuevo"> Nuevos</h2>
+            <div class="orders-list" id="orders-nuevo"></div>
+        </div>
+
+        <!-- En Cocina -->
+        <div class="column" id="col-cocina">
+            <h2 class="column-header status-cocina"> En Cocina</h2>
+            <div class="orders-list" id="orders-cocina"></div>
+        </div>
+
+        <!-- Listos -->
+        <div class="column" id="col-listo">
+            <h2 class="column-header status-listo">🟢 Listos</h2>
+            <div class="orders-list" id="orders-listo"></div>
+        </div>
+
+        <!-- Entregados (ocultos por defecto) -->
+        <div class="column" id="col-entregado" style="display: none;">
+            <h2 class="column-header status-entregado">✅ Entregados</h2>
+            <div class="orders-list" id="orders-entregado"></div>
+        </div>
+    </div>
+
+    <!-- Sonido de alerta -->
+    <audio id="alert-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3"></audio>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="kitchen.js"></script>
+</body>
+</html>
