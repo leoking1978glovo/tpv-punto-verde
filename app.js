@@ -10,6 +10,8 @@ let orderType = 'mostrador';
 let payMethod = 'efectivo';
 let currentSession = null;
 let kitchenOrders = [];
+let notifications = [];
+let unreadNotifs = 0;
 
 // ============ INICIO ============
 async function init() {
@@ -17,6 +19,7 @@ async function init() {
     if (session) { currentUser = session.user; showApp(); } else { showLogin(); }
     setupLoginEvents();
     setupNavigation();
+    setupNotificationsPanel();
 }
 
 function showLogin() {
@@ -31,7 +34,7 @@ function showApp() {
     loadProducts();
     loadCashStatus();
     setupPOSEvents();
-    setupKitchenRealtime();
+    setupRealtimeGlobal();
 }
 
 function setupLoginEvents() {
@@ -43,7 +46,6 @@ function setupLoginEvents() {
         if (error) { document.getElementById('login-error').textContent = 'Credenciales incorrectas'; }
         else { currentUser = data.user; showApp(); }
     });
-
     document.getElementById('btn-logout').addEventListener('click', async () => {
         await supabaseClient.auth.signOut();
         currentUser = null;
@@ -59,11 +61,92 @@ function setupNavigation() {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             item.classList.add('active');
             document.getElementById(`view-${item.dataset.view}`).classList.add('active');
-            
             if (item.dataset.view === 'kitchen') loadKitchenOrders();
             if (item.dataset.view === 'cash') loadCashStatus();
         });
     });
+}
+
+// ============ SISTEMA DE NOTIFICACIONES ============
+function setupNotificationsPanel() {
+    document.getElementById('btn-notifications').addEventListener('click', () => {
+        const panel = document.getElementById('notifications-panel');
+        panel.classList.toggle('open');
+        if (panel.classList.contains('open')) {
+            unreadNotifs = 0;
+            updateNotifBadge();
+            renderNotifications();
+        }
+    });
+    document.getElementById('btn-clear-notifs').addEventListener('click', () => {
+        notifications = [];
+        renderNotifications();
+        updateNotifBadge();
+    });
+}
+
+function addNotification(tipo, title, message) {
+    const notif = {
+        id: Date.now(),
+        tipo,
+        title,
+        message,
+        time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    };
+    notifications.unshift(notif);
+    if (notifications.length > 50) notifications.pop();
+    unreadNotifs++;
+    updateNotifBadge();
+    showToast(tipo, title, message);
+    playNotifSound();
+    renderNotifications();
+    
+    // Animar campana
+    const bell = document.getElementById('btn-notifications');
+    bell.classList.remove('has-notifs');
+    void bell.offsetWidth;
+    bell.classList.add('has-notifs');
+}
+
+function updateNotifBadge() {
+    const badge = document.getElementById('notif-badge');
+    badge.textContent = unreadNotifs;
+    badge.style.display = unreadNotifs > 0 ? 'flex' : 'none';
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notif-list');
+    if (notifications.length === 0) {
+        list.innerHTML = '<div class="notif-empty">No hay notificaciones</div>';
+        return;
+    }
+    list.innerHTML = notifications.map(n => `
+        <div class="notif-item tipo-${n.tipo}">
+            <div class="notif-title">${n.title}</div>
+            <div class="notif-message">${n.message}</div>
+            <div class="notif-time">${n.time}</div>
+        </div>
+    `).join('');
+}
+
+function showToast(tipo, title, message) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast tipo-${tipo}`;
+    toast.innerHTML = `<div class="toast-title">${title}</div><div class="toast-message">${message}</div>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+function playNotifSound() {
+    try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGS57OihUBELTKXh8bllHAU2j9Xvz3kpBSh+zPDajzsKFWC06emrWBUIQ5zd8sFuJAUuhM/z24k2CBhku+zooVASCkyk4PC5ZRwFNo/V7895KQUofsz');
+        audio.volume = 0.3;
+        audio.play();
+    } catch(e) {}
 }
 
 // ============ VISTA: CAJA (TPV) ============
@@ -208,9 +291,8 @@ async function confirmPayment() {
         const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
         if (itemsError) throw itemsError;
         printTicket(order, cart);
+        addNotification('pago', `✓ Pedido #${order.id} cobrado`, `Total: $${Math.round(total).toLocaleString()} | ${payMethod.toUpperCase()}`);
         cart = []; renderCart(); closeModal('pay-modal');
-        showToast(`✓ Pedido #${order.id} registrado`);
-        // Actualizar vista de caja si está visible
         const cashView = document.getElementById('view-cash');
         if (cashView.classList.contains('active')) loadCashStatus();
     } catch (error) { alert('Error: ' + error.message); }
@@ -271,20 +353,43 @@ function updateKitchenStats() {
 async function updateOrderStatus(orderId, newStatus) {
     const { error } = await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId);
     if (error) { alert('Error: ' + error.message); }
-    else { loadKitchenOrders(); showToast(`Pedido #${orderId} actualizado`); }
+    else { loadKitchenOrders(); }
 }
 
-function setupKitchenRealtime() {
-    supabaseClient.channel('orders-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        const kitchenView = document.getElementById('view-kitchen');
-        if (kitchenView.classList.contains('active')) loadKitchenOrders();
-    }).subscribe();
+// ============ REALTIME GLOBAL ============
+function setupRealtimeGlobal() {
+    supabaseClient.channel('orders-global')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+            const order = payload.new;
+            addNotification('nuevo', `🆕 Nuevo Pedido #${order.id}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
+            const kitchenView = document.getElementById('view-kitchen');
+            if (kitchenView.classList.contains('active')) loadKitchenOrders();
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
+            const order = payload.new;
+            const oldStatus = payload.old.status;
+            const newStatus = order.status;
+            
+            let tipo = '', title = '', message = '';
+            if (oldStatus === 'nuevo' && newStatus === 'cocina') {
+                tipo = 'cocina'; title = `🔥 Pedido #${order.id} en preparación`; message = 'La cocina está preparando el pedido';
+            } else if (oldStatus === 'cocina' && newStatus === 'listo') {
+                tipo = 'listo'; title = `✅ Pedido #${order.id} listo`; message = 'El pedido está listo para entregar';
+            } else if (newStatus === 'entregado') {
+                tipo = 'pago'; title = `✓ Pedido #${order.id} entregado`; message = 'Pedido completado';
+            }
+            
+            if (title) addNotification(tipo, title, message);
+            
+            const kitchenView = document.getElementById('view-kitchen');
+            if (kitchenView.classList.contains('active')) loadKitchenOrders();
+        })
+        .subscribe();
 }
 
-// ============ VISTA: ARQUEOS (MEJORADA) ============
+// ============ VISTA: ARQUEOS ============
 async function loadCashStatus() {
     const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single();
-    
     if (error || !session) {
         currentSession = null;
         document.getElementById('cash-status').innerHTML = '<span class="status-closed"> Caja Cerrada</span>';
@@ -295,7 +400,7 @@ async function loadCashStatus() {
         document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
-            <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
+            <button class="action-btn btn-count" onclick="openModal('modal-count')"> Arqueo Ciego</button>
             <button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>
         `;
         await loadCashSummary();
@@ -304,65 +409,27 @@ async function loadCashStatus() {
 
 async function loadCashSummary() {
     if (!currentSession) return;
-    
     const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true);
     const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id);
-    
-    let efectivo = 0, tarjeta = 0, bizum = 0;
-    let totalPedidos = 0;
-    
-    orders.forEach(o => {
-        totalPedidos++;
-        if (o.pay_method === 'efectivo') efectivo += o.total;
-        if (o.pay_method === 'tarjeta') tarjeta += o.total;
-        if (o.pay_method === 'bizum') bizum += o.total;
-    });
-    
+    let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0;
+    orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; });
     let entradas = 0, salidas = 0;
-    movements.forEach(m => {
-        if (m.tipo === 'entrada') entradas += m.importe;
-        if (m.tipo === 'salida') salidas += m.importe;
-    });
-    
+    movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; });
     const totalVentas = efectivo + tarjeta + bizum;
     const totalCaja = currentSession.fondo + efectivo + entradas - salidas;
-    
     document.getElementById('cash-summary').style.display = 'block';
     document.getElementById('summary-content').innerHTML = `
         <div class="summary-grid">
-            <div class="summary-card">
-                <div class="summary-label">Total Ventas</div>
-                <div class="summary-value">$${totalVentas.toLocaleString()}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Pedidos</div>
-                <div class="summary-value">${totalPedidos}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Efectivo</div>
-                <div class="summary-value">$${efectivo.toLocaleString()}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Tarjeta</div>
-                <div class="summary-value">$${tarjeta.toLocaleString()}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Bizum</div>
-                <div class="summary-value">$${bizum.toLocaleString()}</div>
-            </div>
-            <div class="summary-card highlight">
-                <div class="summary-label">Total en Caja</div>
-                <div class="summary-value">$${totalCaja.toLocaleString()}</div>
-            </div>
+            <div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div>
+            <div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div>
+            <div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div>
+            <div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div>
+            <div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div>
+            <div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div>
         </div>
         <div class="movements-section">
             <h4>Movimientos registrados: ${movements.length}</h4>
-            ${movements.length > 0 ? movements.map(m => `
-                <div class="movement-item ${m.tipo}">
-                    <span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span>
-                    <span>$${m.importe.toLocaleString()}</span>
-                </div>
-            `).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : ''} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
         </div>
     `;
 }
@@ -421,6 +488,5 @@ async function closeCashSession() {
 // ============ UTILIDADES ============
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-function showToast(message) { const toast = document.getElementById('toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
 
 init();

@@ -60,6 +60,12 @@
             <section id="view-pos" class="view active">
                 <header class="view-header">
                     <h1>Caja - Punto de Venta</h1>
+                    <div class="header-actions">
+                        <button class="notification-bell" id="btn-notifications">
+                            
+                            <span class="notification-badge" id="notif-badge">0</span>
+                        </button>
+                    </div>
                 </header>
                 <div class="pos-container">
                     <div class="products-section">
@@ -71,7 +77,7 @@
                     <div class="cart-section">
                         <div class="cart-header">
                             <span>Pedido Actual</span>
-                            <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
+                            <span class="clear-btn" id="btn-clear">️ Limpiar</span>
                         </div>
                         <div class="cart-items" id="cart-items">
                             <div class="empty-cart">Añade productos para empezar</div>
@@ -113,18 +119,26 @@
                         <h3>Estado de Caja</h3>
                         <div id="cash-status">Cargando...</div>
                     </div>
-                    
-                    <!-- RESUMEN DE VENTAS -->
                     <div id="cash-summary" class="status-card" style="display: none;">
                         <h3>Resumen de Ventas</h3>
                         <div id="summary-content"></div>
                     </div>
-                    
                     <div class="action-buttons" id="action-buttons"></div>
                 </div>
             </section>
 
         </main>
+
+        <!-- PANEL DE NOTIFICACIONES -->
+        <div class="notifications-panel" id="notifications-panel">
+            <div class="notif-header">
+                <h3>🔔 Notificaciones</h3>
+                <button class="clear-notifs" id="btn-clear-notifs">Limpiar</button>
+            </div>
+            <div class="notif-list" id="notif-list">
+                <div class="notif-empty">No hay notificaciones</div>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL COBRO -->
@@ -238,8 +252,8 @@
         </div>
     </div>
 
-    <!-- TOAST -->
-    <div class="toast" id="toast"></div>
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
 
     <!-- ÁREA IMPRESIÓN -->
     <div id="ticket-print-area"></div>
