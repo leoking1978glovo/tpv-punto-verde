@@ -1,265 +1,236 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPV Punto Verde</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.webmanifest">
-    <link rel="icon" href="icon-192.png">
-</head>
-<body>
+:root {
+  --bg-main: #f3f4f6;
+  --bg-card: #ffffff;
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --text-dark: #1f2937;
+  --text-gray: #6b7280;
+  --border: #e5e7eb;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --status-nuevo: #ef4444;
+  --status-cocina: #f59e0b;
+  --status-listo: #10b981;
+  --sidebar-width: 200px;
+}
 
-    <!-- LOGIN -->
-    <div id="login-overlay" class="login-overlay">
-        <div class="login-card">
-            <h2>🌿 TPV Punto Verde</h2>
-            <p>Inicia sesión para continuar</p>
-            <form id="login-form">
-                <input type="email" id="login-email" placeholder="Correo electrónico" required>
-                <input type="password" id="login-password" placeholder="Contraseña" required>
-                <button type="submit">Entrar</button>
-                <p id="login-error" class="error-msg"></p>
-            </form>
-        </div>
-    </div>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overflow: hidden; }
 
-    <!-- APP PRINCIPAL -->
-    <div id="main-app" style="display: none;">
-        <!-- SIDEBAR -->
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <h2>🌿 TPV</h2>
-            </div>
-            <ul class="nav-menu">
-                <li class="nav-item active" data-view="pos">
-                    <span class="nav-icon">🛒</span>
-                    <span>Caja</span>
-                </li>
-                <li class="nav-item" data-view="kitchen">
-                    <span class="nav-icon">👨‍🍳</span>
-                    <span>Cocina</span>
-                </li>
-                <li class="nav-item" data-view="cash">
-                    <span class="nav-icon">💰</span>
-                    <span>Arqueos</span>
-                </li>
-            </ul>
-            <div class="sidebar-footer">
-                <div class="user-info">
-                    <span id="user-name">Usuario</span>
-                </div>
-                <button id="btn-logout" class="logout-btn">🚪 Salir</button>
-            </div>
-        </nav>
+/* LOGIN */
+.login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+.login-card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); width: 90%; max-width: 400px; text-align: center; }
+.login-card h2 { color: var(--primary); margin-bottom: 0.5rem; }
+.login-card p { color: var(--text-gray); margin-bottom: 2rem; }
+.login-card input { width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; margin-bottom: 1rem; font-size: 1rem; }
+.login-card button { width: 100%; padding: 0.85rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+.error-msg { color: #ef4444; margin-top: 1rem; font-size: 0.9rem; }
 
-        <!-- CONTENIDO PRINCIPAL -->
-        <main class="main-content">
-            
-            <!-- VISTA: CAJA (TPV) -->
-            <section id="view-pos" class="view active">
-                <header class="view-header">
-                    <h1>Caja - Punto de Venta</h1>
-                    <div class="header-actions">
-                        <button class="notification-bell" id="btn-notifications">
-                            
-                            <span class="notification-badge" id="notif-badge">0</span>
-                        </button>
-                    </div>
-                </header>
-                <div class="pos-container">
-                    <div class="products-section">
-                        <div class="categories" id="categories-bar">
-                            <button class="cat-btn active" data-cat="all">Todos</button>
-                        </div>
-                        <div class="product-grid" id="product-grid"></div>
-                    </div>
-                    <div class="cart-section">
-                        <div class="cart-header">
-                            <span>Pedido Actual</span>
-                            <span class="clear-btn" id="btn-clear">️ Limpiar</span>
-                        </div>
-                        <div class="cart-items" id="cart-items">
-                            <div class="empty-cart">Añade productos para empezar</div>
-                        </div>
-                        <div class="cart-footer">
-                            <div class="summary-row"><span>Subtotal</span><span id="subtotal">$0</span></div>
-                            <div class="summary-row"><span>IVA</span><span id="tax">$0</span></div>
-                            <div class="summary-row total"><span>TOTAL</span><span id="total">$0</span></div>
-                            <button class="pay-btn" id="btn-pay">COBRAR ($0)</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
+/* LAYOUT PRINCIPAL */
+#main-app { display: flex; height: 100vh; }
 
-            <!-- VISTA: COCINA -->
-            <section id="view-kitchen" class="view">
-                <header class="view-header">
-                    <h1>Cocina - Pedidos en Tiempo Real</h1>
-                </header>
-                <div class="kitchen-stats">
-                    <div class="stat"><span class="stat-number" id="count-nuevo">0</span><span class="stat-label">Nuevos</span></div>
-                    <div class="stat"><span class="stat-number" id="count-cocina">0</span><span class="stat-label">En Cocina</span></div>
-                    <div class="stat"><span class="stat-number" id="count-listo">0</span><span class="stat-label">Listos</span></div>
-                </div>
-                <div class="kitchen-container">
-                    <div class="column"><h2 class="column-header status-nuevo">🔴 Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
-                    <div class="column"><h2 class="column-header status-cocina">🟠 En Cocina</h2><div class="orders-list" id="orders-cocina"></div></div>
-                    <div class="column"><h2 class="column-header status-listo">🟢 Listos</h2><div class="orders-list" id="orders-listo"></div></div>
-                </div>
-            </section>
+/* SIDEBAR */
+.sidebar { width: var(--sidebar-width); background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-header { padding: 1.5rem; border-bottom: 1px solid var(--border); }
+.sidebar-header h2 { color: var(--primary); font-size: 1.5rem; }
+.nav-menu { list-style: none; padding: 1rem 0; flex: 1; }
+.nav-item { padding: 1rem 1.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; transition: 0.2s; color: var(--text-gray); }
+.nav-item:hover { background: var(--bg-main); color: var(--text-dark); }
+.nav-item.active { background: var(--primary); color: white; }
+.nav-icon { font-size: 1.2rem; }
+.sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); }
+.user-info { font-size: 0.8rem; color: var(--text-gray); margin-bottom: 0.5rem; word-break: break-all; }
+.logout-btn { width: 100%; padding: 0.5rem; background: #f3f4f6; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+.logout-btn:hover { background: #e5e7eb; }
 
-            <!-- VISTA: ARQUEOS -->
-            <section id="view-cash" class="view">
-                <header class="view-header">
-                    <h1>Gestión de Caja</h1>
-                </header>
-                <div class="cash-container">
-                    <div class="status-card" id="status-card">
-                        <h3>Estado de Caja</h3>
-                        <div id="cash-status">Cargando...</div>
-                    </div>
-                    <div id="cash-summary" class="status-card" style="display: none;">
-                        <h3>Resumen de Ventas</h3>
-                        <div id="summary-content"></div>
-                    </div>
-                    <div class="action-buttons" id="action-buttons"></div>
-                </div>
-            </section>
+/* MAIN CONTENT */
+.main-content { flex: 1; overflow-y: auto; padding: 1.5rem; position: relative; }
+.view { display: none; height: 100%; }
+.view.active { display: flex; flex-direction: column; }
+.view-header { margin-bottom: 1rem; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
+.view-header h1 { font-size: 1.5rem; color: var(--text-dark); }
 
-        </main>
+/* HEADER ACTIONS */
+.header-actions { display: flex; gap: 1rem; align-items: center; }
+.notification-bell { position: relative; background: white; border: 1px solid var(--border); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+.notification-bell:hover { background: var(--bg-main); transform: scale(1.05); }
+.notification-bell.has-notifs { animation: ring 0.5s ease-in-out; }
+@keyframes ring { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(15deg); } 75% { transform: rotate(-15deg); } }
+.notification-badge { position: absolute; top: -5px; right: -5px; background: var(--status-nuevo); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 
-        <!-- PANEL DE NOTIFICACIONES -->
-        <div class="notifications-panel" id="notifications-panel">
-            <div class="notif-header">
-                <h3>🔔 Notificaciones</h3>
-                <button class="clear-notifs" id="btn-clear-notifs">Limpiar</button>
-            </div>
-            <div class="notif-list" id="notif-list">
-                <div class="notif-empty">No hay notificaciones</div>
-            </div>
-        </div>
-    </div>
+/* PANEL DE NOTIFICACIONES */
+.notifications-panel { position: fixed; top: 0; right: -380px; width: 360px; height: 100vh; background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.1); z-index: 999; transition: right 0.3s ease; display: flex; flex-direction: column; }
+.notifications-panel.open { right: 0; }
+.notif-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); }
+.notif-header h3 { font-size: 1rem; }
+.notif-header-actions { display: flex; align-items: center; gap: 0.75rem; }
+.clear-notifs { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.close-notifs { background: none; border: none; color: var(--text-gray); cursor: pointer; font-size: 1.2rem; padding: 0.25rem 0.5rem; border-radius: 4px; transition: 0.2s; }
+.close-notifs:hover { background: var(--bg-main); color: var(--text-dark); }
+.notif-list { flex: 1; overflow-y: auto; padding: 1rem; }
+.notif-empty { text-align: center; color: var(--text-gray); padding: 2rem; font-size: 0.9rem; }
+.notif-item { padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid var(--primary); background: var(--bg-main); animation: slideIn 0.3s ease; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+.notif-item.tipo-nuevo { border-left-color: var(--status-nuevo); }
+.notif-item.tipo-cocina { border-left-color: var(--status-cocina); }
+.notif-item.tipo-listo { border-left-color: var(--status-listo); }
+.notif-item.tipo-pago { border-left-color: var(--primary); }
+.notif-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem; }
+.notif-message { font-size: 0.8rem; color: var(--text-gray); }
+.notif-time { font-size: 0.7rem; color: var(--text-gray); margin-top: 0.25rem; }
 
-    <!-- MODAL COBRO -->
-    <div id="pay-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Finalizar Pedido</h2>
-                <button class="close-btn" id="btn-close-modal">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="order-summary">
-                    <h3>Resumen</h3>
-                    <div id="modal-cart-items"></div>
-                    <div class="modal-totals">
-                        <div class="summary-row"><span>Subtotal</span><span id="modal-subtotal">$0</span></div>
-                        <div class="summary-row"><span>IVA</span><span id="modal-tax">$0</span></div>
-                        <div class="summary-row total"><span>TOTAL</span><span id="modal-total">$0</span></div>
-                    </div>
-                </div>
-                <div class="order-type">
-                    <h3>Tipo de Pedido</h3>
-                    <div class="type-buttons">
-                        <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
-                        <button class="type-btn" data-type="recogida">📦 Recogida</button>
-                        <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
-                    </div>
-                </div>
-                <div class="payment-method">
-                    <h3>Método de Pago</h3>
-                    <div class="method-buttons">
-                        <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
-                    </div>
-                </div>
-                <div class="cash-input" id="cash-section">
-                    <label>Efectivo recibido:</label>
-                    <input type="number" id="cash-received" placeholder="0" step="0.01">
-                    <div class="change-display"><span>Cambio:</span><span id="change-amount" class="change-amount">$0</span></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="cancel-btn" id="btn-cancel-pay">Cancelar</button>
-                <button class="confirm-btn" id="btn-confirm-pay">✓ Confirmar Pago</button>
-            </div>
-        </div>
-    </div>
+/* VISTA: CAJA (TPV) */
+.pos-container { display: grid; grid-template-columns: 1fr 340px; gap: 1rem; flex: 1; min-height: 0; }
+.products-section { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; overflow: hidden; }
+.categories { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem; background: var(--bg-card); border-radius: 8px; box-shadow: var(--shadow); flex-shrink: 0; }
+.cat-btn { background: var(--bg-card); border: 1px solid var(--border); padding: 0.35rem 0.7rem; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap; transition: 0.2s; font-size: 0.8rem; flex-shrink: 0; }
+.cat-btn.active, .cat-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.6rem; overflow-y: auto; padding-right: 0.5rem; align-content: start; flex: 1; }
+.product-card { background: var(--bg-card); border-radius: 8px; padding: 0.4rem; box-shadow: var(--shadow); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
+.product-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+.product-img { width: 100%; height: 55px; background: #e5e7eb; border-radius: 6px; margin-bottom: 0.3rem; object-fit: cover; }
+.product-name { font-weight: 600; font-size: 0.7rem; margin-bottom: 0.15rem; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.product-price { color: var(--primary); font-weight: 700; font-size: 0.85rem; margin-top: auto; }
+.cart-section { background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.cart-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-weight: 700; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.clear-btn { color: #ef4444; cursor: pointer; font-size: 0.85rem; }
+.cart-items { flex: 1; overflow-y: auto; padding: 0.75rem; }
+.empty-cart { text-align: center; color: var(--text-gray); padding: 2rem; }
+.cart-item { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+.cart-item-name { font-weight: 600; font-size: 0.85rem; }
+.cart-item-price { font-weight: 700; }
+.qty-controls { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.2rem; }
+.qty-btn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 0.9rem; }
+.cart-footer { padding: 1rem; background: #f9fafb; border-top: 1px solid var(--border); flex-shrink: 0; }
+.summary-row { display: flex; justify-content: space-between; margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--text-gray); }
+.summary-row.total { font-size: 1.15rem; font-weight: 800; color: var(--text-dark); margin-top: 0.75rem; padding-top: 0.75rem; border-top: 2px dashed var(--border); }
+.pay-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 0.9rem; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 0.75rem; }
+.pay-btn:hover { background: var(--primary-hover); }
 
-    <!-- MODAL APERTURA CAJA -->
-    <div id="modal-open-cash" class="modal-overlay">
-        <div class="modal-content">
-            <h3>Abrir Caja</h3>
-            <div class="input-group">
-                <label>Fondo inicial ($):</label>
-                <input type="number" id="opening-fund" placeholder="0" step="0.01">
-            </div>
-            <button class="btn-primary" id="btn-confirm-open">Confirmar Apertura</button>
-            <button class="btn-secondary" onclick="closeModal('modal-open-cash')">Cancelar</button>
-        </div>
-    </div>
+/* VISTA: COCINA */
+.kitchen-stats { display: flex; gap: 2rem; margin-bottom: 1rem; flex-shrink: 0; }
+.stat { display: flex; flex-direction: column; align-items: center; }
+.stat-number { font-size: 1.75rem; font-weight: 800; color: var(--text-dark); }
+.stat-label { font-size: 0.8rem; color: var(--text-gray); }
+.kitchen-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; flex: 1; min-height: 0; overflow: hidden; }
+.column { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; overflow: hidden; }
+.column-header { padding: 0.75rem; border-radius: 8px; font-size: 1rem; font-weight: 700; text-align: center; color: white; flex-shrink: 0; }
+.status-nuevo { background: var(--status-nuevo); }
+.status-cocina { background: var(--status-cocina); }
+.status-listo { background: var(--status-listo); }
+.orders-list { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; align-content: start; padding-right: 0.25rem; }
+.order-card { background: var(--bg-card); border-radius: 10px; padding: 0.75rem; box-shadow: var(--shadow); border-left: 5px solid var(--status-nuevo); display: flex; flex-direction: column; gap: 0.4rem; }
+.order-card.status-cocina { border-left-color: var(--status-cocina); }
+.order-card.status-listo { border-left-color: var(--status-listo); }
+.order-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.5rem; border-bottom: 1px dashed var(--border); }
+.order-id { font-size: 1.1rem; font-weight: 800; }
+.order-type { background: #f3f4f6; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+.order-time { font-size: 0.75rem; color: var(--text-gray); }
+.order-items { flex: 1; }
+.order-item { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+.order-item:last-child { border-bottom: none; }
+.item-qty { font-weight: 700; color: var(--status-nuevo); margin-right: 0.3rem; }
+.order-actions { margin-top: 0.5rem; }
+.action-btn-kitchen { width: 100%; padding: 0.6rem; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; color: white; font-size: 0.85rem; }
+.btn-cocina { background: var(--status-cocina); }
+.btn-listo { background: var(--status-listo); }
+.btn-entregado { background: var(--text-gray); }
 
-    <!-- MODAL MOVIMIENTO -->
-    <div id="modal-movement" class="modal-overlay">
-        <div class="modal-content">
-            <h3>Registrar Movimiento</h3>
-            <div class="input-group">
-                <label>Tipo:</label>
-                <select id="movement-type">
-                    <option value="entrada">Entrada</option>
-                    <option value="salida">Salida</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>Método:</label>
-                <select id="movement-method">
-                    <option value="efectivo">Efectivo</option>
-                    <option value="tarjeta">Tarjeta</option>
-                    <option value="bizum">Bizum</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>Importe ($):</label>
-                <input type="number" id="movement-amount" placeholder="0" step="0.01">
-            </div>
-            <div class="input-group">
-                <label>Nota:</label>
-                <input type="text" id="movement-note" placeholder="Concepto">
-            </div>
-            <button class="btn-primary" id="btn-confirm-movement">Registrar</button>
-            <button class="btn-secondary" onclick="closeModal('modal-movement')">Cancelar</button>
-        </div>
-    </div>
+/* VISTA: ARQUEOS */
+.cash-container { max-width: 900px; margin: 0 auto; width: 100%; }
+.status-card { background: var(--bg-card); padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 1.5rem; }
+.status-card h3 { margin-bottom: 1rem; font-size: 1.1rem; }
+#cash-status { font-size: 1rem; color: var(--text-gray); }
+.status-open { color: var(--primary); font-weight: 700; }
+.status-closed { color: var(--status-nuevo); font-weight: 700; }
+.action-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+.action-btn { padding: 1.25rem; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; color: white; transition: 0.2s; }
+.action-btn:hover { transform: translateY(-2px); }
+.btn-open { background: var(--primary); }
+.btn-movement { background: var(--status-cocina); }
+.btn-count { background: #3b82f6; }
+.btn-close { background: var(--status-nuevo); }
 
-    <!-- MODAL ARQUEO CIEGO -->
-    <div id="modal-count" class="modal-overlay">
-        <div class="modal-content">
-            <h3>Arqueo Ciego - Contar Efectivo</h3>
-            <div class="count-grid">
-                <div class="count-item"><label>Billetes $100.000:</label><input type="number" class="bill-count" data-value="100000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $50.000:</label><input type="number" class="bill-count" data-value="50000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $20.000:</label><input type="number" class="bill-count" data-value="20000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $10.000:</label><input type="number" class="bill-count" data-value="10000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $5.000:</label><input type="number" class="bill-count" data-value="5000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $2.000:</label><input type="number" class="bill-count" data-value="2000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $1.000:</label><input type="number" class="bill-count" data-value="1000" placeholder="0"></div>
-                <div class="count-item"><label>Monedas:</label><input type="number" class="bill-count" data-value="1" placeholder="0"></div>
-            </div>
-            <div class="count-total"><span>Total contado:</span><span id="counted-total">$0</span></div>
-            <button class="btn-primary" id="btn-confirm-count">Confirmar Arqueo</button>
-            <button class="btn-secondary" onclick="closeModal('modal-count')">Cancelar</button>
-        </div>
-    </div>
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.summary-card { background: var(--bg-main); padding: 1rem; border-radius: 8px; text-align: center; }
+.summary-card.highlight { background: var(--primary); color: white; }
+.summary-card.highlight .summary-label { color: rgba(255, 255, 255, 0.9); }
+.summary-card.highlight .summary-value { color: white; }
+.summary-label { font-size: 0.85rem; color: var(--text-gray); margin-bottom: 0.5rem; }
+.summary-value { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); }
+.movements-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.movements-section h4 { margin-bottom: 0.75rem; font-size: 1rem; }
+.movement-item { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.movement-item.entrada { color: var(--primary); }
+.movement-item.salida { color: var(--status-nuevo); }
 
-    <!-- TOAST CONTAINER -->
-    <div class="toast-container" id="toast-container"></div>
+/* MODAL DE COBRO - COMPACTO */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+.modal-overlay.active { display: flex; }
+.modal-content { background: white; padding: 1.25rem; border-radius: 12px; width: 95%; max-width: 480px; max-height: 95vh; overflow: hidden; display: flex; flex-direction: column; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-shrink: 0; }
+.modal-header h2 { font-size: 1.2rem; }
+.close-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-gray); }
+.modal-body { flex: 1; overflow-y: auto; padding: 0; }
+.order-summary { margin-bottom: 0.75rem; }
+.order-summary h3 { font-size: 0.9rem; margin-bottom: 0.4rem; }
+#modal-cart-items { max-height: 80px; overflow-y: auto; margin-bottom: 0.5rem; font-size: 0.85rem; }
+#modal-cart-items .cart-item { padding: 0.3rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.modal-totals { background: #f9fafb; padding: 0.6rem; border-radius: 6px; }
+.modal-totals .summary-row { font-size: 0.8rem; margin-bottom: 0.2rem; }
+.modal-totals .summary-row.total { font-size: 1rem; margin-top: 0.4rem; padding-top: 0.4rem; }
+.order-type, .payment-method { margin-bottom: 0.6rem; }
+.order-type h3, .payment-method h3 { font-size: 0.85rem; margin-bottom: 0.4rem; }
+.type-buttons, .method-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+.type-btn, .method-btn { padding: 0.5rem 0.4rem; border: 2px solid var(--border); background: white; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 0.78rem; }
+.type-btn.active, .method-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
+.cash-input { background: #f9fafb; padding: 0.6rem; border-radius: 6px; margin-bottom: 0.5rem; }
+.cash-input label { display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem; }
+.cash-input input { width: 100%; padding: 0.5rem; border: 2px solid var(--border); border-radius: 6px; font-size: 1rem; font-weight: 700; text-align: right; }
+.change-display { display: flex; justify-content: space-between; margin-top: 0.4rem; font-weight: 700; font-size: 0.95rem; }
+.change-amount { color: var(--primary); }
+.modal-footer { padding: 0.75rem 0 0 0; display: flex; gap: 0.5rem; flex-shrink: 0; }
+.cancel-btn, .confirm-btn { flex: 1; padding: 0.7rem; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem; }
+.cancel-btn { background: #f3f4f6; color: var(--text-dark); }
+.confirm-btn { background: var(--primary); color: white; }
 
-    <!-- ÁREA IMPRESIÓN -->
-    <div id="ticket-print-area"></div>
+.input-group { margin-bottom: 0.75rem; }
+.input-group label { display: block; font-weight: 600; margin-bottom: 0.4rem; font-size: 0.9rem; }
+.input-group input, .input-group select { width: 100%; padding: 0.6rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; }
+.btn-primary, .btn-secondary { padding: 0.75rem 1.25rem; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; margin-right: 0.5rem; font-size: 0.95rem; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-secondary { background: #f3f4f6; color: var(--text-dark); }
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
+.count-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+.count-item label { display: block; font-size: 0.8rem; margin-bottom: 0.2rem; }
+.count-item input { width: 100%; padding: 0.4rem; border: 2px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+.count-total { display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; }
+
+/* TOAST CONTAINER */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 1002; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.toast { background: white; padding: 1rem 1.25rem; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-left: 4px solid var(--primary); min-width: 280px; max-width: 350px; animation: toastIn 0.3s ease; pointer-events: auto; }
+@keyframes toastIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+.toast.removing { animation: toastOut 0.3s ease forwards; }
+@keyframes toastOut { to { opacity: 0; transform: translateX(100%); } }
+.toast.tipo-nuevo { border-left-color: var(--status-nuevo); }
+.toast.tipo-cocina { border-left-color: var(--status-cocina); }
+.toast.tipo-listo { border-left-color: var(--status-listo); }
+.toast.tipo-pago { border-left-color: var(--primary); }
+.toast-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem; }
+.toast-message { font-size: 0.8rem; color: var(--text-gray); }
+
+/* IMPRESIÓN */
+#ticket-print-area { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  #ticket-print-area, #ticket-print-area * { visibility: visible; }
+  #ticket-print-area { display: block; position: absolute; left: 0; top: 0; width: 80mm; padding: 5mm; font-family: 'Courier New', monospace; font-size: 12px; }
+  .ticket-header { text-align: center; margin-bottom: 10px; }
+  .ticket-header h3 { margin: 0; font-size: 16px; }
+  .ticket-header p { margin: 2px 0; font-size: 11px; }
+  .ticket-divider { border-top: 1px dashed black; margin: 8px 0; }
+  .ticket-item { display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px; }
+  .ticket-total { text-align: right; font-weight: bold; font-size: 14px; margin-top: 5px; }
+  .ticket-footer { text-align: center; margin-top: 15px; font-size: 11px; }
+  #qr-code { display: flex; justify-content: center; margin-top: 10px; }
+  @page { margin: 0; size: 80mm auto; }
+}

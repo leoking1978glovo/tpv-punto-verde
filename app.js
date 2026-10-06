@@ -83,6 +83,9 @@ function setupNotificationsPanel() {
         renderNotifications();
         updateNotifBadge();
     });
+    document.getElementById('btn-close-notifs').addEventListener('click', () => {
+        document.getElementById('notifications-panel').classList.remove('open');
+    });
 }
 
 function addNotification(tipo, title, message) {
@@ -101,7 +104,6 @@ function addNotification(tipo, title, message) {
     playNotifSound();
     renderNotifications();
     
-    // Animar campana
     const bell = document.getElementById('btn-notifications');
     bell.classList.remove('has-notifs');
     void bell.offsetWidth;
@@ -372,7 +374,7 @@ function setupRealtimeGlobal() {
             
             let tipo = '', title = '', message = '';
             if (oldStatus === 'nuevo' && newStatus === 'cocina') {
-                tipo = 'cocina'; title = `🔥 Pedido #${order.id} en preparación`; message = 'La cocina está preparando el pedido';
+                tipo = 'cocina'; title = ` Pedido #${order.id} en preparación`; message = 'La cocina está preparando el pedido';
             } else if (oldStatus === 'cocina' && newStatus === 'listo') {
                 tipo = 'listo'; title = `✅ Pedido #${order.id} listo`; message = 'El pedido está listo para entregar';
             } else if (newStatus === 'entregado') {
@@ -400,8 +402,8 @@ async function loadCashStatus() {
         document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
-            <button class="action-btn btn-count" onclick="openModal('modal-count')"> Arqueo Ciego</button>
-            <button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>
+            <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
+            <button class="action-btn btn-close" onclick="closeCashSession()"> Cerrar Caja</button>
         `;
         await loadCashSummary();
     }
@@ -429,7 +431,7 @@ async function loadCashSummary() {
         </div>
         <div class="movements-section">
             <h4>Movimientos registrados: ${movements.length}</h4>
-            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : ''} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
         </div>
     `;
 }
