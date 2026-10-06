@@ -209,6 +209,10 @@ async function confirmPayment() {
         if (itemsError) throw itemsError;
         printTicket(order, cart);
         cart = []; renderCart(); closeModal('pay-modal');
+        showToast(`✓ Pedido #${order.id} registrado`);
+        // Actualizar vista de caja si está visible
+        const cashView = document.getElementById('view-cash');
+        if (cashView.classList.contains('active')) loadCashStatus();
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -277,22 +281,90 @@ function setupKitchenRealtime() {
     }).subscribe();
 }
 
-// ============ VISTA: ARQUEOS ============
+// ============ VISTA: ARQUEOS (MEJORADA) ============
 async function loadCashStatus() {
     const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single();
+    
     if (error || !session) {
         currentSession = null;
-        document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>';
-        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')"> Abrir Caja</button>';
+        document.getElementById('cash-status').innerHTML = '<span class="status-closed"> Caja Cerrada</span>';
+        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>';
+        document.getElementById('cash-summary').style.display = 'none';
     } else {
         currentSession = session;
-        document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo: $${session.fondo.toLocaleString()}</small>`;
+        document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
             <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
             <button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>
         `;
+        await loadCashSummary();
     }
+}
+
+async function loadCashSummary() {
+    if (!currentSession) return;
+    
+    const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true);
+    const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id);
+    
+    let efectivo = 0, tarjeta = 0, bizum = 0;
+    let totalPedidos = 0;
+    
+    orders.forEach(o => {
+        totalPedidos++;
+        if (o.pay_method === 'efectivo') efectivo += o.total;
+        if (o.pay_method === 'tarjeta') tarjeta += o.total;
+        if (o.pay_method === 'bizum') bizum += o.total;
+    });
+    
+    let entradas = 0, salidas = 0;
+    movements.forEach(m => {
+        if (m.tipo === 'entrada') entradas += m.importe;
+        if (m.tipo === 'salida') salidas += m.importe;
+    });
+    
+    const totalVentas = efectivo + tarjeta + bizum;
+    const totalCaja = currentSession.fondo + efectivo + entradas - salidas;
+    
+    document.getElementById('cash-summary').style.display = 'block';
+    document.getElementById('summary-content').innerHTML = `
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-label">Total Ventas</div>
+                <div class="summary-value">$${totalVentas.toLocaleString()}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Pedidos</div>
+                <div class="summary-value">${totalPedidos}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Efectivo</div>
+                <div class="summary-value">$${efectivo.toLocaleString()}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Tarjeta</div>
+                <div class="summary-value">$${tarjeta.toLocaleString()}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Bizum</div>
+                <div class="summary-value">$${bizum.toLocaleString()}</div>
+            </div>
+            <div class="summary-card highlight">
+                <div class="summary-label">Total en Caja</div>
+                <div class="summary-value">$${totalCaja.toLocaleString()}</div>
+            </div>
+        </div>
+        <div class="movements-section">
+            <h4>Movimientos registrados: ${movements.length}</h4>
+            ${movements.length > 0 ? movements.map(m => `
+                <div class="movement-item ${m.tipo}">
+                    <span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span>
+                    <span>$${m.importe.toLocaleString()}</span>
+                </div>
+            `).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+        </div>
+    `;
 }
 
 document.getElementById('btn-confirm-open').addEventListener('click', async () => {
@@ -335,7 +407,7 @@ document.getElementById('btn-confirm-count').addEventListener('click', async () 
     const diferencia = counted - esperado;
     const { error } = await supabaseClient.from('cash_arqueos').insert([{ session_id: currentSession.id, fondo: currentSession.fondo, esperado, contado: counted, dif: diferencia, v_efectivo: ventasEfectivo, entradas, salidas, kind: 'X' }]);
     if (error) { alert('Error: ' + error.message); }
-    else { closeModal('modal-count'); alert(`Arqueo registrado\nEsperado: $${esperado.toLocaleString()}\nContado: $${counted.toLocaleString()}\nDiferencia: $${diferencia.toLocaleString()}`); }
+    else { closeModal('modal-count'); alert(`Arqueo registrado\nEsperado: $${esperado.toLocaleString()}\nContado: $${counted.toLocaleString()}\nDiferencia: $${diferencia.toLocaleString()}`); loadCashStatus(); }
 });
 
 async function closeCashSession() {
