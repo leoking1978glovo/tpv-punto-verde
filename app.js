@@ -9,6 +9,7 @@ let products = [];
 let currentCategory = 'all';
 let orderType = 'mostrador';
 let payMethod = 'efectivo';
+let activeOrders = [];
 
 // ============ INICIO ============
 async function init() {
@@ -17,6 +18,8 @@ async function init() {
     renderProducts();
     setupEvents();
     setupModalEvents();
+    setupActiveOrdersPanel();
+    setupRealtimeOrders();
     
     document.getElementById('user-name').textContent = 'Caja Principal';
     document.getElementById('user-role').textContent = 'Admin';
@@ -146,12 +149,9 @@ function printTicket(order, items) {
     const printArea = document.getElementById('ticket-print-area');
     const date = new Date().toLocaleString('es-ES');
     const total = order.total;
-    
-    // URL más corta para el QR
     const baseUrl = window.location.origin;
     const qrUrl = `${baseUrl}/valorar.html?p=${order.id}`;
     
-    // Construir HTML del ticket
     const ticketHtml = `
         <div class="ticket-header">
             <h3>TPV PUNTO VERDE</h3>
@@ -178,21 +178,17 @@ function printTicket(order, items) {
     
     printArea.innerHTML = ticketHtml;
     
-    // Generar QR con configuración optimizada
     setTimeout(() => {
         const qrContainer = document.getElementById('qr-code');
         qrContainer.innerHTML = '';
-        
         new QRCode(qrContainer, {
             text: qrUrl,
             width: 100,
             height: 100,
             colorDark: "#000000",
             colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.L  // Nivel bajo = menos patrones
+            correctLevel: QRCode.CorrectLevel.L
         });
-        
-        // Disparar impresión una vez el QR está listo
         setTimeout(() => window.print(), 500);
     }, 100);
 }
@@ -218,10 +214,7 @@ async function confirmPayment() {
         const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
         if (itemsError) throw itemsError;
         
-        // 1. Imprimir ticket
         printTicket(order, cart);
-        
-        // 2. Limpiar y cerrar
         cart = [];
         renderCart();
         closePayModal();
@@ -232,6 +225,118 @@ async function confirmPayment() {
     }
 }
 
+// ============ PANEL DE PEDIDOS ACTIVOS ============
+function setupActiveOrdersPanel() {
+    const panel = document.getElementById('active-orders-panel');
+    const btnOpen = document.getElementById('btn-active-orders');
+    const btnClose = document.getElementById('btn-close-panel');
+    
+    btnOpen.addEventListener('click', () => {
+        panel.classList.add('open');
+        loadActiveOrders();
+    });
+    
+    btnClose.addEventListener('click', () => {
+        panel.classList.remove('open');
+    });
+}
+
+async function loadActiveOrders() {
+    const { data, error } = await supabaseClient
+        .from('orders')
+        .select('*')
+        .neq('status', 'entregado')
+        .order('created_at', { ascending: false });
+    
+    if (error) {
+        console.error('Error cargando pedidos activos:', error);
+        return;
+    }
+    
+    activeOrders = data || [];
+    renderActiveOrders();
+}
+
+function renderActiveOrders() {
+    const container = document.getElementById('active-orders-list');
+    const badgeCount = document.getElementById('badge-count');
+    
+    badgeCount.textContent = activeOrders.length;
+    
+    if (activeOrders.length === 0) {
+        container.innerHTML = '<div class="empty-orders">No hay pedidos activos</div>';
+        return;
+    }
+    
+    container.innerHTML = activeOrders.map(order => {
+        const statusText = {
+            'nuevo': 'Nuevo',
+            'cocina': 'En Cocina',
+            'listo': 'Listo'
+        }[order.status] || order.status;
+        
+        return `
+            <div class="active-order-card status-${order.status}">
+                <div class="active-order-header">
+                    <span class="active-order-id">#${order.id}</span>
+                    <span class="active-order-status status-${order.status}">${statusText}</span>
+                </div>
+                <div class="active-order-items">
+                    ${order.type.toUpperCase()} | $${Math.round(order.total).toLocaleString()}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============ TIEMPO REAL ============
+function setupRealtimeOrders() {
+    supabaseClient
+        .channel('orders-channel')
+        .on('postgres_changes', 
+            { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'orders' 
+            }, 
+            (payload) => {
+                console.log('Pedido actualizado:', payload);
+                const order = payload.new;
+                
+                // Mostrar notificación
+                const statusText = {
+                    'cocina': '🔥 En preparación',
+                    'listo': '✅ Listo para entregar'
+                }[order.status];
+                
+                if (statusText) {
+                    showToast(`Pedido #${order.id}: ${statusText}`);
+                }
+                
+                // Recargar pedidos activos si el panel está abierto
+                const panel = document.getElementById('active-orders-panel');
+                if (panel.classList.contains('open')) {
+                    loadActiveOrders();
+                } else {
+                    // Actualizar badge
+                    loadActiveOrders();
+                }
+            }
+        )
+        .subscribe();
+}
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// ============ EVENTOS ============
 function setupModalEvents() {
     document.getElementById('btn-pay').addEventListener('click', openPayModal);
     document.getElementById('btn-close-modal').addEventListener('click', closePayModal);

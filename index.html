@@ -11,11 +11,11 @@
 <body>
 
     <header>
-        <div class="brand"> TPV Punto Verde</div>
+        <div class="brand">🌿 TPV Punto Verde</div>
         <div class="user-info">
             <span id="user-name">Cargando...</span>
             <span class="badge" id="user-role">—</span>
-            <button class="icon-btn" id="btn-settings">⚙️</button>
+            <button class="icon-btn" id="btn-settings">️</button>
         </div>
     </header>
 
@@ -45,6 +45,22 @@
             </div>
         </div>
     </div>
+
+    <!-- PANEL DE PEDIDOS ACTIVOS (NUEVO) -->
+    <div class="active-orders-panel" id="active-orders-panel">
+        <div class="panel-header">
+            <h3>📋 Pedidos en Curso</h3>
+            <button class="close-panel" id="btn-close-panel">✕</button>
+        </div>
+        <div class="active-orders-list" id="active-orders-list">
+            <div class="empty-orders">No hay pedidos activos</div>
+        </div>
+    </div>
+
+    <!-- BOTÓN FLOTANTE PARA ABRIR PANEL -->
+    <button class="floating-btn" id="btn-active-orders">
+        📋 <span class="badge-count" id="badge-count">0</span>
+    </button>
 
     <!-- MODAL DE COBRO -->
     <div id="pay-modal" class="modal-overlay">
@@ -76,7 +92,7 @@
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum"> Bizum</button>
+                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
                 <div class="cash-input" id="cash-section">
@@ -95,7 +111,10 @@
         </div>
     </div>
 
-    <!-- ÁREA DE IMPRESIÓN (Oculta en pantalla, visible al imprimir) -->
+    <!-- NOTIFICACIÓN TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ÁREA DE IMPRESIÓN -->
     <div id="ticket-print-area"></div>
 
     <!-- Librerías externas -->
