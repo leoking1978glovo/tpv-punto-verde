@@ -15,7 +15,7 @@
         <div class="user-info">
             <span id="user-name">Cargando...</span>
             <span class="badge" id="user-role">—</span>
-            <button class="icon-btn" id="btn-settings">⚙️</button>
+            <button class="icon-btn" id="btn-settings">️</button>
         </div>
     </header>
 
@@ -44,6 +44,64 @@
                 <div class="summary-row"><span>IVA</span><span id="tax">$0</span></div>
                 <div class="summary-row total"><span>TOTAL</span><span id="total">$0</span></div>
                 <button class="pay-btn" id="btn-pay">COBRAR ($0)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE COBRO -->
+    <div id="pay-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Finalizar Pedido</h2>
+                <button class="close-btn" id="btn-close-modal"></button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Resumen del pedido -->
+                <div class="order-summary">
+                    <h3>Resumen</h3>
+                    <div id="modal-cart-items"></div>
+                    <div class="modal-totals">
+                        <div class="summary-row"><span>Subtotal</span><span id="modal-subtotal">$0</span></div>
+                        <div class="summary-row"><span>IVA</span><span id="modal-tax">$0</span></div>
+                        <div class="summary-row total"><span>TOTAL</span><span id="modal-total">$0</span></div>
+                    </div>
+                </div>
+
+                <!-- Tipo de pedido -->
+                <div class="order-type">
+                    <h3>Tipo de Pedido</h3>
+                    <div class="type-buttons">
+                        <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
+                        <button class="type-btn" data-type="recogida">📦 Recogida</button>
+                        <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
+                    </div>
+                </div>
+
+                <!-- Método de pago -->
+                <div class="payment-method">
+                    <h3>Método de Pago</h3>
+                    <div class="method-buttons">
+                        <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
+                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
+                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
+                    </div>
+                </div>
+
+                <!-- Input de efectivo recibido -->
+                <div class="cash-input" id="cash-section">
+                    <label>Efectivo recibido:</label>
+                    <input type="number" id="cash-received" placeholder="0" step="0.01">
+                    <div class="change-display">
+                        <span>Cambio:</span>
+                        <span id="change-amount" class="change-amount">$0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-pay">Cancelar</button>
+                <button class="confirm-btn" id="btn-confirm-pay">✓ Confirmar Pago</button>
             </div>
         </div>
     </div>

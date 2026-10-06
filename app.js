@@ -1,14 +1,14 @@
 // ============ CONFIG SUPABASE ============
 const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
-
-// Crear cliente con nombre único para evitar conflictos
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============ ESTADO ============
 let cart = [];
 let products = [];
 let currentCategory = 'all';
+let orderType = 'mostrador';
+let payMethod = 'efectivo';
 
 // ============ INICIO ============
 async function init() {
@@ -16,8 +16,8 @@ async function init() {
     renderCategories();
     renderProducts();
     setupEvents();
+    setupModalEvents();
     
-    // Simulación de usuario (luego se conecta con Auth)
     document.getElementById('user-name').textContent = 'Caja Principal';
     document.getElementById('user-role').textContent = 'Admin';
 }
@@ -40,8 +40,6 @@ async function loadProducts() {
 function renderCategories() {
     const cats = [...new Set(products.map(p => p.category))];
     const bar = document.getElementById('categories-bar');
-    
-    // Limpiar excepto el botón "Todos"
     bar.innerHTML = '<button class="cat-btn active" data-cat="all">Todos</button>';
     
     cats.forEach(cat => {
@@ -124,7 +122,7 @@ function changeQty(id, delta) {
 }
 
 function updateTotals(total) {
-    const tax = total * 0.19; // Ajusta el 0.19 si tu IVA es diferente
+    const tax = total * 0.19;
     const subtotal = total - tax;
     document.getElementById('subtotal').textContent = '$' + Math.round(subtotal).toLocaleString();
     document.getElementById('tax').textContent = '$' + Math.round(tax).toLocaleString();
@@ -132,7 +130,140 @@ function updateTotals(total) {
     document.getElementById('btn-pay').textContent = `COBRAR ($${Math.round(total).toLocaleString()})`;
 }
 
-// ============ EVENTOS ============
+// ============ MODAL DE COBRO ============
+function openPayModal() {
+    if (cart.length === 0) return alert('El carrito está vacío');
+    
+    // Renderizar items en el modal
+    const modalItems = document.getElementById('modal-cart-items');
+    modalItems.innerHTML = cart.map(item => `
+        <div class="cart-item">
+            <div class="cart-item-info">
+                <div class="cart-item-name">${item.name} x${item.qty}</div>
+            </div>
+            <div class="cart-item-price">$${(item.price * item.qty).toLocaleString()}</div>
+        </div>
+    `).join('');
+    
+    // Actualizar totales
+    const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    const tax = total * 0.19;
+    const subtotal = total - tax;
+    document.getElementById('modal-subtotal').textContent = '$' + Math.round(subtotal).toLocaleString();
+    document.getElementById('modal-tax').textContent = '$' + Math.round(tax).toLocaleString();
+    document.getElementById('modal-total').textContent = '$' + Math.round(total).toLocaleString();
+    
+    // Resetear inputs
+    document.getElementById('cash-received').value = '';
+    document.getElementById('change-amount').textContent = '$0';
+    
+    // Mostrar modal
+    document.getElementById('pay-modal').classList.add('active');
+}
+
+function closePayModal() {
+    document.getElementById('pay-modal').classList.remove('active');
+}
+
+async function confirmPayment() {
+    const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    
+    // Validar efectivo si es el método
+    if (payMethod === 'efectivo') {
+        const cashReceived = parseFloat(document.getElementById('cash-received').value);
+        if (!cashReceived || cashReceived < total) {
+            return alert('El efectivo recibido es insuficiente');
+        }
+    }
+    
+    try {
+        // 1. Crear pedido en Supabase
+        const { data: order, error: orderError } = await supabaseClient
+            .from('orders')
+            .insert([{
+                type: orderType,
+                status: 'nuevo',
+                total: total,
+                paid: true,
+                pay_method: payMethod,
+                source: 'tpv'
+            }])
+            .select()
+            .single();
+        
+        if (orderError) throw orderError;
+        
+        // 2. Crear items del pedido
+        const orderItems = cart.map(item => ({
+            order_id: order.id,
+            name: item.name,
+            price: item.price,
+            qty: item.qty
+        }));
+        
+        const { error: itemsError } = await supabaseClient
+            .from('order_items')
+            .insert(orderItems);
+        
+        if (itemsError) throw itemsError;
+        
+        // 3. Éxito
+        alert(`✓ Pedido #${order.id} registrado correctamente\n\nTotal: $${Math.round(total).toLocaleString()}\nMétodo: ${payMethod}`);
+        
+        // 4. Limpiar carrito y cerrar modal
+        cart = [];
+        renderCart();
+        closePayModal();
+        
+    } catch (error) {
+        console.error('Error al procesar pago:', error);
+        alert('Error al procesar el pago: ' + error.message);
+    }
+}
+
+function setupModalEvents() {
+    // Abrir modal
+    document.getElementById('btn-pay').addEventListener('click', openPayModal);
+    
+    // Cerrar modal
+    document.getElementById('btn-close-modal').addEventListener('click', closePayModal);
+    document.getElementById('btn-cancel-pay').addEventListener('click', closePayModal);
+    
+    // Tipo de pedido
+    document.querySelectorAll('.type-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            orderType = e.target.dataset.type;
+        });
+    });
+    
+    // Método de pago
+    document.querySelectorAll('.method-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            payMethod = e.target.dataset.method;
+            
+            // Mostrar/ocultar input de efectivo
+            const cashSection = document.getElementById('cash-section');
+            cashSection.style.display = payMethod === 'efectivo' ? 'block' : 'none';
+        });
+    });
+    
+    // Calcular cambio
+    document.getElementById('cash-received').addEventListener('input', (e) => {
+        const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+        const received = parseFloat(e.target.value) || 0;
+        const change = received - total;
+        document.getElementById('change-amount').textContent = '$' + Math.max(0, Math.round(change)).toLocaleString();
+    });
+    
+    // Confirmar pago
+    document.getElementById('btn-confirm-pay').addEventListener('click', confirmPayment);
+}
+
+// ============ EVENTOS PRINCIPALES ============
 function setupEvents() {
     document.getElementById('product-grid').addEventListener('click', e => {
         const card = e.target.closest('.product-card');
@@ -149,13 +280,10 @@ function setupEvents() {
     });
     
     document.getElementById('btn-clear').addEventListener('click', () => {
-        cart = [];
-        renderCart();
-    });
-    
-    document.getElementById('btn-pay').addEventListener('click', () => {
-        if (cart.length === 0) return alert('El carrito está vacío');
-        alert('¡Pedido listo para procesar! (Aquí irá el modal de pago)');
+        if (cart.length > 0 && confirm('¿Seguro que quieres limpiar el carrito?')) {
+            cart = [];
+            renderCart();
+        }
     });
 }
 
