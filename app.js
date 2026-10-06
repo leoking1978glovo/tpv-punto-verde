@@ -80,20 +80,35 @@ function setupNavigation() {
 }
 
 async function loadTables() {
+    console.log('Cargando mesas...');
     const { data, error } = await supabaseClient.from('tables').select('*').order('id');
-    if (error) return;
+    if (error) {
+        console.error('Error cargando mesas:', error);
+        return;
+    }
     tables = data || [];
+    console.log('Mesas cargadas:', tables.length, tables);
     renderTables();
 }
 
 function renderTables() {
+    console.log('Renderizando mesas:', tables.length);
     const grid = document.getElementById('tables-grid');
+    if (!grid) {
+        console.error('No se encontró el elemento tables-grid');
+        return;
+    }
+    if (tables.length === 0) {
+        grid.innerHTML = '<p style="text-align:center; color: #6b7280; padding: 2rem;">No hay mesas disponibles</p>';
+        return;
+    }
     grid.innerHTML = tables.map(table => `
         <div class="table-card status-${table.status}" onclick="selectTable(${table.id}, '${table.name}')">
             <div class="table-name">${table.name}</div>
             <div class="table-status">${table.status}</div>
         </div>
     `).join('');
+    console.log('Mesas renderizadas');
 }
 
 function selectTable(id, name) {
@@ -434,7 +449,7 @@ async function loadCashStatus() {
         document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
-            <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
+            <button class="action-btn btn-count" onclick="openModal('modal-count')"> Arqueo Ciego</button>
             <button class="action-btn btn-close" onclick="closeCashSession()"> Cerrar Caja</button>
         `;
         await loadCashSummary();
@@ -463,7 +478,7 @@ async function loadCashSummary() {
         </div>
         <div class="movements-section">
             <h4>Movimientos registrados: ${movements.length}</h4>
-            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '' : ''} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
         </div>
     `;
 }
