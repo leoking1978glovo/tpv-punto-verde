@@ -1,5 +1,5 @@
 // ============ CONFIG SUPABASE ============
-const SUPABASE_URL = const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
+const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -14,6 +14,10 @@ async function init() {
     renderCategories();
     renderProducts();
     setupEvents();
+    
+    // Simulación de usuario (luego se conecta con Auth)
+    document.getElementById('user-name').textContent = 'Caja Principal';
+    document.getElementById('user-role').textContent = 'Admin';
 }
 
 // ============ PRODUCTOS ============
@@ -22,21 +26,30 @@ async function loadProducts() {
         .from('products')
         .select('*')
         .eq('active', true)
-        .order('position');
+        .order('position', { ascending: true });
     
-    if (error) { console.error(error); return; }
+    if (error) { 
+        console.error('Error cargando productos:', error); 
+        return; 
+    }
     products = data || [];
 }
 
 function renderCategories() {
     const cats = [...new Set(products.map(p => p.category))];
     const bar = document.getElementById('categories-bar');
+    
+    // Limpiar excepto el botón "Todos"
+    bar.innerHTML = '<button class="cat-btn active" data-cat="all">Todos</button>';
+    
     cats.forEach(cat => {
-        const btn = document.createElement('button');
-        btn.className = 'cat-btn';
-        btn.dataset.cat = cat;
-        btn.textContent = cat;
-        bar.appendChild(btn);
+        if (cat) {
+            const btn = document.createElement('button');
+            btn.className = 'cat-btn';
+            btn.dataset.cat = cat;
+            btn.textContent = cat;
+            bar.appendChild(btn);
+        }
     });
 }
 
@@ -46,9 +59,14 @@ function renderProducts() {
         ? products 
         : products.filter(p => p.category === currentCategory);
     
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div style="padding: 2rem; color: #6b7280;">No hay productos en esta categoría</div>';
+        return;
+    }
+
     grid.innerHTML = filtered.map(p => `
         <div class="product-card" data-id="${p.id}">
-            <img class="product-img" src="${p.image || ''}" alt="${p.name}" onerror="this.style.display='none'">
+            <img class="product-img" src="${p.image || 'https://via.placeholder.com/160x100?text=Sin+Imagen'}" alt="${p.name}">
             <div class="product-name">${p.name}</div>
             <div class="product-price">$${Number(p.price).toLocaleString()}</div>
         </div>
@@ -104,12 +122,12 @@ function changeQty(id, delta) {
 }
 
 function updateTotals(total) {
-    const tax = total * 0.19;
+    const tax = total * 0.19; // Ajusta el 0.19 si tu IVA es diferente
     const subtotal = total - tax;
-    document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(0);
-    document.getElementById('tax').textContent = '$' + tax.toFixed(0);
-    document.getElementById('total').textContent = '$' + total.toLocaleString();
-    document.getElementById('btn-pay').textContent = `COBRAR ($${total.toLocaleString()})`;
+    document.getElementById('subtotal').textContent = '$' + Math.round(subtotal).toLocaleString();
+    document.getElementById('tax').textContent = '$' + Math.round(tax).toLocaleString();
+    document.getElementById('total').textContent = '$' + Math.round(total).toLocaleString();
+    document.getElementById('btn-pay').textContent = `COBRAR ($${Math.round(total).toLocaleString()})`;
 }
 
 // ============ EVENTOS ============
@@ -134,8 +152,9 @@ function setupEvents() {
     });
     
     document.getElementById('btn-pay').addEventListener('click', () => {
-        if (cart.length === 0) return alert('Carrito vacío');
-        alert('Aquí irá el modal de cobro (paso siguiente)');
+        if (cart.length === 0) return alert('El carrito está vacío');
+        alert('¡Pedido listo para procesar! (Aquí irá el modal de pago)');
+        // Aquí llamaremos a la función para guardar en Supabase (orders)
     });
 }
 
