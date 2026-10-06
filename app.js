@@ -147,6 +147,10 @@ function printTicket(order, items) {
     const date = new Date().toLocaleString('es-ES');
     const total = order.total;
     
+    // URL más corta para el QR
+    const baseUrl = window.location.origin;
+    const qrUrl = `${baseUrl}/valorar.html?p=${order.id}`;
+    
     // Construir HTML del ticket
     const ticketHtml = `
         <div class="ticket-header">
@@ -167,24 +171,29 @@ function printTicket(order, items) {
         <div class="ticket-total">TOTAL: $${Math.round(total).toLocaleString()}</div>
         <div class="ticket-footer">
             <p>¡Gracias por su visita!</p>
-            <p>Valora tu experiencia escaneando:</p>
+            <p>Valora tu experiencia:</p>
             <div id="qr-code"></div>
         </div>
     `;
     
     printArea.innerHTML = ticketHtml;
     
-    // Generar QR real
+    // Generar QR con configuración optimizada
     setTimeout(() => {
         const qrContainer = document.getElementById('qr-code');
         qrContainer.innerHTML = '';
+        
         new QRCode(qrContainer, {
-            text: `https://tpv-punto-verde.vercel.app/valorar.html?p=${order.id}`,
-            width: 80,
-            height: 80
+            text: qrUrl,
+            width: 100,
+            height: 100,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.L  // Nivel bajo = menos patrones
         });
+        
         // Disparar impresión una vez el QR está listo
-        setTimeout(() => window.print(), 300);
+        setTimeout(() => window.print(), 500);
     }, 100);
 }
 
