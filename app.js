@@ -14,6 +14,7 @@ let notifications = [];
 let unreadNotifs = 0;
 let activeTableId = null;
 let tables = [];
+let currentTableOrder = null;
 
 async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
@@ -64,13 +65,23 @@ function setupNavigation() {
             document.getElementById(`view-${item.dataset.view}`).classList.add('active');
             if (item.dataset.view === 'kitchen') loadKitchenOrders();
             if (item.dataset.view === 'cash') loadCashStatus();
-            if (item.dataset.view === 'tables') loadTables();
+            if (item.dataset.view === 'tables') {
+                activeTableId = null;
+                currentTableOrder = null;
+                cart = [];
+                renderCart();
+                loadTables();
+            }
         });
     });
 
     document.getElementById('btn-back-to-tables').addEventListener('click', () => {
         activeTableId = null;
+        currentTableOrder = null;
+        cart = [];
+        renderCart();
         document.getElementById('active-table-display').style.display = 'none';
+        document.getElementById('table-order-info').style.display = 'none';
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         document.querySelector('[data-view="tables"]').classList.add('active');
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -80,24 +91,19 @@ function setupNavigation() {
 }
 
 async function loadTables() {
-    console.log('Cargando mesas...');
     const { data, error } = await supabaseClient.from('tables').select('*').order('id');
     if (error) {
         console.error('Error cargando mesas:', error);
         return;
     }
     tables = data || [];
-    console.log('Mesas cargadas:', tables.length, tables);
+    console.log('Mesas cargadas:', tables.length);
     renderTables();
 }
 
 function renderTables() {
-    console.log('Renderizando mesas:', tables.length);
     const grid = document.getElementById('tables-grid');
-    if (!grid) {
-        console.error('No se encontró el elemento tables-grid');
-        return;
-    }
+    if (!grid) return;
     if (tables.length === 0) {
         grid.innerHTML = '<p style="text-align:center; color: #6b7280; padding: 2rem;">No hay mesas disponibles</p>';
         return;
@@ -106,15 +112,46 @@ function renderTables() {
         <div class="table-card status-${table.status}" onclick="selectTable(${table.id}, '${table.name}')">
             <div class="table-name">${table.name}</div>
             <div class="table-status">${table.status}</div>
+            ${table.order_total ? `<div class="table-order-total">$${Math.round(table.order_total).toLocaleString()}</div>` : ''}
         </div>
     `).join('');
-    console.log('Mesas renderizadas');
 }
 
-function selectTable(id, name) {
+async function selectTable(id, name) {
     activeTableId = id;
     document.getElementById('active-table-display').textContent = `Mesa: ${name}`;
     document.getElementById('active-table-display').style.display = 'inline-block';
+    
+    // Buscar si ya tiene un pedido pendiente
+    const { data: existingOrder } = await supabaseClient
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('table_id', id)
+        .eq('status', 'pendiente_pago')
+        .single();
+    
+    if (existingOrder) {
+        currentTableOrder = existingOrder;
+        cart = existingOrder.order_items.map(item => ({
+            id: item.product_id || item.id,
+            name: item.name,
+            price: item.price,
+            qty: item.qty
+        }));
+        renderCart();
+        document.getElementById('table-order-info').style.display = 'block';
+        document.getElementById('table-order-info').innerHTML = `
+            <span style="background: var(--status-ocupada); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.85rem;">
+                Pedido existente: $${Math.round(existingOrder.total).toLocaleString()}
+            </span>
+        `;
+    } else {
+        currentTableOrder = null;
+        cart = [];
+        renderCart();
+        document.getElementById('table-order-info').style.display = 'none';
+    }
+    
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelector('[data-view="pos"]').classList.add('active');
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -263,7 +300,14 @@ function updateTotals(total) {
     document.getElementById('subtotal').textContent = '$' + Math.round(total - tax).toLocaleString();
     document.getElementById('tax').textContent = '$' + Math.round(tax).toLocaleString();
     document.getElementById('total').textContent = '$' + Math.round(total).toLocaleString();
-    document.getElementById('btn-pay').textContent = `COBRAR ($${Math.round(total).toLocaleString()})`;
+    
+    // Cambiar texto del botón según si hay mesa o no
+    const btnPay = document.getElementById('btn-pay');
+    if (activeTableId) {
+        btnPay.textContent = `AÑADIR A MESA ($${Math.round(total).toLocaleString()})`;
+    } else {
+        btnPay.textContent = `COBRAR ($${Math.round(total).toLocaleString()})`;
+    }
 }
 
 function setupPOSEvents() {
@@ -283,7 +327,13 @@ function setupPOSEvents() {
     document.getElementById('btn-clear').addEventListener('click', () => {
         if (cart.length > 0 && confirm('¿Limpiar carrito?')) { cart = []; renderCart(); }
     });
-    document.getElementById('btn-pay').addEventListener('click', openPayModal);
+    document.getElementById('btn-pay').addEventListener('click', () => {
+        if (activeTableId) {
+            addToTable();
+        } else {
+            openPayModal();
+        }
+    });
     document.getElementById('btn-close-modal').addEventListener('click', () => closeModal('pay-modal'));
     document.getElementById('btn-cancel-pay').addEventListener('click', () => closeModal('pay-modal'));
     document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', (e) => {
@@ -301,6 +351,68 @@ function setupPOSEvents() {
         document.getElementById('change-amount').textContent = '$' + Math.max(0, Math.round(received - total)).toLocaleString();
     });
     document.getElementById('btn-confirm-pay').addEventListener('click', confirmPayment);
+}
+
+async function addToTable() {
+    if (cart.length === 0) return alert('Carrito vacío');
+    
+    const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    
+    try {
+        if (currentTableOrder) {
+            // Actualizar pedido existente
+            const { error: orderError } = await supabaseClient
+                .from('orders')
+                .update({ total: currentTableOrder.total + total })
+                .eq('id', currentTableOrder.id);
+            if (orderError) throw orderError;
+            
+            // Añadir items
+            const orderItems = cart.map(item => ({ 
+                order_id: currentTableOrder.id, 
+                product_id: item.id,
+                name: item.name, 
+                price: item.price, 
+                qty: item.qty 
+            }));
+            const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
+            if (itemsError) throw itemsError;
+            
+            addNotification('pago', `✓ Añadido a Mesa`, `+$${Math.round(total).toLocaleString()} en ${tables.find(t => t.id === activeTableId)?.name}`);
+        } else {
+            // Crear nuevo pedido
+            const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ 
+                type: 'mesa', status: 'pendiente_pago', total, paid: false, pay_method: 'pendiente', 
+                source: 'tpv', user_email: currentUser?.email, table_id: activeTableId 
+            }]).select().single();
+            if (orderError) throw orderError;
+            
+            const orderItems = cart.map(item => ({ 
+                order_id: order.id, 
+                product_id: item.id,
+                name: item.name, 
+                price: item.price, 
+                qty: item.qty 
+            }));
+            const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
+            if (itemsError) throw itemsError;
+            
+            currentTableOrder = order;
+            
+            // Actualizar estado de la mesa
+            await supabaseClient.from('tables').update({ status: 'ocupada' }).eq('id', activeTableId);
+            
+            addNotification('nuevo', ` Pedido en Mesa`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
+        }
+        
+        cart = [];
+        renderCart();
+        showToast('pago', '✓ Añadido a la mesa', 'Los productos se guardaron en el pedido');
+        loadTables();
+        
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
 }
 
 function openPayModal() {
@@ -398,13 +510,19 @@ function updateKitchenStats() {
 
 async function updateOrderStatus(orderId, newStatus) {
     const { error } = await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId);
-    if (error) { alert('Error: ' + error.message); }
-    else { 
+    if (error) { 
+        alert('Error: ' + error.message); 
+    } else { 
         loadKitchenOrders(); 
         if (newStatus === 'entregado') {
             const order = kitchenOrders.find(o => o.id === orderId);
             if (order && order.table_id) {
                 await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', order.table_id);
+            }
+        } else if (newStatus === 'listo') {
+            const order = kitchenOrders.find(o => o.id === orderId);
+            if (order && order.table_id) {
+                await supabaseClient.from('tables').update({ status: 'pendiente' }).eq('id', order.table_id);
             }
         }
     }
@@ -427,7 +545,7 @@ function setupRealtimeGlobal() {
             let tipo = '', title = '', message = '';
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
             if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = ` Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
-            else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; }
+            else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); }
             else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); }
             if (title) addNotification(tipo, title, message);
             const kitchenView = document.getElementById('view-kitchen');
@@ -446,7 +564,7 @@ async function loadCashStatus() {
         document.getElementById('cash-summary').style.display = 'none';
     } else {
         currentSession = session;
-        document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
+        document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
             <button class="action-btn btn-count" onclick="openModal('modal-count')"> Arqueo Ciego</button>
