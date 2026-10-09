@@ -73,6 +73,7 @@ function setupNavigation() {
                 renderTableOrder();
                 loadTables();
             }
+            if (item.dataset.view === 'pos') renderMiniTables();
         });
     });
 
@@ -82,7 +83,6 @@ function setupNavigation() {
         cart = [];
         renderCart();
         renderTableOrder();
-        document.getElementById('active-table-display').style.display = 'none';
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         document.querySelector('[data-view="tables"]').classList.add('active');
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -126,6 +126,7 @@ async function loadTables() {
     });
     
     renderTables();
+    renderMiniTables();
 }
 
 function renderTables() {
@@ -171,15 +172,29 @@ function renderTables() {
     }).join('');
 }
 
+// RENDERIZA LAS MINI-MESAS EN LA BARRA SUPERIOR DE LA VISTA CAJA
+function renderMiniTables() {
+    const bar = document.getElementById('mini-tables-bar');
+    if (!bar) return;
+    
+    if (tables.length === 0) {
+        bar.innerHTML = '<span style="color: var(--text-gray); font-size: 0.85rem;">Cargando mesas...</span>';
+        return;
+    }
+    
+    bar.innerHTML = tables.map(table => {
+        const hasOrders = table.pendingItems && table.pendingItems.length > 0;
+        const status = hasOrders ? table.visualStatus : 'libre';
+        const isActive = table.id === activeTableId ? 'active' : '';
+        return `<div class="mini-table status-${status} ${isActive}" onclick="selectTable(${table.id}, '${table.name}')">${table.name}</div>`;
+    }).join('');
+}
+
 async function selectTable(id, name) {
     activeTableId = id;
-    document.getElementById('active-table-display').textContent = `Mesa: ${name}`;
-    document.getElementById('active-table-display').style.display = 'inline-block';
+    cart = [];
     
     const table = tables.find(t => t.id === id);
-    
-    // Carrito SIEMPRE vacío al entrar
-    cart = [];
     
     if (table && table.pendingOrders && table.pendingOrders.length > 0) {
         currentTableOrder = table.pendingOrders[0];
@@ -195,14 +210,18 @@ async function selectTable(id, name) {
     
     renderCart();
     renderTableOrder();
+    renderMiniTables(); // Actualiza la barra para marcar la mesa activa
     
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    document.querySelector('[data-view="pos"]').classList.add('active');
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('view-pos').classList.add('active');
+    // Si no estamos en la vista POS, ir a ella
+    const posView = document.getElementById('view-pos');
+    if (!posView.classList.contains('active')) {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.querySelector('[data-view="pos"]').classList.add('active');
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        posView.classList.add('active');
+    }
 }
 
-// COBRAR DIRECTO DESDE LA TARJETA DE MESA
 async function cobrarMesaDirecta(tableId) {
     const table = tables.find(t => t.id === tableId);
     if (!table || !table.pendingOrders || table.pendingOrders.length === 0) return;
@@ -210,7 +229,6 @@ async function cobrarMesaDirecta(tableId) {
     activeTableId = tableId;
     currentTableOrder = table.pendingOrders[0];
     
-    // Recargar datos completos
     const { data: fullOrder } = await supabaseClient
         .from('orders')
         .select('*, order_items(*)')
@@ -486,7 +504,7 @@ async function addToTable() {
         renderCart();
         renderTableOrder();
         showToast('pago', '✓ Añadido a la mesa', 'Los productos se guardaron en el pedido');
-        loadTables();
+        loadTables(); // Recarga mesas y actualiza mini-tables-bar
     } catch (error) {
         alert('Error: ' + error.message);
     }
@@ -578,7 +596,7 @@ async function confirmPaymentForTable() {
         renderCart();
         renderTableOrder();
         closeModal('pay-modal');
-        loadTables();
+        loadTables(); // Recarga mesas y actualiza mini-tables-bar
     } catch (error) {
         alert('Error: ' + error.message);
     }
@@ -662,7 +680,7 @@ function setupRealtimeGlobal() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
+            addNotification('nuevo', ` Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
             loadTables();
@@ -673,7 +691,7 @@ function setupRealtimeGlobal() {
             const newStatus = order.status;
             let tipo = '', title = '', message = '';
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = `🔥 Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
+            if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = ` Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
             else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); }
             else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); }
             if (title) addNotification(tipo, title, message);
@@ -689,11 +707,11 @@ async function loadCashStatus() {
     if (error || !session) {
         currentSession = null;
         document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>';
-        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')"> Abrir Caja</button>';
+        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>';
         document.getElementById('cash-summary').style.display = 'none';
     } else {
         currentSession = session;
-        document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
+        document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
             <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
@@ -725,7 +743,7 @@ async function loadCashSummary() {
         </div>
         <div class="movements-section">
             <h4>Movimientos registrados: ${movements.length}</h4>
-            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : ''} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
         </div>
     `;
 }

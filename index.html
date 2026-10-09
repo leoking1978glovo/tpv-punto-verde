@@ -34,11 +34,11 @@
                     <span>Mesas</span>
                 </li>
                 <li class="nav-item" data-view="pos">
-                    <span class="nav-icon"></span>
+                    <span class="nav-icon">🛒</span>
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen">
-                    <span class="nav-icon">👨‍🍳</span>
+                    <span class="nav-icon">👨‍</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="cash">
@@ -50,7 +50,7 @@
                 <div class="user-info">
                     <span id="user-name">Usuario</span>
                 </div>
-                <button id="btn-logout" class="logout-btn">🚪 Salir</button>
+                <button id="btn-logout" class="logout-btn"> Salir</button>
             </div>
         </nav>
 
@@ -71,7 +71,8 @@
                 <header class="view-header">
                     <div>
                         <h1>Caja - Punto de Venta</h1>
-                        <span id="active-table-display" class="table-badge" style="display: none;">Mesa: -</span>
+                        <!-- BARRA DE MINI-MESAS -->
+                        <div class="mini-tables-bar" id="mini-tables-bar"></div>
                     </div>
                     <div class="header-actions">
                         <button class="btn-secondary" id="btn-back-to-tables">← Volver a Mesas</button>
@@ -99,7 +100,7 @@
 
                         <div class="table-order-section" id="table-order-section" style="display: none;">
                             <div class="table-order-header">
-                                <h3>📋 Pedido Acumulado de la Mesa</h3>
+                                <h3> Pedido Acumulado de la Mesa</h3>
                             </div>
                             <div class="table-order-items" id="table-order-items"></div>
                             <div class="table-order-total">
@@ -185,8 +186,8 @@
                 <div class="order-type">
                     <h3>Tipo de Pedido</h3>
                     <div class="type-buttons">
-                        <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
-                        <button class="type-btn" data-type="recogida">📦 Recogida</button>
+                        <button class="type-btn active" data-type="mostrador"> Mostrador</button>
+                        <button class="type-btn" data-type="recogida"> Recogida</button>
                         <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
                     </div>
                 </div>
@@ -194,7 +195,7 @@
                     <h3>Método de Pago</h3>
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta"> Tarjeta</button>
+                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
