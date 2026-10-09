@@ -177,22 +177,28 @@ async function selectTable(id, name) {
     
     const table = tables.find(t => t.id === id);
     
+    // El carrito SIEMPRE empieza vacío al entrar a una mesa
+    cart = [];
+    
     if (table && table.pendingOrders && table.pendingOrders.length > 0) {
+        // Solo cargar el pedido acumulado (NO el carrito)
         currentTableOrder = table.pendingOrders[0];
-        cart = table.pendingItems.map(item => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            qty: item.qty
-        }));
-        renderCart();
-        renderTableOrder();
+        // Recargar los items completos desde la BD para tener todo actualizado
+        const { data: fullOrder } = await supabaseClient
+            .from('orders')
+            .select('*, order_items(*)')
+            .eq('id', currentTableOrder.id)
+            .single();
+        if (fullOrder) {
+            currentTableOrder = fullOrder;
+        }
     } else {
         currentTableOrder = null;
-        cart = [];
-        renderCart();
-        renderTableOrder();
     }
+    
+    // Renderizar: carrito vacío arriba, pedido acumulado abajo
+    renderCart();
+    renderTableOrder();
     
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelector('[data-view="pos"]').classList.add('active');
@@ -215,7 +221,18 @@ function renderTableOrder() {
     }
     
     section.style.display = 'block';
-    itemsContainer.innerHTML = currentTableOrder.order_items.map(item => `
+    
+    // Agrupar items por nombre para no repetir
+    const itemsGrouped = {};
+    currentTableOrder.order_items.forEach(item => {
+        const key = item.name;
+        if (!itemsGrouped[key]) {
+            itemsGrouped[key] = { name: item.name, qty: 0, price: item.price };
+        }
+        itemsGrouped[key].qty += item.qty;
+    });
+    
+    itemsContainer.innerHTML = Object.values(itemsGrouped).map(item => `
         <div class="order-item">
             <span>${item.qty}x ${item.name}</span>
             <span>$${Math.round(item.price * item.qty).toLocaleString()}</span>
@@ -482,7 +499,18 @@ function openPayModal() {
 function openPayModalForTable() {
     if (!currentTableOrder) return;
     document.getElementById('modal-title').textContent = `Cobrar Mesa ${tables.find(t => t.id === activeTableId)?.name}`;
-    document.getElementById('modal-cart-items').innerHTML = currentTableOrder.order_items.map(item => `
+    
+    // Agrupar items para el modal
+    const itemsGrouped = {};
+    currentTableOrder.order_items.forEach(item => {
+        const key = item.name;
+        if (!itemsGrouped[key]) {
+            itemsGrouped[key] = { name: item.name, qty: 0, price: item.price };
+        }
+        itemsGrouped[key].qty += item.qty;
+    });
+    
+    document.getElementById('modal-cart-items').innerHTML = Object.values(itemsGrouped).map(item => `
         <div class="cart-item"><div class="cart-item-name">${item.name} x${item.qty}</div><div class="cart-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div>
     `).join('');
     document.getElementById('modal-subtotal').textContent = '$' + Math.round(currentTableOrder.total - (currentTableOrder.total * 0.19)).toLocaleString();
