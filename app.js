@@ -370,7 +370,12 @@ async function addToTable() {
             // Añadir items
             const orderItems = cart.map(item => ({ 
                 order_id: currentTableOrder.id, 
-                product_id: item.id,
+                const orderItems = cart.map(item => ({ 
+                    order_id: currentTableOrder.id, 
+                    name: item.name, 
+                    price: item.price, 
+                    qty: item.qty 
+                }));
                 name: item.name, 
                 price: item.price, 
                 qty: item.qty 
@@ -389,7 +394,12 @@ async function addToTable() {
             
             const orderItems = cart.map(item => ({ 
                 order_id: order.id, 
-                product_id: item.id,
+                const orderItems = cart.map(item => ({ 
+                    order_id: order.id, 
+                    name: item.name, 
+                    price: item.price, 
+                    qty: item.qty 
+                }));
                 name: item.name, 
                 price: item.price, 
                 qty: item.qty 
