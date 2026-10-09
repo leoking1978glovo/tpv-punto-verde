@@ -70,6 +70,7 @@ function setupNavigation() {
                 currentTableOrder = null;
                 cart = [];
                 renderCart();
+                renderTableOrder();
                 loadTables();
             }
         });
@@ -80,8 +81,8 @@ function setupNavigation() {
         currentTableOrder = null;
         cart = [];
         renderCart();
+        renderTableOrder();
         document.getElementById('active-table-display').style.display = 'none';
-        document.getElementById('table-order-info').style.display = 'none';
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         document.querySelector('[data-view="tables"]').classList.add('active');
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -92,10 +93,7 @@ function setupNavigation() {
 
 async function loadTables() {
     const { data, error } = await supabaseClient.from('tables').select('*').order('id');
-    if (error) {
-        console.error('Error cargando mesas:', error);
-        return;
-    }
+    if (error) return;
     tables = data || [];
     renderTables();
 }
@@ -129,30 +127,46 @@ async function selectTable(id, name) {
     
     if (existingOrder) {
         currentTableOrder = existingOrder;
-        cart = existingOrder.order_items.map(item => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            qty: item.qty
-        }));
+        cart = []; // El carrito nuevo empieza vacío, lo acumulado está en currentTableOrder
         renderCart();
-        document.getElementById('table-order-info').style.display = 'block';
-        document.getElementById('table-order-info').innerHTML = `
-            <span style="background: var(--status-ocupada); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.85rem;">
-                Pedido existente: $${Math.round(existingOrder.total).toLocaleString()}
-            </span>
-        `;
+        renderTableOrder();
     } else {
         currentTableOrder = null;
         cart = [];
         renderCart();
-        document.getElementById('table-order-info').style.display = 'none';
+        renderTableOrder();
     }
     
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelector('[data-view="pos"]').classList.add('active');
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-pos').classList.add('active');
+}
+
+function renderTableOrder() {
+    const section = document.getElementById('table-order-section');
+    const itemsContainer = document.getElementById('table-order-items');
+    const totalElement = document.getElementById('table-order-total');
+    const btnPay = document.getElementById('btn-pay');
+    
+    if (!currentTableOrder || !currentTableOrder.order_items || currentTableOrder.order_items.length === 0) {
+        section.style.display = 'none';
+        if (activeTableId) {
+            btnPay.textContent = `AÑADIR A MESA ($${Math.round(cart.reduce((sum, i) => sum + (i.price * i.qty), 0)).toLocaleString()})`;
+        }
+        return;
+    }
+    
+    section.style.display = 'block';
+    itemsContainer.innerHTML = currentTableOrder.order_items.map(item => `
+        <div class="order-item">
+            <span>${item.qty}x ${item.name}</span>
+            <span>$${Math.round(item.price * item.qty).toLocaleString()}</span>
+        </div>
+    `).join('');
+    
+    totalElement.textContent = `$${Math.round(currentTableOrder.total).toLocaleString()}`;
+    btnPay.textContent = `AÑADIR MÁS A MESA ($${Math.round(cart.reduce((sum, i) => sum + (i.price * i.qty), 0)).toLocaleString()})`;
 }
 
 function setupNotificationsPanel() {
@@ -263,6 +277,7 @@ function addToCart(productId) {
     const existing = cart.find(i => i.id === productId);
     if (existing) { existing.qty++; } else { cart.push({ ...product, qty: 1 }); }
     renderCart();
+    renderTableOrder(); // Actualizar texto del botón
 }
 
 function renderCart() {
@@ -290,6 +305,7 @@ function changeQty(id, delta) {
     item.qty += delta;
     if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
     renderCart();
+    renderTableOrder();
 }
 
 function updateTotals(total) {
@@ -300,7 +316,7 @@ function updateTotals(total) {
     
     const btnPay = document.getElementById('btn-pay');
     if (activeTableId) {
-        btnPay.textContent = `AÑADIR A MESA ($${Math.round(total).toLocaleString()})`;
+        btnPay.textContent = currentTableOrder ? `AÑADIR MÁS A MESA ($${Math.round(total).toLocaleString()})` : `AÑADIR A MESA ($${Math.round(total).toLocaleString()})`;
     } else {
         btnPay.textContent = `COBRAR ($${Math.round(total).toLocaleString()})`;
     }
@@ -321,7 +337,7 @@ function setupPOSEvents() {
         }
     });
     document.getElementById('btn-clear').addEventListener('click', () => {
-        if (cart.length > 0 && confirm('¿Limpiar carrito?')) { cart = []; renderCart(); }
+        if (cart.length > 0 && confirm('¿Limpiar carrito?')) { cart = []; renderCart(); renderTableOrder(); }
     });
     document.getElementById('btn-pay').addEventListener('click', () => {
         if (activeTableId) {
@@ -329,6 +345,9 @@ function setupPOSEvents() {
         } else {
             openPayModal();
         }
+    });
+    document.getElementById('btn-pay-mesa').addEventListener('click', () => {
+        openPayModalForTable();
     });
     document.getElementById('btn-close-modal').addEventListener('click', () => closeModal('pay-modal'));
     document.getElementById('btn-cancel-pay').addEventListener('click', () => closeModal('pay-modal'));
@@ -342,36 +361,31 @@ function setupPOSEvents() {
         document.getElementById('cash-section').style.display = payMethod === 'efectivo' ? 'block' : 'none';
     }));
     document.getElementById('cash-received').addEventListener('input', (e) => {
-        const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+        const total = currentTableOrder ? currentTableOrder.total : cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
         const received = parseFloat(e.target.value) || 0;
         document.getElementById('change-amount').textContent = '$' + Math.max(0, Math.round(received - total)).toLocaleString();
     });
-    document.getElementById('btn-confirm-pay').addEventListener('click', confirmPayment);
+    document.getElementById('btn-confirm-pay').addEventListener('click', () => {
+        if (currentTableOrder) confirmPaymentForTable();
+        else confirmPayment();
+    });
 }
 
 async function addToTable() {
     if (cart.length === 0) return alert('Carrito vacío');
-    
     const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     
     try {
         if (currentTableOrder) {
-            const { error: orderError } = await supabaseClient
-                .from('orders')
-                .update({ total: currentTableOrder.total + total })
-                .eq('id', currentTableOrder.id);
+            const { error: orderError } = await supabaseClient.from('orders').update({ total: currentTableOrder.total + total }).eq('id', currentTableOrder.id);
             if (orderError) throw orderError;
             
-            const orderItems = cart.map(item => ({ 
-                order_id: currentTableOrder.id, 
-                name: item.name, 
-                price: item.price, 
-                qty: item.qty 
-            }));
+            const orderItems = cart.map(item => ({ order_id: currentTableOrder.id, name: item.name, price: item.price, qty: item.qty }));
             const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
             if (itemsError) throw itemsError;
             
-            addNotification('pago', `✓ Añadido a Mesa`, `+$${Math.round(total).toLocaleString()} en ${tables.find(t => t.id === activeTableId)?.name}`);
+            currentTableOrder.total += total;
+            currentTableOrder.order_items = [...currentTableOrder.order_items, ...cart];
         } else {
             const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ 
                 type: 'mesa', status: 'pendiente_pago', total, paid: false, pay_method: 'pendiente', 
@@ -379,26 +393,20 @@ async function addToTable() {
             }]).select().single();
             if (orderError) throw orderError;
             
-            const orderItems = cart.map(item => ({ 
-                order_id: order.id, 
-                name: item.name, 
-                price: item.price, 
-                qty: item.qty 
-            }));
+            const orderItems = cart.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty }));
             const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
             if (itemsError) throw itemsError;
             
             currentTableOrder = order;
             await supabaseClient.from('tables').update({ status: 'ocupada' }).eq('id', activeTableId);
-            
-            addNotification('nuevo', ` Pedido en Mesa`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
+            addNotification('nuevo', `📝 Pedido en Mesa`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
         }
         
         cart = [];
         renderCart();
+        renderTableOrder();
         showToast('pago', '✓ Añadido a la mesa', 'Los productos se guardaron en el pedido');
         loadTables();
-        
     } catch (error) {
         alert('Error: ' + error.message);
     }
@@ -406,6 +414,7 @@ async function addToTable() {
 
 function openPayModal() {
     if (cart.length === 0) return alert('Carrito vacío');
+    document.getElementById('modal-title').textContent = 'Finalizar Pedido';
     document.getElementById('modal-cart-items').innerHTML = cart.map(item => `
         <div class="cart-item"><div class="cart-item-name">${item.name} x${item.qty}</div><div class="cart-item-price">$${(item.price * item.qty).toLocaleString()}</div></div>
     `).join('');
@@ -413,6 +422,20 @@ function openPayModal() {
     document.getElementById('modal-subtotal').textContent = '$' + Math.round(total - (total * 0.19)).toLocaleString();
     document.getElementById('modal-tax').textContent = '$' + Math.round(total * 0.19).toLocaleString();
     document.getElementById('modal-total').textContent = '$' + Math.round(total).toLocaleString();
+    document.getElementById('cash-received').value = '';
+    document.getElementById('change-amount').textContent = '$0';
+    document.getElementById('pay-modal').classList.add('active');
+}
+
+function openPayModalForTable() {
+    if (!currentTableOrder) return;
+    document.getElementById('modal-title').textContent = `Cobrar Mesa ${tables.find(t => t.id === activeTableId)?.name}`;
+    document.getElementById('modal-cart-items').innerHTML = currentTableOrder.order_items.map(item => `
+        <div class="cart-item"><div class="cart-item-name">${item.name} x${item.qty}</div><div class="cart-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div>
+    `).join('');
+    document.getElementById('modal-subtotal').textContent = '$' + Math.round(currentTableOrder.total - (currentTableOrder.total * 0.19)).toLocaleString();
+    document.getElementById('modal-tax').textContent = '$' + Math.round(currentTableOrder.total * 0.19).toLocaleString();
+    document.getElementById('modal-total').textContent = '$' + Math.round(currentTableOrder.total).toLocaleString();
     document.getElementById('cash-received').value = '';
     document.getElementById('change-amount').textContent = '$0';
     document.getElementById('pay-modal').classList.add('active');
@@ -438,10 +461,37 @@ async function confirmPayment() {
         }
         printTicket(order, cart);
         addNotification('pago', `✓ Pedido #${order.id} cobrado`, `Total: $${Math.round(total).toLocaleString()} | ${payMethod.toUpperCase()}`);
-        cart = []; renderCart(); closeModal('pay-modal');
+        cart = []; renderCart(); renderTableOrder(); closeModal('pay-modal');
         const cashView = document.getElementById('view-cash');
         if (cashView.classList.contains('active')) loadCashStatus();
     } catch (error) { alert('Error: ' + error.message); }
+}
+
+async function confirmPaymentForTable() {
+    const total = currentTableOrder.total;
+    if (payMethod === 'efectivo') {
+        const cashReceived = parseFloat(document.getElementById('cash-received').value);
+        if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente');
+    }
+    try {
+        const { error } = await supabaseClient.from('orders').update({ 
+            status: 'nuevo', paid: true, pay_method: payMethod 
+        }).eq('id', currentTableOrder.id);
+        if (error) throw error;
+        
+        await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId);
+        
+        addNotification('pago', `✓ Mesa cobrada`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
+        
+        currentTableOrder = null;
+        cart = [];
+        renderCart();
+        renderTableOrder();
+        closeModal('pay-modal');
+        loadTables();
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
 }
 
 function printTicket(order, items) {
@@ -522,7 +572,7 @@ function setupRealtimeGlobal() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            addNotification('nuevo', ` Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
+            addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
             loadTables();
@@ -533,7 +583,7 @@ function setupRealtimeGlobal() {
             const newStatus = order.status;
             let tipo = '', title = '', message = '';
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = ` Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
+            if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = `🔥 Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
             else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); }
             else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); }
             if (title) addNotification(tipo, title, message);
@@ -553,11 +603,11 @@ async function loadCashStatus() {
         document.getElementById('cash-summary').style.display = 'none';
     } else {
         currentSession = session;
-        document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
+        document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
-            <button class="action-btn btn-count" onclick="openModal('modal-count')"> Arqueo Ciego</button>
-            <button class="action-btn btn-close" onclick="closeCashSession()"> Cerrar Caja</button>
+            <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
+            <button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>
         `;
         await loadCashSummary();
     }
@@ -585,7 +635,7 @@ async function loadCashSummary() {
         </div>
         <div class="movements-section">
             <h4>Movimientos registrados: ${movements.length}</h4>
-            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '' : ''} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
         </div>
     `;
 }

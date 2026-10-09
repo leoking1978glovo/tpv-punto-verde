@@ -10,10 +10,9 @@
 </head>
 <body>
 
-    <!-- LOGIN -->
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
-            <h2> TPV Punto Verde</h2>
+            <h2>🌿 TPV Punto Verde</h2>
             <p>Inicia sesión para continuar</p>
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="Correo electrónico" required>
@@ -24,7 +23,6 @@
         </div>
     </div>
 
-    <!-- APP PRINCIPAL -->
     <div id="main-app" style="display: none;">
         <nav class="sidebar">
             <div class="sidebar-header">
@@ -40,7 +38,7 @@
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen">
-                    <span class="nav-icon">👨🍳</span>
+                    <span class="nav-icon">👨‍🍳</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="cash">
@@ -57,8 +55,6 @@
         </nav>
 
         <main class="main-content">
-            
-            <!-- VISTA: MAPA DE MESAS -->
             <section id="view-tables" class="view active">
                 <header class="view-header">
                     <h1>Mapa de Mesas</h1>
@@ -71,13 +67,11 @@
                 <div class="tables-grid" id="tables-grid"></div>
             </section>
 
-            <!-- VISTA: CAJA (TPV) -->
             <section id="view-pos" class="view">
                 <header class="view-header">
                     <div>
                         <h1>Caja - Punto de Venta</h1>
                         <span id="active-table-display" class="table-badge" style="display: none;">Mesa: -</span>
-                        <span id="table-order-info" style="display: none; margin-left: 1rem;"></span>
                     </div>
                     <div class="header-actions">
                         <button class="btn-secondary" id="btn-back-to-tables">← Volver a Mesas</button>
@@ -96,23 +90,36 @@
                     </div>
                     <div class="cart-section">
                         <div class="cart-header">
-                            <span>Pedido Actual</span>
+                            <span>Pedido Actual (Carrito)</span>
                             <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
                         </div>
                         <div class="cart-items" id="cart-items">
                             <div class="empty-cart">Añade productos para empezar</div>
                         </div>
+
+                        <!-- PEDIDO ACUMULADO DE LA MESA (VISIBLE SIEMPRE) -->
+                        <div class="table-order-section" id="table-order-section" style="display: none;">
+                            <div class="table-order-header">
+                                <h3>📋 Pedido Acumulado de la Mesa</h3>
+                                <button class="btn-pay-mesa" id="btn-pay-mesa">COBRAR MESA</button>
+                            </div>
+                            <div class="table-order-items" id="table-order-items"></div>
+                            <div class="table-order-total">
+                                <span>Total Mesa:</span>
+                                <span id="table-order-total">$0</span>
+                            </div>
+                        </div>
+
                         <div class="cart-footer">
                             <div class="summary-row"><span>Subtotal</span><span id="subtotal">$0</span></div>
                             <div class="summary-row"><span>IVA</span><span id="tax">$0</span></div>
-                            <div class="summary-row total"><span>TOTAL</span><span id="total">$0</span></div>
-                            <button class="pay-btn" id="btn-pay">COBRAR ($0)</button>
+                            <div class="summary-row total"><span>TOTAL CARRITO</span><span id="total">$0</span></div>
+                            <button class="pay-btn" id="btn-pay">AÑADIR A MESA ($0)</button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- VISTA: COCINA -->
             <section id="view-kitchen" class="view">
                 <header class="view-header">
                     <h1>Cocina - Pedidos en Tiempo Real</h1>
@@ -129,7 +136,6 @@
                 </div>
             </section>
 
-            <!-- VISTA: ARQUEOS -->
             <section id="view-cash" class="view">
                 <header class="view-header">
                     <h1>Gestión de Caja</h1>
@@ -146,10 +152,8 @@
                     <div class="action-buttons" id="action-buttons"></div>
                 </div>
             </section>
-
         </main>
 
-        <!-- PANEL DE NOTIFICACIONES -->
         <div class="notifications-panel" id="notifications-panel">
             <div class="notif-header">
                 <h3>🔔 Notificaciones</h3>
@@ -164,11 +168,10 @@
         </div>
     </div>
 
-    <!-- MODAL COBRO -->
     <div id="pay-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Finalizar Pedido</h2>
+                <h2 id="modal-title">Finalizar Pedido</h2>
                 <button class="close-btn" id="btn-close-modal">✕</button>
             </div>
             <div class="modal-body">
@@ -193,7 +196,7 @@
                     <h3>Método de Pago</h3>
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta"> Tarjeta</button>
+                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
@@ -210,7 +213,6 @@
         </div>
     </div>
 
-    <!-- MODALES DE CAJA -->
     <div id="modal-open-cash" class="modal-overlay">
         <div class="modal-content">
             <h3>Abrir Caja</h3>
