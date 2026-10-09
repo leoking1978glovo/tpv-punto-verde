@@ -92,9 +92,39 @@ function setupNavigation() {
 }
 
 async function loadTables() {
-    const { data, error } = await supabaseClient.from('tables').select('*').order('id');
-    if (error) return;
-    tables = data || [];
+    const { data: tablesData, error: tablesError } = await supabaseClient.from('tables').select('*').order('id');
+    if (tablesError) return;
+    
+    const { data: ordersData, error: ordersError } = await supabaseClient
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('status', 'pendiente_pago');
+    
+    if (ordersError) return;
+    
+    const ordersByTable = {};
+    (ordersData || []).forEach(order => {
+        if (order.table_id) {
+            if (!ordersByTable[order.table_id]) ordersByTable[order.table_id] = [];
+            ordersByTable[order.table_id].push(order);
+        }
+    });
+    
+    tables = (tablesData || []).map(table => {
+        const tableOrders = ordersByTable[table.id] || [];
+        const pendingItems = tableOrders.flatMap(o => o.order_items || []);
+        const pendingTotal = tableOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        const visualStatus = pendingItems.length > 0 ? 'ocupada' : 'libre';
+        
+        return {
+            ...table,
+            pendingOrders: tableOrders,
+            pendingItems: pendingItems,
+            pendingTotal: pendingTotal,
+            visualStatus: visualStatus
+        };
+    });
+    
     renderTables();
 }
 
@@ -105,12 +135,39 @@ function renderTables() {
         grid.innerHTML = '<p style="text-align:center; color: #6b7280; padding: 2rem;">No hay mesas disponibles</p>';
         return;
     }
-    grid.innerHTML = tables.map(table => `
-        <div class="table-card status-${table.status}" onclick="selectTable(${table.id}, '${table.name}')">
+    grid.innerHTML = tables.map(table => {
+        const hasOrders = table.pendingItems && table.pendingItems.length > 0;
+        const status = hasOrders ? table.visualStatus : 'libre';
+        
+        const itemsGrouped = {};
+        (table.pendingItems || []).forEach(item => {
+            const key = item.name;
+            if (!itemsGrouped[key]) {
+                itemsGrouped[key] = { name: item.name, qty: 0, price: item.price };
+            }
+            itemsGrouped[key].qty += item.qty;
+        });
+        
+        const itemsHtml = hasOrders ? Object.values(itemsGrouped).map(item => 
+            `<div class="table-order-item"><span>${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span></div>`
+        ).join('') : '';
+        
+        return `
+        <div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')">
             <div class="table-name">${table.name}</div>
-            <div class="table-status">${table.status}</div>
+            <div class="table-status">${hasOrders ? 'OCUPADA' : 'LIBRE'}</div>
+            ${hasOrders ? `
+                <div class="table-orders-list">
+                    ${itemsHtml}
+                </div>
+                <div class="table-order-total">
+                    <span>Total:</span>
+                    <span>$${Math.round(table.pendingTotal).toLocaleString()}</span>
+                </div>
+            ` : '<div style="flex:1;"></div>'}
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 async function selectTable(id, name) {
@@ -118,16 +175,16 @@ async function selectTable(id, name) {
     document.getElementById('active-table-display').textContent = `Mesa: ${name}`;
     document.getElementById('active-table-display').style.display = 'inline-block';
     
-    const { data: existingOrder } = await supabaseClient
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('table_id', id)
-        .eq('status', 'pendiente_pago')
-        .single();
+    const table = tables.find(t => t.id === id);
     
-    if (existingOrder) {
-        currentTableOrder = existingOrder;
-        cart = []; // El carrito nuevo empieza vacío, lo acumulado está en currentTableOrder
+    if (table && table.pendingOrders && table.pendingOrders.length > 0) {
+        currentTableOrder = table.pendingOrders[0];
+        cart = table.pendingItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            qty: item.qty
+        }));
         renderCart();
         renderTableOrder();
     } else {
@@ -198,10 +255,6 @@ function addNotification(tipo, title, message) {
     showToast(tipo, title, message);
     playNotifSound();
     renderNotifications();
-    const bell = document.getElementById('btn-notifications');
-    bell.classList.remove('has-notifs');
-    void bell.offsetWidth;
-    bell.classList.add('has-notifs');
 }
 
 function updateNotifBadge() {
@@ -277,7 +330,7 @@ function addToCart(productId) {
     const existing = cart.find(i => i.id === productId);
     if (existing) { existing.qty++; } else { cart.push({ ...product, qty: 1 }); }
     renderCart();
-    renderTableOrder(); // Actualizar texto del botón
+    renderTableOrder();
 }
 
 function renderCart() {
@@ -398,7 +451,6 @@ async function addToTable() {
             if (itemsError) throw itemsError;
             
             currentTableOrder = order;
-            await supabaseClient.from('tables').update({ status: 'ocupada' }).eq('id', activeTableId);
             addNotification('nuevo', `📝 Pedido en Mesa`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
         }
         
@@ -598,8 +650,8 @@ async function loadCashStatus() {
     const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single();
     if (error || !session) {
         currentSession = null;
-        document.getElementById('cash-status').innerHTML = '<span class="status-closed"> Caja Cerrada</span>';
-        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>';
+        document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>';
+        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')"> Abrir Caja</button>';
         document.getElementById('cash-summary').style.display = 'none';
     } else {
         currentSession = session;
