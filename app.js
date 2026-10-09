@@ -164,6 +164,7 @@ function renderTables() {
                     <span>Total:</span>
                     <span>$${Math.round(table.pendingTotal).toLocaleString()}</span>
                 </div>
+                <button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>
             ` : '<div style="flex:1;"></div>'}
         </div>
         `;
@@ -177,26 +178,21 @@ async function selectTable(id, name) {
     
     const table = tables.find(t => t.id === id);
     
-    // El carrito SIEMPRE empieza vacío al entrar a una mesa
+    // Carrito SIEMPRE vacío al entrar
     cart = [];
     
     if (table && table.pendingOrders && table.pendingOrders.length > 0) {
-        // Solo cargar el pedido acumulado (NO el carrito)
         currentTableOrder = table.pendingOrders[0];
-        // Recargar los items completos desde la BD para tener todo actualizado
         const { data: fullOrder } = await supabaseClient
             .from('orders')
             .select('*, order_items(*)')
             .eq('id', currentTableOrder.id)
             .single();
-        if (fullOrder) {
-            currentTableOrder = fullOrder;
-        }
+        if (fullOrder) currentTableOrder = fullOrder;
     } else {
         currentTableOrder = null;
     }
     
-    // Renderizar: carrito vacío arriba, pedido acumulado abajo
     renderCart();
     renderTableOrder();
     
@@ -204,6 +200,25 @@ async function selectTable(id, name) {
     document.querySelector('[data-view="pos"]').classList.add('active');
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-pos').classList.add('active');
+}
+
+// COBRAR DIRECTO DESDE LA TARJETA DE MESA
+async function cobrarMesaDirecta(tableId) {
+    const table = tables.find(t => t.id === tableId);
+    if (!table || !table.pendingOrders || table.pendingOrders.length === 0) return;
+    
+    activeTableId = tableId;
+    currentTableOrder = table.pendingOrders[0];
+    
+    // Recargar datos completos
+    const { data: fullOrder } = await supabaseClient
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('id', currentTableOrder.id)
+        .single();
+    if (fullOrder) currentTableOrder = fullOrder;
+    
+    openPayModalForTable();
 }
 
 function renderTableOrder() {
@@ -222,7 +237,6 @@ function renderTableOrder() {
     
     section.style.display = 'block';
     
-    // Agrupar items por nombre para no repetir
     const itemsGrouped = {};
     currentTableOrder.order_items.forEach(item => {
         const key = item.name;
@@ -416,9 +430,6 @@ function setupPOSEvents() {
             openPayModal();
         }
     });
-    document.getElementById('btn-pay-mesa').addEventListener('click', () => {
-        openPayModalForTable();
-    });
     document.getElementById('btn-close-modal').addEventListener('click', () => closeModal('pay-modal'));
     document.getElementById('btn-cancel-pay').addEventListener('click', () => closeModal('pay-modal'));
     document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', (e) => {
@@ -500,7 +511,6 @@ function openPayModalForTable() {
     if (!currentTableOrder) return;
     document.getElementById('modal-title').textContent = `Cobrar Mesa ${tables.find(t => t.id === activeTableId)?.name}`;
     
-    // Agrupar items para el modal
     const itemsGrouped = {};
     currentTableOrder.order_items.forEach(item => {
         const key = item.name;
