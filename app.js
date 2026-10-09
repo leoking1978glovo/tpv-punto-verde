@@ -97,7 +97,6 @@ async function loadTables() {
         return;
     }
     tables = data || [];
-    console.log('Mesas cargadas:', tables.length);
     renderTables();
 }
 
@@ -112,7 +111,6 @@ function renderTables() {
         <div class="table-card status-${table.status}" onclick="selectTable(${table.id}, '${table.name}')">
             <div class="table-name">${table.name}</div>
             <div class="table-status">${table.status}</div>
-            ${table.order_total ? `<div class="table-order-total">$${Math.round(table.order_total).toLocaleString()}</div>` : ''}
         </div>
     `).join('');
 }
@@ -122,7 +120,6 @@ async function selectTable(id, name) {
     document.getElementById('active-table-display').textContent = `Mesa: ${name}`;
     document.getElementById('active-table-display').style.display = 'inline-block';
     
-    // Buscar si ya tiene un pedido pendiente
     const { data: existingOrder } = await supabaseClient
         .from('orders')
         .select('*, order_items(*)')
@@ -133,7 +130,7 @@ async function selectTable(id, name) {
     if (existingOrder) {
         currentTableOrder = existingOrder;
         cart = existingOrder.order_items.map(item => ({
-            id: item.product_id || item.id,
+            id: item.id,
             name: item.name,
             price: item.price,
             qty: item.qty
@@ -301,7 +298,6 @@ function updateTotals(total) {
     document.getElementById('tax').textContent = '$' + Math.round(tax).toLocaleString();
     document.getElementById('total').textContent = '$' + Math.round(total).toLocaleString();
     
-    // Cambiar texto del botón según si hay mesa o no
     const btnPay = document.getElementById('btn-pay');
     if (activeTableId) {
         btnPay.textContent = `AÑADIR A MESA ($${Math.round(total).toLocaleString()})`;
@@ -360,22 +356,14 @@ async function addToTable() {
     
     try {
         if (currentTableOrder) {
-            // Actualizar pedido existente
             const { error: orderError } = await supabaseClient
                 .from('orders')
                 .update({ total: currentTableOrder.total + total })
                 .eq('id', currentTableOrder.id);
             if (orderError) throw orderError;
             
-            // Añadir items
             const orderItems = cart.map(item => ({ 
                 order_id: currentTableOrder.id, 
-                const orderItems = cart.map(item => ({ 
-                    order_id: currentTableOrder.id, 
-                    name: item.name, 
-                    price: item.price, 
-                    qty: item.qty 
-                }));
                 name: item.name, 
                 price: item.price, 
                 qty: item.qty 
@@ -385,7 +373,6 @@ async function addToTable() {
             
             addNotification('pago', `✓ Añadido a Mesa`, `+$${Math.round(total).toLocaleString()} en ${tables.find(t => t.id === activeTableId)?.name}`);
         } else {
-            // Crear nuevo pedido
             const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ 
                 type: 'mesa', status: 'pendiente_pago', total, paid: false, pay_method: 'pendiente', 
                 source: 'tpv', user_email: currentUser?.email, table_id: activeTableId 
@@ -394,12 +381,6 @@ async function addToTable() {
             
             const orderItems = cart.map(item => ({ 
                 order_id: order.id, 
-                const orderItems = cart.map(item => ({ 
-                    order_id: order.id, 
-                    name: item.name, 
-                    price: item.price, 
-                    qty: item.qty 
-                }));
                 name: item.name, 
                 price: item.price, 
                 qty: item.qty 
@@ -408,8 +389,6 @@ async function addToTable() {
             if (itemsError) throw itemsError;
             
             currentTableOrder = order;
-            
-            // Actualizar estado de la mesa
             await supabaseClient.from('tables').update({ status: 'ocupada' }).eq('id', activeTableId);
             
             addNotification('nuevo', ` Pedido en Mesa`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
