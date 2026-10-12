@@ -242,7 +242,7 @@ function renderDivideModal() {
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                         <span class="diner-total">$${Math.round(total).toLocaleString()}</span>
                         ${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})">💰 Cobrar</button>` : ''}
-                        ${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">️</button>` : ''}
+                        ${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}
                     </div>
                 </div>
                 <div class="diner-items">
@@ -336,7 +336,6 @@ async function confirmDinerPayment() {
         const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
         if (itemsError) throw itemsError;
         
-        // ✅ Imprimir ticket del comensal
         printTicket(order, diner.items);
         
         const remainingItems = currentTableOrder.order_items.filter(origItem => {
@@ -1086,7 +1085,6 @@ async function confirmPaymentForTable() {
         
         await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId);
         
-        // ✅ Imprimir ticket al cobrar mesa
         printTicket(currentTableOrder, currentTableOrder.order_items);
         
         addNotification('pago', `✓ Mesa cobrada`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
@@ -1245,7 +1243,7 @@ async function loadCashSummary() {
         </div>
         <div class="movements-section">
             <h4>Movimientos registrados: ${movements.length}</h4>
-            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
         </div>
     `;
 }
@@ -1299,5 +1297,12 @@ async function closeCashSession() {
 
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// Hacer funciones accesibles globalmente para los onclick inline del modal Dividir Cuenta
+window.openDinerPayModal = openDinerPayModal;
+window.removeItemFromDiner = removeItemFromDiner;
+window.removeDiner = removeDiner;
+window.updateDinerName = updateDinerName;
+window.assignItemToDiner = assignItemToDiner;
 
 init();
