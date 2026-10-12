@@ -384,6 +384,20 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .diner-item-btn.remove { color: #ef4444; border-color: #ef4444; }
 .btn-remove-diner { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1rem; padding: 0 0.25rem; }
 .btn-remove-diner:hover { transform: scale(1.2); }
+.btn-cobrar-diner {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.75rem;
+}
+.btn-cobrar-diner:hover {
+    background: var(--primary-hover);
+    transform: scale(1.05);
+}
 
 .items-to-assign h3 { font-size: 1rem; margin-bottom: 0.5rem; }
 .unassigned-items { display: flex; flex-direction: column; gap: 0.5rem; max-height: 400px; overflow-y: auto; }

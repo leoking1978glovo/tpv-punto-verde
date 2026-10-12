@@ -16,14 +16,12 @@ let activeTableId = null;
 let tables = [];
 let currentTableOrder = null;
 
-// Variables para gráficas
 let chartHoras = null;
 let chartProductos = null;
 let currentReportPeriod = 'today';
 
-// Variables para dividir cuenta
-let diners = []; // [{id, name, items: [{orderItemId, name, price, qty}]}]
-let unassignedItems = []; // items del pedido sin asignar
+let diners = [];
+let unassignedItems = [];
 let currentDinerPayId = null;
 let currentDinerPayMethod = 'efectivo';
 
@@ -126,14 +124,13 @@ function setupNavigation() {
     });
 }
 
-// ============ DIVIDIR CUENTA ============
 function setupDivideEvents() {
     document.getElementById('btn-divide-account').addEventListener('click', openDivideModal);
     document.getElementById('btn-close-divide').addEventListener('click', () => closeModal('divide-modal'));
     document.getElementById('btn-cancel-divide').addEventListener('click', () => closeModal('divide-modal'));
     document.getElementById('btn-add-diner').addEventListener('click', addDiner);
     document.getElementById('btn-pay-all').addEventListener('click', () => {
-        // Cobrar todo junto
+        closeModal('divide-modal');
         openPayModalForTable();
     });
     document.getElementById('btn-close-diner-pay').addEventListener('click', () => closeModal('diner-pay-modal'));
@@ -163,13 +160,11 @@ function openDivideModal() {
         return alert('No hay productos en el pedido');
     }
     
-    // Inicializar comensales con 2 por defecto
     diners = [
         { id: 1, name: 'Comensal 1', items: [] },
         { id: 2, name: 'Comensal 2', items: [] }
     ];
     
-    // Todos los items sin asignar
     unassignedItems = currentTableOrder.order_items.map((item, idx) => ({
         uid: idx,
         orderItemId: item.id,
@@ -191,7 +186,6 @@ function addDiner() {
 function removeDiner(dinerId) {
     const diner = diners.find(d => d.id === dinerId);
     if (!diner) return;
-    // Devolver sus items a sin asignar
     unassignedItems.push(...diner.items);
     diners = diners.filter(d => d.id !== dinerId);
     renderDivideModal();
@@ -227,7 +221,6 @@ function renderDivideModal() {
     const dinersList = document.getElementById('diners-list');
     const unassignedList = document.getElementById('unassigned-items');
     
-    // Renderizar comensales
     dinersList.innerHTML = diners.map(diner => {
         const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
         const itemsHtml = diner.items.map(item => `
@@ -248,7 +241,8 @@ function renderDivideModal() {
                     </div>
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                         <span class="diner-total">$${Math.round(total).toLocaleString()}</span>
-                        ${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}
+                        ${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})">💰 Cobrar</button>` : ''}
+                        ${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">️</button>` : ''}
                     </div>
                 </div>
                 <div class="diner-items">
@@ -258,7 +252,6 @@ function renderDivideModal() {
         `;
     }).join('');
     
-    // Renderizar items sin asignar
     if (unassignedItems.length === 0) {
         unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>';
     } else {
@@ -276,7 +269,6 @@ function renderDivideModal() {
         `).join('');
     }
     
-    // Actualizar botón de cobrar todo
     const totalMesa = currentTableOrder.total;
     document.getElementById('btn-pay-all').textContent = `💰 Cobrar Todo ($${Math.round(totalMesa).toLocaleString()})`;
 }
@@ -301,7 +293,6 @@ async function openDinerPayModal(dinerId) {
     document.getElementById('diner-cash-received').value = '';
     document.getElementById('diner-change-amount').textContent = '$0';
     
-    // Resetear métodos
     document.querySelectorAll('#diner-method-buttons .method-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('#diner-method-buttons .method-btn[data-method="efectivo"]').classList.add('active');
     document.getElementById('diner-cash-section').style.display = 'block';
@@ -321,7 +312,6 @@ async function confirmDinerPayment() {
     }
     
     try {
-        // Crear pedido individual para este comensal
         const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{
             type: 'mesa',
             status: 'nuevo',
@@ -346,7 +336,9 @@ async function confirmDinerPayment() {
         const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
         if (itemsError) throw itemsError;
         
-        // Quitar los items pagados del pedido original
+        // ✅ Imprimir ticket del comensal
+        printTicket(order, diner.items);
+        
         const remainingItems = currentTableOrder.order_items.filter(origItem => {
             return !diner.items.some(dinerItem => dinerItem.orderItemId === origItem.id);
         });
@@ -354,7 +346,6 @@ async function confirmDinerPayment() {
         const newTotal = remainingItems.reduce((s, i) => s + (i.price * i.qty), 0);
         
         if (remainingItems.length === 0) {
-            // Pedido completo pagado
             await supabaseClient.from('orders').update({
                 status: 'nuevo',
                 paid: true
@@ -367,12 +358,10 @@ async function confirmDinerPayment() {
             
             currentTableOrder = null;
         } else {
-            // Actualizar pedido original con lo que falta
             await supabaseClient.from('orders').update({
                 total: newTotal
             }).eq('id', currentTableOrder.id);
             
-            // Borrar los items pagados del order_items
             const paidItemIds = diner.items.map(i => i.orderItemId);
             await supabaseClient.from('order_items').delete().in('id', paidItemIds);
             
@@ -393,7 +382,6 @@ async function confirmDinerPayment() {
     }
 }
 
-// ============ REPORTES ============
 function setupReportFilters() {
     document.querySelectorAll('.report-filter-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1098,6 +1086,9 @@ async function confirmPaymentForTable() {
         
         await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId);
         
+        // ✅ Imprimir ticket al cobrar mesa
+        printTicket(currentTableOrder, currentTableOrder.order_items);
+        
         addNotification('pago', `✓ Mesa cobrada`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
         
         currentTableOrder = null;
@@ -1191,7 +1182,7 @@ function setupRealtimeGlobal() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            addNotification('nuevo', ` Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
+            addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
             loadTables();
@@ -1222,7 +1213,7 @@ async function loadCashStatus() {
         document.getElementById('cash-summary').style.display = 'none';
     } else {
         currentSession = session;
-        document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
+        document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
             <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
             <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
@@ -1254,7 +1245,7 @@ async function loadCashSummary() {
         </div>
         <div class="movements-section">
             <h4>Movimientos registrados: ${movements.length}</h4>
-            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : ''} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
         </div>
     `;
 }

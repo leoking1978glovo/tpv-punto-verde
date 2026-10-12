@@ -13,7 +13,7 @@
 
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
-            <h2>🌿 TPV Punto Verde</h2>
+            <h2> TPV Punto Verde</h2>
             <p>Inicia sesión para continuar</p>
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="Correo electrónico" required>
@@ -35,15 +35,15 @@
                     <span>Mesas</span>
                 </li>
                 <li class="nav-item" data-view="pos">
-                    <span class="nav-icon"></span>
+                    <span class="nav-icon">🛒</span>
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen">
-                    <span class="nav-icon">👨‍</span>
+                    <span class="nav-icon">‍🍳</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="reports">
-                    <span class="nav-icon">📊</span>
+                    <span class="nav-icon"></span>
                     <span>Reportes</span>
                 </li>
                 <li class="nav-item" data-view="cash">
@@ -174,20 +174,20 @@
                     </div>
                     <div class="charts-grid">
                         <div class="chart-card">
-                            <h3> Ventas por Hora</h3>
+                            <h3>📈 Ventas por Hora</h3>
                             <div class="chart-wrapper">
                                 <canvas id="chart-horas"></canvas>
                             </div>
                         </div>
                         <div class="chart-card">
-                            <h3> Top 5 Productos</h3>
+                            <h3>🏆 Top 5 Productos</h3>
                             <div class="chart-wrapper">
                                 <canvas id="chart-productos"></canvas>
                             </div>
                         </div>
                     </div>
                     <div class="recent-orders-card">
-                        <h3>🕒 Últimos Pedidos</h3>
+                        <h3> Últimos Pedidos</h3>
                         <div class="table-wrapper">
                             <table class="recent-table">
                                 <thead>
@@ -229,7 +229,7 @@
                 <h3>🔔 Notificaciones</h3>
                 <div class="notif-header-actions">
                     <button class="clear-notifs" id="btn-clear-notifs">Limpiar</button>
-                    <button class="close-notifs" id="btn-close-notifs"></button>
+                    <button class="close-notifs" id="btn-close-notifs">✕</button>
                 </div>
             </div>
             <div class="notif-list" id="notif-list">
@@ -267,7 +267,7 @@
                     <h3>Método de Pago</h3>
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta"> Tarjeta</button>
+                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
@@ -284,7 +284,7 @@
         </div>
     </div>
 
-    <!-- NUEVO MODAL: DIVIDIR CUENTA -->
+    <!-- MODAL: DIVIDIR CUENTA -->
     <div id="divide-modal" class="modal-overlay">
         <div class="modal-content modal-large">
             <div class="modal-header">
@@ -316,7 +316,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="diner-pay-title">Cobrar Comensal</h2>
-                <button class="close-btn" id="btn-close-diner-pay"></button>
+                <button class="close-btn" id="btn-close-diner-pay">✕</button>
             </div>
             <div class="modal-body">
                 <div class="order-summary">
@@ -329,9 +329,9 @@
                 <div class="payment-method">
                     <h3>Método de Pago</h3>
                     <div class="method-buttons" id="diner-method-buttons">
-                        <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
+                        <button class="method-btn active" data-method="efectivo"> Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum"> Bizum</button>
+                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
                 <div class="cash-input" id="diner-cash-section">
