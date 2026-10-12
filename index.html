@@ -13,7 +13,7 @@
 
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
-            <h2> TPV Punto Verde</h2>
+            <h2>🌿 TPV Punto Verde</h2>
             <p>Inicia sesión para continuar</p>
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="Correo electrónico" required>
@@ -42,8 +42,12 @@
                     <span class="nav-icon">‍🍳</span>
                     <span>Cocina</span>
                 </li>
+                <li class="nav-item" data-view="inventory">
+                    <span class="nav-icon">📦</span>
+                    <span>Inventario</span>
+                </li>
                 <li class="nav-item" data-view="reports">
-                    <span class="nav-icon"></span>
+                    <span class="nav-icon">📊</span>
                     <span>Reportes</span>
                 </li>
                 <li class="nav-item" data-view="cash">
@@ -136,7 +140,45 @@
                 <div class="kitchen-container">
                     <div class="column"><h2 class="column-header status-nuevo">🔴 Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
                     <div class="column"><h2 class="column-header status-cocina">🟠 En Cocina</h2><div class="orders-list" id="orders-cocina"></div></div>
-                    <div class="column"><h2 class="column-header status-listo">🟢 Listos</h2><div class="orders-list" id="orders-listo"></div></div>
+                    <div class="column"><h2 class="column-header status-listo"> Listos</h2><div class="orders-list" id="orders-listo"></div></div>
+                </div>
+            </section>
+
+            <!-- NUEVA VISTA: INVENTARIO -->
+            <section id="view-inventory" class="view">
+                <header class="view-header">
+                    <h1>📦 Inventario de Ingredientes</h1>
+                    <button class="btn-primary" id="btn-add-ingredient">+ Nuevo Ingrediente</button>
+                </header>
+                <div class="inventory-container">
+                    <div class="inventory-stats">
+                        <div class="inv-stat-card">
+                            <div class="inv-stat-label">Total Ingredientes</div>
+                            <div class="inv-stat-value" id="inv-total">0</div>
+                        </div>
+                        <div class="inv-stat-card inv-stat-ok">
+                            <div class="inv-stat-label">Stock OK</div>
+                            <div class="inv-stat-value" id="inv-ok">0</div>
+                        </div>
+                        <div class="inv-stat-card inv-stat-low">
+                            <div class="inv-stat-label">Stock Bajo</div>
+                            <div class="inv-stat-value" id="inv-low">0</div>
+                        </div>
+                        <div class="inv-stat-card inv-stat-out">
+                            <div class="inv-stat-label">Agotados</div>
+                            <div class="inv-stat-value" id="inv-out">0</div>
+                        </div>
+                    </div>
+                    <div class="inventory-filters">
+                        <input type="text" id="inv-search" placeholder=" Buscar ingrediente..." class="inv-search-input">
+                        <select id="inv-filter-status" class="inv-filter-select">
+                            <option value="all">Todos los estados</option>
+                            <option value="ok">Stock OK</option>
+                            <option value="low">Stock Bajo</option>
+                            <option value="out">Agotados</option>
+                        </select>
+                    </div>
+                    <div class="inventory-grid" id="inventory-grid"></div>
                 </div>
             </section>
 
@@ -180,14 +222,14 @@
                             </div>
                         </div>
                         <div class="chart-card">
-                            <h3>🏆 Top 5 Productos</h3>
+                            <h3> Top 5 Productos</h3>
                             <div class="chart-wrapper">
                                 <canvas id="chart-productos"></canvas>
                             </div>
                         </div>
                     </div>
                     <div class="recent-orders-card">
-                        <h3> Últimos Pedidos</h3>
+                        <h3>🕒 Últimos Pedidos</h3>
                         <div class="table-wrapper">
                             <table class="recent-table">
                                 <thead>
@@ -268,7 +310,7 @@
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
+                        <button class="method-btn" data-method="bizum"> Bizum</button>
                     </div>
                 </div>
                 <div class="cash-input" id="cash-section">
@@ -329,7 +371,7 @@
                 <div class="payment-method">
                     <h3>Método de Pago</h3>
                     <div class="method-buttons" id="diner-method-buttons">
-                        <button class="method-btn active" data-method="efectivo"> Efectivo</button>
+                        <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
@@ -343,6 +385,73 @@
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-diner-pay">Cancelar</button>
                 <button class="confirm-btn" id="btn-confirm-diner-pay">✓ Cobrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: AGREGAR/EDITAR INGREDIENTE -->
+    <div id="ingredient-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="ingredient-modal-title">Nuevo Ingrediente</h2>
+                <button class="close-btn" id="btn-close-ingredient">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ingredient-id">
+                <div class="input-group">
+                    <label>Nombre del ingrediente:</label>
+                    <input type="text" id="ingredient-name" placeholder="Ej: Arroz">
+                </div>
+                <div class="input-group">
+                    <label>Stock actual:</label>
+                    <input type="number" id="ingredient-stock" placeholder="0" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Unidad de medida:</label>
+                    <select id="ingredient-unit">
+                        <option value="unidad">Unidad</option>
+                        <option value="gramo">Gramo (g)</option>
+                        <option value="kilogramo">Kilogramo (kg)</option>
+                        <option value="litro">Litro (L)</option>
+                        <option value="mililitro">Mililitro (ml)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Stock mínimo (alerta):</label>
+                    <input type="number" id="ingredient-min-stock" placeholder="0" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Costo por unidad ($):</label>
+                    <input type="number" id="ingredient-cost" placeholder="0" step="0.01">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-ingredient">Cancelar</button>
+                <button class="confirm-btn" id="btn-save-ingredient"> Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: RECETA DEL PRODUCTO -->
+    <div id="recipe-modal" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="recipe-modal-title">Receta del Producto</h2>
+                <button class="close-btn" id="btn-close-recipe">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="recipe-product-info" id="recipe-product-info"></div>
+                <div class="recipe-add-row">
+                    <select id="recipe-ingredient-select" class="recipe-select">
+                        <option value="">Seleccionar ingrediente...</option>
+                    </select>
+                    <input type="number" id="recipe-quantity" placeholder="Cantidad" step="0.01" class="recipe-input">
+                    <button class="btn-add-recipe-item" id="btn-add-recipe-item">+ Agregar</button>
+                </div>
+                <div class="recipe-items-list" id="recipe-items-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-recipe">Cerrar</button>
             </div>
         </div>
     </div>

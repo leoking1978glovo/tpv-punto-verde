@@ -25,6 +25,12 @@ let unassignedItems = [];
 let currentDinerPayId = null;
 let currentDinerPayMethod = 'efectivo';
 
+// Variables de inventario
+let ingredients = [];
+let recipes = [];
+let currentRecipeProductId = null;
+let currentRecipeProduct = null;
+
 async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) { currentUser = session.user; showApp(); } else { showLogin(); }
@@ -33,6 +39,7 @@ async function init() {
     setupNotificationsPanel();
     setupReportFilters();
     setupDivideEvents();
+    setupInventoryEvents();
 }
 
 function showLogin() {
@@ -47,6 +54,7 @@ function showApp() {
     loadProducts();
     loadTables();
     loadCashStatus();
+    loadIngredients();
     setupPOSEvents();
     setupRealtimeGlobal();
 }
@@ -98,6 +106,10 @@ function setupNavigation() {
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-kitchen').classList.add('active');
                 loadKitchenOrders();
+            } else if (view === 'inventory') {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('view-inventory').classList.add('active');
+                loadIngredients();
             } else if (view === 'reports') {
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-reports').classList.add('active');
@@ -124,6 +136,292 @@ function setupNavigation() {
     });
 }
 
+// ============ INVENTARIO ============
+function setupInventoryEvents() {
+    document.getElementById('btn-add-ingredient').addEventListener('click', () => openIngredientModal());
+    document.getElementById('btn-close-ingredient').addEventListener('click', () => closeModal('ingredient-modal'));
+    document.getElementById('btn-cancel-ingredient').addEventListener('click', () => closeModal('ingredient-modal'));
+    document.getElementById('btn-save-ingredient').addEventListener('click', saveIngredient);
+    
+    document.getElementById('btn-close-recipe').addEventListener('click', () => closeModal('recipe-modal'));
+    document.getElementById('btn-cancel-recipe').addEventListener('click', () => closeModal('recipe-modal'));
+    document.getElementById('btn-add-recipe-item').addEventListener('click', addRecipeItem);
+    
+    document.getElementById('inv-search').addEventListener('input', renderInventory);
+    document.getElementById('inv-filter-status').addEventListener('change', renderInventory);
+}
+
+async function loadIngredients() {
+    const { data: ingData, error: ingError } = await supabaseClient
+        .from('ingredients')
+        .select('*')
+        .order('name');
+    if (ingError) { console.error('Error cargando ingredientes:', ingError); return; }
+    ingredients = ingData || [];
+    
+    const { data: recData, error: recError } = await supabaseClient
+        .from('recipes')
+        .select('*');
+    if (recError) { console.error('Error cargando recetas:', recError); return; }
+    recipes = recData || [];
+    
+    renderInventory();
+    checkLowStockAlerts();
+}
+
+function getIngredientStatus(ing) {
+    if (ing.stock <= 0) return 'out';
+    if (ing.stock <= ing.min_stock) return 'low';
+    return 'ok';
+}
+
+function renderInventory() {
+    const grid = document.getElementById('inventory-grid');
+    if (!grid) return;
+    
+    const search = (document.getElementById('inv-search')?.value || '').toLowerCase();
+    const filter = document.getElementById('inv-filter-status')?.value || 'all';
+    
+    let filtered = ingredients.filter(ing => {
+        const matchSearch = ing.name.toLowerCase().includes(search);
+        const status = getIngredientStatus(ing);
+        const matchFilter = filter === 'all' || status === filter;
+        return matchSearch && matchFilter;
+    });
+    
+    // Stats
+    const total = ingredients.length;
+    const ok = ingredients.filter(i => getIngredientStatus(i) === 'ok').length;
+    const low = ingredients.filter(i => getIngredientStatus(i) === 'low').length;
+    const out = ingredients.filter(i => getIngredientStatus(i) === 'out').length;
+    
+    document.getElementById('inv-total').textContent = total;
+    document.getElementById('inv-ok').textContent = ok;
+    document.getElementById('inv-low').textContent = low;
+    document.getElementById('inv-out').textContent = out;
+    
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay ingredientes</div>';
+        return;
+    }
+    
+    grid.innerHTML = filtered.map(ing => {
+        const status = getIngredientStatus(ing);
+        const statusClass = status === 'out' ? 'stock-out' : status === 'low' ? 'stock-low' : '';
+        const unitLabel = ing.unit === 'gramo' ? 'g' : ing.unit === 'kilogramo' ? 'kg' : ing.unit === 'litro' ? 'L' : ing.unit === 'mililitro' ? 'ml' : 'und';
+        
+        return `
+        <div class="ingredient-card ${statusClass}">
+            <div class="ingredient-header">
+                <div class="ingredient-name">${ing.name}</div>
+                <div class="ingredient-actions">
+                    <button class="ingredient-action-btn" onclick="editIngredient(${ing.id})" title="Editar">✏️</button>
+                    <button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})" title="Eliminar">🗑️</button>
+                </div>
+            </div>
+            <div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div>
+            <div class="ingredient-meta">
+                <span>Mínimo: ${ing.min_stock} ${unitLabel}</span>
+                <span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span>
+            </div>
+            <button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas que usan este ingrediente</button>
+        </div>
+        `;
+    }).join('');
+}
+
+function openIngredientModal(ingredient = null) {
+    document.getElementById('ingredient-modal-title').textContent = ingredient ? 'Editar Ingrediente' : 'Nuevo Ingrediente';
+    document.getElementById('ingredient-id').value = ingredient ? ingredient.id : '';
+    document.getElementById('ingredient-name').value = ingredient ? ingredient.name : '';
+    document.getElementById('ingredient-stock').value = ingredient ? ingredient.stock : 0;
+    document.getElementById('ingredient-unit').value = ingredient ? ingredient.unit : 'unidad';
+    document.getElementById('ingredient-min-stock').value = ingredient ? ingredient.min_stock : 0;
+    document.getElementById('ingredient-cost').value = ingredient ? ingredient.cost_per_unit : 0;
+    document.getElementById('ingredient-modal').classList.add('active');
+}
+
+async function saveIngredient() {
+    const id = document.getElementById('ingredient-id').value;
+    const name = document.getElementById('ingredient-name').value.trim();
+    const stock = parseFloat(document.getElementById('ingredient-stock').value) || 0;
+    const unit = document.getElementById('ingredient-unit').value;
+    const min_stock = parseFloat(document.getElementById('ingredient-min-stock').value) || 0;
+    const cost_per_unit = parseFloat(document.getElementById('ingredient-cost').value) || 0;
+    
+    if (!name) return alert('El nombre es obligatorio');
+    
+    try {
+        if (id) {
+            const { error } = await supabaseClient
+                .from('ingredients')
+                .update({ name, stock, unit, min_stock, cost_per_unit })
+                .eq('id', id);
+            if (error) throw error;
+        } else {
+            const { error } = await supabaseClient
+                .from('ingredients')
+                .insert([{ name, stock, unit, min_stock, cost_per_unit }]);
+            if (error) throw error;
+        }
+        
+        closeModal('ingredient-modal');
+        loadIngredients();
+        showToast('pago', '✓ Ingrediente guardado', name);
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function editIngredient(id) {
+    const ing = ingredients.find(i => i.id === id);
+    if (ing) openIngredientModal(ing);
+}
+
+async function deleteIngredient(id) {
+    if (!confirm('¿Eliminar este ingrediente? También se eliminarán las recetas asociadas.')) return;
+    try {
+        await supabaseClient.from('recipes').delete().eq('ingredient_id', id);
+        const { error } = await supabaseClient.from('ingredients').delete().eq('id', id);
+        if (error) throw error;
+        loadIngredients();
+        showToast('pago', '🗑️ Ingrediente eliminado', '');
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function openRecipeModal(ingredientId) {
+    const ing = ingredients.find(i => i.id === ingredientId);
+    if (!ing) return;
+    
+    // Cargar productos
+    const { data: prods } = await supabaseClient.from('products').select('*').eq('active', true);
+    const allProducts = prods || [];
+    
+    document.getElementById('recipe-modal-title').textContent = `Recetas que usan: ${ing.name}`;
+    
+    // Llenar select de ingredientes (para agregar nuevos)
+    const select = document.getElementById('recipe-ingredient-select');
+    select.innerHTML = '<option value="">Seleccionar ingrediente...</option>' + 
+        ingredients.filter(i => i.id !== ingredientId).map(i => 
+            `<option value="${i.id}">${i.name} (${i.stock} ${i.unit})</option>`
+        ).join('');
+    
+    // Mostrar productos que usan este ingrediente
+    const productIds = recipes.filter(r => r.ingredient_id === ingredientId).map(r => r.product_id);
+    const relatedProducts = allProducts.filter(p => productIds.includes(p.id));
+    
+    const infoDiv = document.getElementById('recipe-product-info');
+    if (relatedProducts.length === 0) {
+        infoDiv.innerHTML = `<div style="color: var(--text-gray);">Este ingrediente no está asociado a ningún producto aún.</div>`;
+    } else {
+        infoDiv.innerHTML = `<div>Productos que usan ${ing.name}:</div>` + 
+            relatedProducts.map(p => `<div style="font-size: 0.9rem; padding: 0.25rem 0;">• ${p.name}</div>`).join('');
+    }
+    
+    document.getElementById('recipe-items-list').innerHTML = '';
+    document.getElementById('recipe-modal').classList.add('active');
+}
+
+async function addRecipeItem() {
+    const ingredientId = parseInt(document.getElementById('recipe-ingredient-select').value);
+    const quantity = parseFloat(document.getElementById('recipe-quantity').value);
+    
+    if (!ingredientId || !quantity || quantity <= 0) return alert('Selecciona un ingrediente y cantidad válida');
+    
+    // Para simplificar: asociar el ingrediente seleccionado a todos los productos que ya usan el ingrediente principal
+    // En una versión más completa, se elegiría el producto específico
+    
+    const currentIngredientId = parseInt(document.getElementById('recipe-modal-title').textContent.match(/\d+/)?.[0]);
+    
+    try {
+        // Buscar productos que usan el ingrediente actual
+        const relatedRecipes = recipes.filter(r => r.ingredient_id === currentIngredientId);
+        const productIds = [...new Set(relatedRecipes.map(r => r.product_id))];
+        
+        if (productIds.length === 0) {
+            return alert('Primero debes asociar el ingrediente principal a algún producto');
+        }
+        
+        // Agregar la relación para cada producto
+        for (const productId of productIds) {
+            const { error } = await supabaseClient
+                .from('recipes')
+                .insert([{ product_id: productId, ingredient_id: ingredientId, quantity }]);
+            if (error) throw error;
+        }
+        
+        document.getElementById('recipe-quantity').value = '';
+        document.getElementById('recipe-ingredient-select').value = '';
+        
+        showToast('pago', '✓ Ingrediente agregado a recetas', '');
+        loadIngredients();
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function checkLowStockAlerts() {
+    const lowStock = ingredients.filter(i => getIngredientStatus(i) !== 'ok');
+    if (lowStock.length > 0) {
+        const badge = document.getElementById('notif-badge');
+        const currentCount = parseInt(badge.textContent) || 0;
+        badge.textContent = currentCount + lowStock.length;
+        badge.style.display = 'flex';
+        
+        lowStock.forEach(ing => {
+            const status = getIngredientStatus(ing);
+            const message = status === 'out' 
+                ? `⚠️ ${ing.name} está AGOTADO` 
+                : `⚠️ ${ing.name} tiene stock bajo (${ing.stock})`;
+            addNotification('alerta', 'Stock Bajo', message);
+        });
+    }
+}
+
+// Descuento automático de inventario al cobrar
+async function deductInventory(items) {
+    try {
+        for (const item of items) {
+            // Buscar receta del producto
+            const productRecipes = recipes.filter(r => r.product_id === item.id);
+            
+            for (const recipe of productRecipes) {
+                const qtyToDeduct = recipe.quantity * item.qty;
+                
+                const { data: ing, error: fetchError } = await supabaseClient
+                    .from('ingredients')
+                    .select('stock, min_stock, name')
+                    .eq('id', recipe.ingredient_id)
+                    .single();
+                
+                if (fetchError) continue;
+                
+                const newStock = Math.max(0, ing.stock - qtyToDeduct);
+                
+                await supabaseClient
+                    .from('ingredients')
+                    .update({ stock: newStock })
+                    .eq('id', recipe.ingredient_id);
+                
+                // Alerta si queda bajo el mínimo
+                if (newStock <= ing.min_stock && newStock > 0) {
+                    addNotification('alerta', '⚠️ Stock Bajo', `${ing.name} quedó con ${newStock} (mínimo: ${ing.min_stock})`);
+                } else if (newStock === 0) {
+                    addNotification('alerta', '🚨 Agotado', `${ing.name} se agotó`);
+                }
+            }
+        }
+        
+        // Recargar inventario
+        loadIngredients();
+    } catch (error) {
+        console.error('Error descontando inventario:', error);
+    }
+}
+
+// ============ DIVIDIR CUENTA ============
 function setupDivideEvents() {
     document.getElementById('btn-divide-account').addEventListener('click', openDivideModal);
     document.getElementById('btn-close-divide').addEventListener('click', () => closeModal('divide-modal'));
@@ -242,7 +540,7 @@ function renderDivideModal() {
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                         <span class="diner-total">$${Math.round(total).toLocaleString()}</span>
                         ${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})">💰 Cobrar</button>` : ''}
-                        ${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}
+                        ${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">️</button>` : ''}
                     </div>
                 </div>
                 <div class="diner-items">
@@ -338,6 +636,9 @@ async function confirmDinerPayment() {
         
         printTicket(order, diner.items);
         
+        // ✅ Descontar inventario
+        await deductInventory(diner.items);
+        
         const remainingItems = currentTableOrder.order_items.filter(origItem => {
             return !diner.items.some(dinerItem => dinerItem.orderItemId === origItem.id);
         });
@@ -381,6 +682,7 @@ async function confirmDinerPayment() {
     }
 }
 
+// ============ REPORTES ============
 function setupReportFilters() {
     document.querySelectorAll('.report-filter-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1063,7 +1365,12 @@ async function confirmPayment() {
         const orderItems = cart.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty }));
         const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
         if (itemsError) throw itemsError;
+        
         printTicket(order, cart);
+        
+        // ✅ Descontar inventario
+        await deductInventory(cart);
+        
         addNotification('pago', `✓ Pedido #${order.id} cobrado`, `Total: $${Math.round(total).toLocaleString()} | ${payMethod.toUpperCase()}`);
         cart = []; renderCart(); renderTableOrder(); closeModal('pay-modal');
         const cashView = document.getElementById('view-cash');
@@ -1086,6 +1393,9 @@ async function confirmPaymentForTable() {
         await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId);
         
         printTicket(currentTableOrder, currentTableOrder.order_items);
+        
+        // ✅ Descontar inventario
+        await deductInventory(currentTableOrder.order_items);
         
         addNotification('pago', `✓ Mesa cobrada`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
         
@@ -1180,7 +1490,7 @@ function setupRealtimeGlobal() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
+            addNotification('nuevo', ` Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
             loadTables();
@@ -1298,11 +1608,14 @@ async function closeCashSession() {
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-// Hacer funciones accesibles globalmente para los onclick inline del modal Dividir Cuenta
+// Hacer funciones accesibles globalmente para los onclick inline
 window.openDinerPayModal = openDinerPayModal;
 window.removeItemFromDiner = removeItemFromDiner;
 window.removeDiner = removeDiner;
 window.updateDinerName = updateDinerName;
 window.assignItemToDiner = assignItemToDiner;
+window.editIngredient = editIngredient;
+window.deleteIngredient = deleteIngredient;
+window.openRecipeModal = openRecipeModal;
 
 init();

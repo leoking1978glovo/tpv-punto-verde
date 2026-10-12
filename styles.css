@@ -65,6 +65,7 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .notif-item.tipo-cocina { border-left-color: var(--status-ocupada); }
 .notif-item.tipo-listo { border-left-color: var(--status-libre); }
 .notif-item.tipo-pago { border-left-color: var(--primary); }
+.notif-item.tipo-alerta { border-left-color: #f59e0b; }
 .notif-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem; }
 .notif-message { font-size: 0.8rem; color: var(--text-gray); }
 .notif-time { font-size: 0.7rem; color: var(--text-gray); margin-top: 0.25rem; }
@@ -261,6 +262,36 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .btn-listo { background: var(--status-libre); }
 .btn-entregado { background: var(--text-gray); }
 
+/* INVENTARIO */
+.inventory-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+.inventory-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.inv-stat-card { background: var(--bg-card); padding: 1rem; border-radius: 10px; box-shadow: var(--shadow); border-left: 4px solid var(--text-gray); }
+.inv-stat-card.inv-stat-ok { border-left-color: var(--status-libre); }
+.inv-stat-card.inv-stat-low { border-left-color: var(--status-ocupada); }
+.inv-stat-card.inv-stat-out { border-left-color: var(--status-pendiente); }
+.inv-stat-label { font-size: 0.75rem; color: var(--text-gray); text-transform: uppercase; font-weight: 600; margin-bottom: 0.3rem; }
+.inv-stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); }
+
+.inventory-filters { display: flex; gap: 0.75rem; }
+.inv-search-input { flex: 1; padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; }
+.inv-filter-select { padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white; }
+
+.inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.ingredient-card { background: var(--bg-card); border-radius: 10px; padding: 1rem; box-shadow: var(--shadow); border-left: 4px solid var(--status-libre); position: relative; }
+.ingredient-card.stock-low { border-left-color: var(--status-ocupada); background: #fffbeb; }
+.ingredient-card.stock-out { border-left-color: var(--status-pendiente); background: #fef2f2; }
+.ingredient-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+.ingredient-name { font-size: 1.05rem; font-weight: 700; color: var(--text-dark); }
+.ingredient-actions { display: flex; gap: 0.3rem; }
+.ingredient-action-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.2rem; border-radius: 4px; transition: 0.2s; }
+.ingredient-action-btn:hover { background: var(--bg-main); }
+.ingredient-stock { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); margin: 0.5rem 0; }
+.ingredient-stock span { font-size: 0.85rem; font-weight: 500; color: var(--text-gray); }
+.ingredient-meta { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-gray); margin-bottom: 0.5rem; }
+.ingredient-cost { font-size: 0.8rem; color: var(--primary); font-weight: 600; }
+.ingredient-recipe-btn { width: 100%; padding: 0.5rem; background: var(--bg-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: var(--text-dark); transition: 0.2s; }
+.ingredient-recipe-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
 .report-filters { display: flex; gap: 0.5rem; }
 .report-filter-btn { padding: 0.5rem 1rem; border: 1px solid var(--border); background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
 .report-filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
@@ -408,6 +439,22 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .btn-assign { background: var(--primary); color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 600; }
 .btn-assign:hover { background: var(--primary-hover); }
 
+/* RECETA MODAL */
+.recipe-product-info { background: var(--bg-main); padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-weight: 700; font-size: 1.05rem; }
+.recipe-add-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+.recipe-select { flex: 2; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+.recipe-input { flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+.btn-add-recipe-item { padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+.btn-add-recipe-item:hover { background: var(--primary-hover); }
+.recipe-items-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 300px; overflow-y: auto; }
+.recipe-item-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: var(--bg-main); border-radius: 6px; }
+.recipe-item-info { flex: 1; }
+.recipe-item-name { font-weight: 600; font-size: 0.9rem; }
+.recipe-item-qty { font-size: 0.8rem; color: var(--text-gray); }
+.recipe-item-remove { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; }
+.recipe-item-remove:hover { transform: scale(1.2); }
+.recipe-empty { text-align: center; color: var(--text-gray); padding: 1rem; font-size: 0.9rem; }
+
 .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1002; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
 .toast { background: white; padding: 1rem 1.25rem; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-left: 4px solid var(--primary); min-width: 280px; max-width: 350px; animation: toastIn 0.3s ease; pointer-events: auto; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
@@ -417,6 +464,7 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .toast.tipo-cocina { border-left-color: var(--status-ocupada); }
 .toast.tipo-listo { border-left-color: var(--status-libre); }
 .toast.tipo-pago { border-left-color: var(--primary); }
+.toast.tipo-alerta { border-left-color: #f59e0b; }
 .toast-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem; }
 .toast-message { font-size: 0.8rem; color: var(--text-gray); }
 
