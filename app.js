@@ -73,22 +73,15 @@ function setupNavigation() {
                 document.getElementById('view-tables').classList.add('active');
                 loadTables();
             } else if (view === 'pos') {
-                // Modo Caja (mesas): mantiene la mesa seleccionada si la había
+                if (!activeTableId) {
+                    currentTableOrder = null;
+                    cart = [];
+                    renderCart();
+                    renderTableOrder();
+                    document.getElementById('pos-title').textContent = 'Caja - Mostrador';
+                }
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-pos').classList.add('active');
-                document.getElementById('pos-title').textContent = 'Caja - Punto de Venta';
-                renderMiniTables();
-                renderTableOrder();
-            } else if (view === 'mostrador') {
-                // Modo Mostrador: sin mesa, venta directa
-                activeTableId = null;
-                currentTableOrder = null;
-                cart = [];
-                renderCart();
-                renderTableOrder();
-                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-                document.getElementById('view-pos').classList.add('active');
-                document.getElementById('pos-title').textContent = 'Mostrador - Venta Directa';
                 renderMiniTables();
             } else if (view === 'kitchen') {
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -197,7 +190,6 @@ function renderTables() {
     }).join('');
 }
 
-// Barra de mini-mesas: SOLO las 12 mesas (el Mostrador vive en el sidebar)
 function renderMiniTables() {
     const bar = document.getElementById('mini-tables-bar');
     if (!bar) return;
@@ -237,7 +229,6 @@ async function selectTable(id, name) {
     renderTableOrder();
     renderMiniTables();
     
-    // Al elegir una mesa, pasamos a modo Caja y resaltamos "Caja" en el sidebar
     document.getElementById('pos-title').textContent = `Caja - ${name}`;
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     const cajaItem = document.querySelector('[data-view="pos"]');
