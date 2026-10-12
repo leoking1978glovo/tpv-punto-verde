@@ -27,6 +27,7 @@ let ingredients = [];
 let recipes = [];
 let staffList = [];
 let staffSales = [];
+let currentQRTable = null;
 
 const ROLE_PERMISSIONS = {
     admin: ['tables', 'pos', 'kitchen', 'inventory', 'reports', 'cash', 'staff'],
@@ -45,6 +46,7 @@ async function init() {
     setupDivideEvents();
     setupInventoryEvents();
     setupStaffEvents();
+    setupQREvents();
 }
 
 async function loadProfile() {
@@ -191,6 +193,17 @@ function setupStaffEvents() {
     document.getElementById('btn-save-staff').addEventListener('click', saveStaff);
 }
 
+function setupQREvents() {
+    document.getElementById('btn-close-qr-table').addEventListener('click', () => closeModal('qr-table-modal'));
+    document.getElementById('btn-print-qr').addEventListener('click', () => {
+        if (!currentQRTable) return;
+        const url = `${window.location.origin}/menu.html?mesa=${currentQRTable.id}`;
+        const win = window.open('', '_blank');
+        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}h2{margin-bottom:0.5rem;}p{color:#666;}</style></head><body><h2>🌿 TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
+        win.document.close();
+    });
+}
+
 function setupNotificationsPanel() {
     document.getElementById('btn-notifications').addEventListener('click', () => {
         const panel = document.getElementById('notifications-panel');
@@ -223,6 +236,17 @@ function setupPOSEvents() {
     document.querySelectorAll('.method-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); payMethod = e.target.dataset.method; document.getElementById('cash-section').style.display = payMethod === 'efectivo' ? 'block' : 'none'; }));
     document.getElementById('cash-received').addEventListener('input', (e) => { const total = currentTableOrder ? currentTableOrder.total : cart.reduce((sum, i) => sum + (i.price * i.qty), 0); const received = parseFloat(e.target.value) || 0; document.getElementById('change-amount').textContent = '$' + Math.max(0, Math.round(received - total)).toLocaleString(); });
     document.getElementById('btn-confirm-pay').addEventListener('click', () => { if (currentTableOrder) confirmPaymentForTable(); else confirmPayment(); });
+}
+
+// ============ QR DE MESA ============
+function openTableQR(tableId, tableName) {
+    currentQRTable = { id: tableId, name: tableName };
+    document.getElementById('qr-table-title').textContent = `QR - ${tableName}`;
+    const container = document.getElementById('qr-table-code');
+    container.innerHTML = '';
+    const url = `${window.location.origin}/menu.html?mesa=${tableId}`;
+    new QRCode(container, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+    document.getElementById('qr-table-modal').classList.add('active');
 }
 
 // ============ PERSONAL ============
@@ -500,7 +524,7 @@ async function confirmDinerPayment() {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
-// ============ MESAS Y CAJA ============
+// ============ PRODUCTOS Y CARRITO ============
 async function loadProducts() {
     const { data, error } = await supabaseClient.from('products').select('*').eq('active', true).order('position');
     if (error) return;
@@ -557,6 +581,7 @@ function updateTotals(total) {
     else { btnPay.textContent = `COBRAR ($${Math.round(total).toLocaleString()})`; }
 }
 
+// ============ MESAS ============
 async function loadTables() {
     const { data: tablesData, error: tablesError } = await supabaseClient.from('tables').select('*').order('id');
     if (tablesError) return;
@@ -579,7 +604,12 @@ function renderTables() {
         const itemsGrouped = {};
         (table.pendingItems || []).forEach(item => { const key = item.name; if (!itemsGrouped[key]) itemsGrouped[key] = { name: item.name, qty: 0, price: item.price }; itemsGrouped[key].qty += item.qty; });
         const itemsHtml = hasOrders ? Object.values(itemsGrouped).map(item => `<div class="table-order-item"><span>${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span></div>`).join('') : '';
-        return `<div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')"><div class="table-name">${table.name}</div><div class="table-status">${hasOrders ? 'OCUPADA' : 'LIBRE'}</div>${hasOrders ? `<div class="table-orders-list">${itemsHtml}</div><div class="table-order-total"><span>Total:</span><span>$${Math.round(table.pendingTotal).toLocaleString()}</span></div><button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>` : '<div style="flex:1;"></div>'}</div>`;
+        return `<div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')">
+            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')">📱 QR</button>
+            <div class="table-name">${table.name}</div>
+            <div class="table-status">${hasOrders ? 'OCUPADA' : 'LIBRE'}</div>
+            ${hasOrders ? `<div class="table-orders-list">${itemsHtml}</div><div class="table-order-total"><span>Total:</span><span>$${Math.round(table.pendingTotal).toLocaleString()}</span></div><button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>` : '<div style="flex:1;"></div>'}
+        </div>`;
     }).join('');
 }
 
@@ -655,6 +685,7 @@ async function addToTable() {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
+// ============ PAGOS ============
 function openPayModal() {
     if (cart.length === 0) return alert('Carrito vacío');
     document.getElementById('modal-title').textContent = 'Finalizar Pedido (Mostrador)';
@@ -728,10 +759,29 @@ function printTicket(order, items) {
 }
 
 // ============ COCINA ============
-async function loadKitchenOrders() { const { data, error } = await supabaseClient.from('orders').select('*, order_items(*)').neq('status', 'entregado').order('created_at', { ascending: false }); if (error) return; kitchenOrders = data || []; renderKitchenOrders(); updateKitchenStats(); }
-function renderKitchenOrders() { ['nuevo', 'cocina', 'listo'].forEach(status => { const container = document.getElementById(`orders-${status}`); const orders = kitchenOrders.filter(o => o.status === status); if (orders.length === 0) { container.innerHTML = '<div class="empty-cart">No hay pedidos</div>'; return; } container.innerHTML = orders.map(order => { const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); let actionBtn = ''; if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`; else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`; return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}${dinerText}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`; }).join(''); }); }
+async function loadKitchenOrders() { const { data, error } = await supabaseClient.from('orders').select('*, order_items(*)').neq('status', 'entregado').neq('status', 'pendiente_pago').order('created_at', { ascending: false }); if (error) return; kitchenOrders = data || []; renderKitchenOrders(); updateKitchenStats(); }
+
+function renderKitchenOrders() { ['nuevo', 'cocina', 'listo'].forEach(status => { const container = document.getElementById(`orders-${status}`); const orders = kitchenOrders.filter(o => o.status === status); if (orders.length === 0) { container.innerHTML = '<div class="empty-cart">No hay pedidos</div>'; return; } container.innerHTML = orders.map(order => { const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; const webBadge = order.source === 'web' ? ' 📱' : ''; const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); let actionBtn = ''; if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`; else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`; return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}${dinerText}${webBadge}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`; }).join(''); }); }
+
 function updateKitchenStats() { document.getElementById('count-nuevo').textContent = kitchenOrders.filter(o => o.status === 'nuevo').length; document.getElementById('count-cocina').textContent = kitchenOrders.filter(o => o.status === 'cocina').length; document.getElementById('count-listo').textContent = kitchenOrders.filter(o => o.status === 'listo').length; }
-async function updateOrderStatus(orderId, newStatus) { const { error } = await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId); if (error) { alert('Error: ' + error.message); } else { loadKitchenOrders(); if (newStatus === 'entregado') { const order = kitchenOrders.find(o => o.id === orderId); if (order && order.table_id) await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', order.table_id); } else if (newStatus === 'listo') { const order = kitchenOrders.find(o => o.id === orderId); if (order && order.table_id) await supabaseClient.from('tables').update({ status: 'pendiente' }).eq('id', order.table_id); } } }
+
+async function updateOrderStatus(orderId, newStatus) {
+    const order = kitchenOrders.find(o => o.id === orderId);
+    const { error } = await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId);
+    if (error) { alert('Error: ' + error.message); return; }
+    loadKitchenOrders();
+    if (newStatus === 'entregado') {
+        if (order && order.table_id && !order.paid) {
+            await supabaseClient.from('orders').update({ status: 'pendiente_pago' }).eq('id', orderId);
+            await supabaseClient.from('tables').update({ status: 'ocupada' }).eq('id', order.table_id);
+        } else if (order && order.table_id) {
+            await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', order.table_id);
+        }
+        loadTables();
+    } else if (newStatus === 'listo') {
+        if (order && order.table_id) await supabaseClient.from('tables').update({ status: 'pendiente' }).eq('id', order.table_id);
+    }
+}
 
 // ============ REPORTES ============
 function getDateRange(period) { const now = new Date(); const end = new Date(now); end.setHours(23, 59, 59, 999); const start = new Date(now); if (period === 'today') start.setHours(0, 0, 0, 0); else if (period === 'week') { const day = start.getDay(); const diff = start.getDate() - day + (day === 0 ? -6 : 1); start.setDate(diff); start.setHours(0, 0, 0, 0); } else if (period === 'month') { start.setDate(1); start.setHours(0, 0, 0, 0); } const d = new Date(start); if (period === 'today') d.setDate(d.getDate() - 1); else if (period === 'week') d.setDate(d.getDate() - 7); else if (period === 'month') d.setMonth(d.getMonth() - 1); return { start: start.toISOString(), end: end.toISOString(), prevStart: d.toISOString(), prevEnd: start.toISOString() }; }
@@ -767,9 +817,9 @@ function renderNotifications() { const list = document.getElementById('notif-lis
 function showToast(tipo, title, message) { const container = document.getElementById('toast-container'); const toast = document.createElement('div'); toast.className = `toast tipo-${tipo}`; toast.innerHTML = `<div class="toast-title">${title}</div><div class="toast-message">${message}</div>`; container.appendChild(toast); setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 4000); }
 
 // ============ REALTIME ============
-function setupRealtimeGlobal() { supabaseClient.channel('orders-global').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); loadTables(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const oldStatus = payload.old.status; const newStatus = order.status; let tipo = '', title = '', message = ''; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = `🔥 Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; } else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); } else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); } if (title) addNotification(tipo, title, message); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); }).subscribe(); }
+function setupRealtimeGlobal() { supabaseClient.channel('orders-global').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const webText = order.source === 'web' ? ' 📱 (QR)' : ''; addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); loadTables(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const oldStatus = payload.old.status; const newStatus = order.status; let tipo = '', title = '', message = ''; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = `🔥 Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; } else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); } else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); } if (title) addNotification(tipo, title, message); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); }).subscribe(); }
 
-// ============ CAJA ============
+// ============ CAJA / ARQUEOS ============
 async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
 
 async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
@@ -793,5 +843,6 @@ window.deleteIngredient = deleteIngredient;
 window.openRecipeModal = openRecipeModal;
 window.editStaff = editStaff;
 window.deleteStaff = deleteStaff;
+window.openTableQR = openTableQR;
 
 init();

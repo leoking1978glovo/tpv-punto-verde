@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Menú - TPV Punto Verde</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #10b981; --primary-dark: #059669; --dark: #1f2937; --gray: #6b7280; --border: #e5e7eb; --bg: #f9fafb; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--dark); padding-bottom: 90px; }
+        .menu-header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1.25rem 1rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .menu-header h1 { font-size: 1.25rem; margin-bottom: 0.2rem; }
+        .menu-header p { font-size: 0.8rem; opacity: 0.9; }
+        .table-chip { display: inline-block; background: rgba(255,255,255,0.25); padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; margin-top: 0.4rem; }
+        .cats { display: flex; gap: 0.5rem; overflow-x: auto; padding: 0.75rem 1rem; background: white; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 99; }
+        .cats::-webkit-scrollbar { display: none; }
+        .cat-chip { flex-shrink: 0; padding: 0.45rem 0.9rem; border-radius: 999px; border: 1px solid var(--border); background: white; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+        .cat-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .products { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .prod-card { background: white; border-radius: 12px; padding: 0.9rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; gap: 0.9rem; align-items: center; }
+        .prod-img { width: 70px; height: 70px; border-radius: 8px; background: #e5e7eb; object-fit: cover; flex-shrink: 0; }
+        .prod-info { flex: 1; }
+        .prod-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; }
+        .prod-desc { font-size: 0.75rem; color: var(--gray); margin-bottom: 0.3rem; }
+        .prod-price { color: var(--primary); font-weight: 800; font-size: 1rem; }
+        .prod-add { background: var(--primary); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; font-size: 1.4rem; cursor: pointer; flex-shrink: 0; }
+        .prod-add:active { transform: scale(0.9); }
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 0.9rem 1rem; display: flex; gap: 0.75rem; align-items: center; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.08); }
+        .cart-count { background: var(--primary); color: white; min-width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+        .cart-total { flex: 1; font-weight: 800; font-size: 1.1rem; }
+        .cart-btn { background: var(--primary); color: white; border: none; padding: 0.8rem 1.4rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; }
+        .cart-btn:disabled { background: var(--border); color: var(--gray); }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: flex-end; }
+        .overlay.open { display: flex; }
+        .sheet { background: white; width: 100%; max-width: 500px; border-radius: 16px 16px 0 0; padding: 1.25rem; max-height: 75vh; overflow-y: auto; }
+        .sheet h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+        .sheet-item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        .sheet-qty { display: flex; align-items: center; gap: 0.6rem; }
+        .sheet-qty button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 1rem; }
+        .sheet-total { display: flex; justify-content: space-between; font-weight: 800; font-size: 1.15rem; padding: 1rem 0; }
+        .sheet-send { width: 100%; background: var(--primary); color: white; border: none; padding: 1rem; border-radius: 10px; font-weight: 800; font-size: 1rem; cursor: pointer; }
+        .success { display: none; position: fixed; inset: 0; background: white; z-index: 300; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; }
+        .success.show { display: flex; }
+        .success-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .success h2 { font-size: 1.4rem; margin-bottom: 0.5rem; color: var(--primary); }
+        .success p { color: var(--gray); font-size: 0.95rem; }
+        .empty { text-align: center; color: var(--gray); padding: 3rem 1rem; }
+    </style>
+</head>
+<body>
+
+    <div class="menu-header">
+        <h1>🌿 TPV Punto Verde</h1>
+        <p>Escanea, pide y disfruta</p>
+        <span class="table-chip" id="table-chip">Mesa —</span>
+    </div>
+
+    <div class="cats" id="cats"></div>
+    <div class="products" id="products"></div>
+
+    <div class="cart-bar">
+        <div class="cart-count" id="cart-count">0</div>
+        <div class="cart-total" id="cart-total">$0</div>
+        <button class="cart-btn" id="cart-open">Ver pedido</button>
+    </div>
+
+    <div class="overlay" id="cart-overlay">
+        <div class="sheet">
+            <h2>🛒 Tu pedido</h2>
+            <div id="sheet-items"></div>
+            <div class="sheet-total"><span>Total</span><span id="sheet-total">$0</span></div>
+            <button class="sheet-send" id="sheet-send">📤 Enviar a cocina</button>
+        </div>
+    </div>
+
+    <div class="success" id="success">
+        <div class="success-icon">✅</div>
+        <h2>¡Pedido enviado!</h2>
+        <p>Tu pedido ya está en cocina.<br>Gracias por preferirnos.</p>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const params = new URLSearchParams(window.location.search);
+        const tableId = parseInt(params.get('mesa')) || null;
+        let products = [];
+        let cart = [];
+        let currentCat = 'all';
+
+        document.getElementById('table-chip').textContent = tableId ? `Mesa ${tableId}` : 'Para llevar';
+
+        async function init() {
+            if (!tableId) { document.getElementById('products').innerHTML = '<div class="empty">⚠️ Enlace inválido.<br>Escanea el QR desde tu mesa.</div>'; return; }
+            const { data } = await supabaseClient.from('products').select('*').eq('active', true).order('position');
+            products = data || [];
+            renderCats();
+            renderProducts();
+        }
+
+        function renderCats() {
+            const cats = [...new Set(products.map(p => p.category))].filter(Boolean);
+            document.getElementById('cats').innerHTML = `<button class="cat-chip active" data-cat="all">Todos</button>` + cats.map(c => `<button class="cat-chip" data-cat="${c}">${c}</button>`).join('');
+            document.querySelectorAll('.cat-chip').forEach(btn => btn.addEventListener('click', () => {
+                document.querySelectorAll('.cat-chip').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentCat = btn.dataset.cat;
+                renderProducts();
+            }));
+        }
+
+        function renderProducts() {
+            const filtered = currentCat === 'all' ? products : products.filter(p => p.category === currentCat);
+            const grid = document.getElementById('products');
+            if (filtered.length === 0) { grid.innerHTML = '<div class="empty">No hay productos</div>'; return; }
+            grid.innerHTML = filtered.map(p => `
+                <div class="prod-card">
+                    <img class="prod-img" src="${p.image || 'https://via.placeholder.com/70'}" alt="">
+                    <div class="prod-info">
+                        <div class="prod-name">${p.name}</div>
+                        <div class="prod-desc">${p.description || p.category || ''}</div>
+                        <div class="prod-price">$${Number(p.price).toLocaleString()}</div>
+                    </div>
+                    <button class="prod-add" onclick="addToCart(${p.id})">+</button>
+                </div>
+            `).join('');
+        }
+
+        function addToCart(id) {
+            const p = products.find(x => x.id === id);
+            const ex = cart.find(i => i.id === id);
+            if (ex) ex.qty++; else cart.push({ ...p, qty: 1 });
+            renderCart();
+        }
+
+        function changeQty(id, d) {
+            const i = cart.find(x => x.id === id);
+            if (!i) return;
+            i.qty += d;
+            if (i.qty <= 0) cart = cart.filter(x => x.id !== id);
+            renderCart();
+            renderSheet();
+        }
+
+        function renderCart() {
+            const count = cart.reduce((s, i) => s + i.qty, 0);
+            const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+            document.getElementById('cart-count').textContent = count;
+            document.getElementById('cart-total').textContent = '$' + Math.round(total).toLocaleString();
+        }
+
+        function renderSheet() {
+            const box = document.getElementById('sheet-items');
+            if (cart.length === 0) { box.innerHTML = '<div class="empty">Tu pedido está vacío</div>'; }
+            else {
+                box.innerHTML = cart.map(i => `
+                    <div class="sheet-item">
+                        <span>${i.name}</span>
+                        <div class="sheet-qty">
+                            <button onclick="changeQty(${i.id}, -1)">−</button>
+                            <span>${i.qty}</span>
+                            <button onclick="changeQty(${i.id}, 1)">+</button>
+                        </div>
+                        <strong>$${Math.round(i.price * i.qty).toLocaleString()}</strong>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('sheet-total').textContent = '$' + Math.round(cart.reduce((s, i) => s + i.price * i.qty, 0)).toLocaleString();
+        }
+
+        document.getElementById('cart-open').addEventListener('click', () => { renderSheet(); document.getElementById('cart-overlay').classList.add('open'); });
+        document.getElementById('cart-overlay').addEventListener('click', (e) => { if (e.target.id === 'cart-overlay') document.getElementById('cart-overlay').classList.remove('open'); });
+
+        document.getElementById('sheet-send').addEventListener('click', async () => {
+            if (cart.length === 0) return alert('Tu pedido está vacío');
+            const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+            try {
+                const { data: order, error } = await supabaseClient.from('orders').insert([{
+                    type: 'mesa', status: 'nuevo', total, paid: false, pay_method: 'pendiente',
+                    source: 'web', table_id: tableId, user_email: 'cliente-web'
+                }]).select().single();
+                if (error) throw error;
+                const items = cart.map(i => ({ order_id: order.id, name: i.name, price: i.price, qty: i.qty }));
+                const { error: ie } = await supabaseClient.from('order_items').insert(items);
+                if (ie) throw ie;
+                document.getElementById('cart-overlay').classList.remove('open');
+                document.getElementById('success').classList.add('show');
+                cart = [];
+                renderCart();
+            } catch (e) { alert('Error al enviar: ' + e.message); }
+        });
+
+        window.addToCart = addToCart;
+        window.changeQty = changeQty;
+        init();
+    </script>
+</body>
+</html>

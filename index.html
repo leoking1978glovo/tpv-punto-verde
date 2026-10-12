@@ -252,7 +252,6 @@
                 </div>
             </section>
 
-            <!-- NUEVA VISTA: PERSONAL -->
             <section id="view-staff" class="view">
                 <header class="view-header">
                     <h1>👥 Gestión de Personal</h1>
@@ -523,13 +522,28 @@
                     <label>Estado:</label>
                     <select id="staff-active">
                         <option value="true">✅ Activo</option>
-                        <option value="false"> Inactivo</option>
+                        <option value="false">⛔ Inactivo</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-staff">Cancelar</button>
                 <button class="confirm-btn" id="btn-save-staff">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL QR DE MESA -->
+    <div id="qr-table-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 360px; text-align: center;">
+            <div class="modal-header">
+                <h2 id="qr-table-title">QR de Mesa</h2>
+                <button class="close-btn" id="btn-close-qr-table">✕</button>
+            </div>
+            <div class="modal-body" style="display:flex; flex-direction:column; align-items:center; gap:1rem; padding:1rem;">
+                <div id="qr-table-code" style="padding:1rem; background:white; border:2px solid var(--border); border-radius:12px;"></div>
+                <p style="font-size:0.85rem; color:var(--text-gray);">El cliente escanea este código para pedir desde su celular sin mesero.</p>
+                <button class="btn-primary" id="btn-print-qr" style="margin:0;">🖨️ Imprimir QR</button>
             </div>
         </div>
     </div>
