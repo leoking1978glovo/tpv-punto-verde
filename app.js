@@ -1618,4 +1618,5 @@ window.editIngredient = editIngredient;
 window.deleteIngredient = deleteIngredient;
 window.openRecipeModal = openRecipeModal;
 
-init();
+init();/ /   f o r c e   r e d e p l o y   1 0 / 1 2 / 2 0 2 6   1 5 : 3 0 : 2 4  
+ 
