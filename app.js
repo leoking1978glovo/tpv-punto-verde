@@ -21,6 +21,12 @@ let chartHoras = null;
 let chartProductos = null;
 let currentReportPeriod = 'today';
 
+// Variables para dividir cuenta
+let diners = []; // [{id, name, items: [{orderItemId, name, price, qty}]}]
+let unassignedItems = []; // items del pedido sin asignar
+let currentDinerPayId = null;
+let currentDinerPayMethod = 'efectivo';
+
 async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) { currentUser = session.user; showApp(); } else { showLogin(); }
@@ -28,6 +34,7 @@ async function init() {
     setupNavigation();
     setupNotificationsPanel();
     setupReportFilters();
+    setupDivideEvents();
 }
 
 function showLogin() {
@@ -119,6 +126,273 @@ function setupNavigation() {
     });
 }
 
+// ============ DIVIDIR CUENTA ============
+function setupDivideEvents() {
+    document.getElementById('btn-divide-account').addEventListener('click', openDivideModal);
+    document.getElementById('btn-close-divide').addEventListener('click', () => closeModal('divide-modal'));
+    document.getElementById('btn-cancel-divide').addEventListener('click', () => closeModal('divide-modal'));
+    document.getElementById('btn-add-diner').addEventListener('click', addDiner);
+    document.getElementById('btn-pay-all').addEventListener('click', () => {
+        // Cobrar todo junto
+        openPayModalForTable();
+    });
+    document.getElementById('btn-close-diner-pay').addEventListener('click', () => closeModal('diner-pay-modal'));
+    document.getElementById('btn-cancel-diner-pay').addEventListener('click', () => closeModal('diner-pay-modal'));
+    document.getElementById('btn-confirm-diner-pay').addEventListener('click', confirmDinerPayment);
+    
+    document.querySelectorAll('#diner-method-buttons .method-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('#diner-method-buttons .method-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            currentDinerPayMethod = e.target.dataset.method;
+            document.getElementById('diner-cash-section').style.display = currentDinerPayMethod === 'efectivo' ? 'block' : 'none';
+        });
+    });
+    
+    document.getElementById('diner-cash-received').addEventListener('input', (e) => {
+        const diner = diners.find(d => d.id === currentDinerPayId);
+        if (!diner) return;
+        const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
+        const received = parseFloat(e.target.value) || 0;
+        document.getElementById('diner-change-amount').textContent = '$' + Math.max(0, Math.round(received - total)).toLocaleString();
+    });
+}
+
+function openDivideModal() {
+    if (!currentTableOrder || !currentTableOrder.order_items || currentTableOrder.order_items.length === 0) {
+        return alert('No hay productos en el pedido');
+    }
+    
+    // Inicializar comensales con 2 por defecto
+    diners = [
+        { id: 1, name: 'Comensal 1', items: [] },
+        { id: 2, name: 'Comensal 2', items: [] }
+    ];
+    
+    // Todos los items sin asignar
+    unassignedItems = currentTableOrder.order_items.map((item, idx) => ({
+        uid: idx,
+        orderItemId: item.id,
+        name: item.name,
+        price: item.price,
+        qty: item.qty
+    }));
+    
+    renderDivideModal();
+    document.getElementById('divide-modal').classList.add('active');
+}
+
+function addDiner() {
+    const newId = diners.length > 0 ? Math.max(...diners.map(d => d.id)) + 1 : 1;
+    diners.push({ id: newId, name: `Comensal ${newId}`, items: [] });
+    renderDivideModal();
+}
+
+function removeDiner(dinerId) {
+    const diner = diners.find(d => d.id === dinerId);
+    if (!diner) return;
+    // Devolver sus items a sin asignar
+    unassignedItems.push(...diner.items);
+    diners = diners.filter(d => d.id !== dinerId);
+    renderDivideModal();
+}
+
+function assignItemToDiner(uid, dinerId) {
+    const itemIdx = unassignedItems.findIndex(i => i.uid === uid);
+    if (itemIdx === -1) return;
+    const item = unassignedItems.splice(itemIdx, 1)[0];
+    const diner = diners.find(d => d.id === dinerId);
+    if (diner) {
+        diner.items.push(item);
+    }
+    renderDivideModal();
+}
+
+function removeItemFromDiner(uid, dinerId) {
+    const diner = diners.find(d => d.id === dinerId);
+    if (!diner) return;
+    const itemIdx = diner.items.findIndex(i => i.uid === uid);
+    if (itemIdx === -1) return;
+    const item = diner.items.splice(itemIdx, 1)[0];
+    unassignedItems.push(item);
+    renderDivideModal();
+}
+
+function updateDinerName(dinerId, newName) {
+    const diner = diners.find(d => d.id === dinerId);
+    if (diner) diner.name = newName;
+}
+
+function renderDivideModal() {
+    const dinersList = document.getElementById('diners-list');
+    const unassignedList = document.getElementById('unassigned-items');
+    
+    // Renderizar comensales
+    dinersList.innerHTML = diners.map(diner => {
+        const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
+        const itemsHtml = diner.items.map(item => `
+            <div class="diner-item">
+                <span class="diner-item-name">${item.qty}x ${item.name}</span>
+                <span>$${Math.round(item.price * item.qty).toLocaleString()}</span>
+                <div class="diner-item-controls">
+                    <button class="diner-item-btn remove" onclick="removeItemFromDiner(${item.uid}, ${diner.id})">✕</button>
+                </div>
+            </div>
+        `).join('');
+        
+        return `
+            <div class="diner-card">
+                <div class="diner-header">
+                    <div class="diner-name">
+                        <input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span class="diner-total">$${Math.round(total).toLocaleString()}</span>
+                        ${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}
+                    </div>
+                </div>
+                <div class="diner-items">
+                    ${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Renderizar items sin asignar
+    if (unassignedItems.length === 0) {
+        unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>';
+    } else {
+        unassignedList.innerHTML = unassignedItems.map(item => `
+            <div class="unassigned-item">
+                <div class="unassigned-item-info">
+                    <div class="unassigned-item-name">${item.qty}x ${item.name}</div>
+                    <div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div>
+                </div>
+                <select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);">
+                    <option value="">Asignar a...</option>
+                    ${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
+                </select>
+            </div>
+        `).join('');
+    }
+    
+    // Actualizar botón de cobrar todo
+    const totalMesa = currentTableOrder.total;
+    document.getElementById('btn-pay-all').textContent = `💰 Cobrar Todo ($${Math.round(totalMesa).toLocaleString()})`;
+}
+
+async function openDinerPayModal(dinerId) {
+    const diner = diners.find(d => d.id === dinerId);
+    if (!diner || diner.items.length === 0) return alert('Este comensal no tiene productos');
+    
+    currentDinerPayId = dinerId;
+    currentDinerPayMethod = 'efectivo';
+    
+    document.getElementById('diner-pay-title').textContent = `Cobrar ${diner.name}`;
+    document.getElementById('diner-cart-items').innerHTML = diner.items.map(item => `
+        <div class="cart-item">
+            <div class="cart-item-name">${item.qty}x ${item.name}</div>
+            <div class="cart-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div>
+        </div>
+    `).join('');
+    
+    const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
+    document.getElementById('diner-total').textContent = '$' + Math.round(total).toLocaleString();
+    document.getElementById('diner-cash-received').value = '';
+    document.getElementById('diner-change-amount').textContent = '$0';
+    
+    // Resetear métodos
+    document.querySelectorAll('#diner-method-buttons .method-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('#diner-method-buttons .method-btn[data-method="efectivo"]').classList.add('active');
+    document.getElementById('diner-cash-section').style.display = 'block';
+    
+    document.getElementById('diner-pay-modal').classList.add('active');
+}
+
+async function confirmDinerPayment() {
+    const diner = diners.find(d => d.id === currentDinerPayId);
+    if (!diner) return;
+    
+    const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
+    
+    if (currentDinerPayMethod === 'efectivo') {
+        const cashReceived = parseFloat(document.getElementById('diner-cash-received').value);
+        if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente');
+    }
+    
+    try {
+        // Crear pedido individual para este comensal
+        const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{
+            type: 'mesa',
+            status: 'nuevo',
+            total: total,
+            paid: true,
+            pay_method: currentDinerPayMethod,
+            source: 'tpv',
+            user_email: currentUser?.email,
+            table_id: activeTableId,
+            diner_name: diner.name
+        }]).select().single();
+        
+        if (orderError) throw orderError;
+        
+        const orderItems = diner.items.map(item => ({
+            order_id: order.id,
+            name: item.name,
+            price: item.price,
+            qty: item.qty
+        }));
+        
+        const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
+        if (itemsError) throw itemsError;
+        
+        // Quitar los items pagados del pedido original
+        const remainingItems = currentTableOrder.order_items.filter(origItem => {
+            return !diner.items.some(dinerItem => dinerItem.orderItemId === origItem.id);
+        });
+        
+        const newTotal = remainingItems.reduce((s, i) => s + (i.price * i.qty), 0);
+        
+        if (remainingItems.length === 0) {
+            // Pedido completo pagado
+            await supabaseClient.from('orders').update({
+                status: 'nuevo',
+                paid: true
+            }).eq('id', currentTableOrder.id);
+            
+            await supabaseClient.from('tables').update({
+                status: 'libre',
+                current_order_id: null
+            }).eq('id', activeTableId);
+            
+            currentTableOrder = null;
+        } else {
+            // Actualizar pedido original con lo que falta
+            await supabaseClient.from('orders').update({
+                total: newTotal
+            }).eq('id', currentTableOrder.id);
+            
+            // Borrar los items pagados del order_items
+            const paidItemIds = diner.items.map(i => i.orderItemId);
+            await supabaseClient.from('order_items').delete().in('id', paidItemIds);
+            
+            currentTableOrder.order_items = remainingItems;
+            currentTableOrder.total = newTotal;
+        }
+        
+        addNotification('pago', `✓ ${diner.name} pagó`, `$${Math.round(total).toLocaleString()} | ${currentDinerPayMethod.toUpperCase()}`);
+        
+        closeModal('diner-pay-modal');
+        closeModal('divide-modal');
+        renderCart();
+        renderTableOrder();
+        loadTables();
+        
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
 // ============ REPORTES ============
 function setupReportFilters() {
     document.querySelectorAll('.report-filter-btn').forEach(btn => {
@@ -168,7 +442,6 @@ function getPreviousPeriodStart(currentStart, period) {
 async function loadReports(period) {
     const range = getDateRange(period);
     
-    // Pedidos del período actual
     const { data: currentOrders, error: err1 } = await supabaseClient
         .from('orders')
         .select('*, order_items(*)')
@@ -177,7 +450,6 @@ async function loadReports(period) {
         .lte('created_at', range.end)
         .order('created_at', { ascending: false });
     
-    // Pedidos del período anterior (para comparar)
     const { data: prevOrders, error: err2 } = await supabaseClient
         .from('orders')
         .select('*')
@@ -193,7 +465,6 @@ async function loadReports(period) {
     const orders = currentOrders || [];
     const prev = prevOrders || [];
     
-    // KPIs
     const totalVentas = orders.reduce((s, o) => s + (o.total || 0), 0);
     const totalPedidos = orders.length;
     const ticketPromedio = totalPedidos > 0 ? totalVentas / totalPedidos : 0;
@@ -201,30 +472,22 @@ async function loadReports(period) {
     const prevVentas = prev.reduce((s, o) => s + (o.total || 0), 0);
     const prevPedidos = prev.length;
     
-    // Método top
     const metodos = {};
     orders.forEach(o => { metodos[o.pay_method] = (metodos[o.pay_method] || 0) + o.total; });
     const metodoTop = Object.entries(metodos).sort((a, b) => b[1] - a[1])[0];
     
-    // Renderizar KPIs
     document.getElementById('kpi-ventas').textContent = '$' + Math.round(totalVentas).toLocaleString();
     document.getElementById('kpi-pedidos').textContent = totalPedidos;
     document.getElementById('kpi-ticket').textContent = '$' + Math.round(ticketPromedio).toLocaleString();
     document.getElementById('kpi-metodo').textContent = metodoTop ? metodoTop[0].toUpperCase() : '—';
     document.getElementById('kpi-metodo-detail').textContent = metodoTop ? '$' + Math.round(metodoTop[1]).toLocaleString() : '—';
     
-    // Tendencias
     renderTrend('kpi-ventas-trend', totalVentas, prevVentas);
     renderTrend('kpi-pedidos-trend', totalPedidos, prevPedidos);
     renderTrend('kpi-ticket-trend', ticketPromedio, prevPedidos > 0 ? prevVentas / prevPedidos : 0);
     
-    // Gráfica por horas
     renderChartHoras(orders);
-    
-    // Gráfica top productos
     renderChartProductos(orders);
-    
-    // Tabla últimos pedidos
     renderRecentOrders(orders.slice(0, 10));
 }
 
@@ -488,6 +751,7 @@ function renderTableOrder() {
     const itemsContainer = document.getElementById('table-order-items');
     const totalElement = document.getElementById('table-order-total');
     const btnPay = document.getElementById('btn-pay');
+    const btnDivide = document.getElementById('btn-divide-account');
     
     if (!currentTableOrder || !currentTableOrder.order_items || currentTableOrder.order_items.length === 0) {
         section.style.display = 'none';
@@ -496,10 +760,12 @@ function renderTableOrder() {
         } else {
             btnPay.textContent = `COBRAR ($${Math.round(cart.reduce((sum, i) => sum + (i.price * i.qty), 0)).toLocaleString()})`;
         }
+        if (btnDivide) btnDivide.style.display = 'none';
         return;
     }
     
     section.style.display = 'block';
+    if (btnDivide) btnDivide.style.display = 'inline-block';
     
     const itemsGrouped = {};
     currentTableOrder.order_items.forEach(item => {
@@ -850,8 +1116,9 @@ function printTicket(order, items) {
     const date = new Date().toLocaleString('es-ES');
     const qrUrl = `${window.location.origin}/valorar.html?p=${order.id}`;
     const tableText = order.table_id ? ` | Mesa: ${order.table_id}` : '';
+    const dinerText = order.diner_name ? ` | ${order.diner_name}` : '';
     printArea.innerHTML = `
-        <div class="ticket-header"><h3>TPV PUNTO VERDE</h3><p>${date}</p><p>Pedido #${order.id}${tableText}</p><p>Cajero: ${currentUser?.email || 'N/A'}</p></div>
+        <div class="ticket-header"><h3>TPV PUNTO VERDE</h3><p>${date}</p><p>Pedido #${order.id}${tableText}${dinerText}</p><p>Cajero: ${currentUser?.email || 'N/A'}</p></div>
         <div class="ticket-divider"></div>
         ${items.map(i => `<div class="ticket-item"><span>${i.qty}x ${i.name.substring(0, 20)}</span><span>$${Math.round(i.price * i.qty).toLocaleString()}</span></div>`).join('')}
         <div class="ticket-divider"></div>
@@ -882,12 +1149,13 @@ function renderKitchenOrders() {
         container.innerHTML = orders.map(order => {
             const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
+            const dinerText = order.diner_name ? ` - ${order.diner_name}` : '';
             const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join('');
             let actionBtn = '';
             if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`;
             else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`;
             else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`;
-            return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time"> ${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`;
+            return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}${dinerText}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time"> ${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`;
         }).join('');
     });
 }
@@ -956,7 +1224,7 @@ async function loadCashStatus() {
         currentSession = session;
         document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
-            <button class="action-btn btn-movement" onclick="openModal('modal-movement')"> Movimiento</button>
+            <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
             <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
             <button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>
         `;

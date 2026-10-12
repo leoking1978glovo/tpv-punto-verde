@@ -39,7 +39,7 @@
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen">
-                    <span class="nav-icon">👨‍🍳</span>
+                    <span class="nav-icon">👨‍</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="reports">
@@ -81,7 +81,7 @@
                     <div class="header-actions">
                         <button class="btn-secondary" id="btn-back-to-tables">← Volver a Mesas</button>
                         <button class="notification-bell" id="btn-notifications">
-                            
+                            🔔
                             <span class="notification-badge" id="notif-badge">0</span>
                         </button>
                     </div>
@@ -96,7 +96,7 @@
                     <div class="cart-section">
                         <div class="cart-header">
                             <span>Pedido Actual (Carrito)</span>
-                            <span class="clear-btn" id="btn-clear">️ Limpiar</span>
+                            <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
                         </div>
                         <div class="cart-items" id="cart-items">
                             <div class="empty-cart">Añade productos para empezar</div>
@@ -105,6 +105,7 @@
                         <div class="table-order-section" id="table-order-section" style="display: none;">
                             <div class="table-order-header">
                                 <h3>📋 Pedido Acumulado de la Mesa</h3>
+                                <button class="btn-divide-account" id="btn-divide-account" style="display: none;">✂️ Dividir Cuenta</button>
                             </div>
                             <div class="table-order-items" id="table-order-items"></div>
                             <div class="table-order-total">
@@ -139,7 +140,6 @@
                 </div>
             </section>
 
-            <!-- NUEVA VISTA: REPORTES -->
             <section id="view-reports" class="view">
                 <header class="view-header">
                     <h1>📊 Reportes y Analíticas</h1>
@@ -150,7 +150,6 @@
                     </div>
                 </header>
                 <div class="reports-container">
-                    <!-- KPIs -->
                     <div class="kpi-grid">
                         <div class="kpi-card">
                             <div class="kpi-label">Ventas Totales</div>
@@ -173,26 +172,22 @@
                             <div class="kpi-trend" id="kpi-metodo-detail">—</div>
                         </div>
                     </div>
-
-                    <!-- Gráficas -->
                     <div class="charts-grid">
                         <div class="chart-card">
-                            <h3>📈 Ventas por Hora</h3>
+                            <h3> Ventas por Hora</h3>
                             <div class="chart-wrapper">
                                 <canvas id="chart-horas"></canvas>
                             </div>
                         </div>
                         <div class="chart-card">
-                            <h3>🏆 Top 5 Productos</h3>
+                            <h3> Top 5 Productos</h3>
                             <div class="chart-wrapper">
                                 <canvas id="chart-productos"></canvas>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Últimos pedidos -->
                     <div class="recent-orders-card">
-                        <h3> Últimos Pedidos</h3>
+                        <h3>🕒 Últimos Pedidos</h3>
                         <div class="table-wrapper">
                             <table class="recent-table">
                                 <thead>
@@ -231,10 +226,10 @@
 
         <div class="notifications-panel" id="notifications-panel">
             <div class="notif-header">
-                <h3> Notificaciones</h3>
+                <h3>🔔 Notificaciones</h3>
                 <div class="notif-header-actions">
                     <button class="clear-notifs" id="btn-clear-notifs">Limpiar</button>
-                    <button class="close-notifs" id="btn-close-notifs">✕</button>
+                    <button class="close-notifs" id="btn-close-notifs"></button>
                 </div>
             </div>
             <div class="notif-list" id="notif-list">
@@ -243,6 +238,7 @@
         </div>
     </div>
 
+    <!-- MODAL COBRO NORMAL -->
     <div id="pay-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -271,7 +267,7 @@
                     <h3>Método de Pago</h3>
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
+                        <button class="method-btn" data-method="tarjeta"> Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
@@ -284,6 +280,69 @@
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-pay">Cancelar</button>
                 <button class="confirm-btn" id="btn-confirm-pay">✓ Confirmar Pago</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NUEVO MODAL: DIVIDIR CUENTA -->
+    <div id="divide-modal" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>✂️ Dividir Cuenta</h2>
+                <button class="close-btn" id="btn-close-divide">✕</button>
+            </div>
+            <div class="modal-body divide-body">
+                <div class="divide-controls">
+                    <div class="diners-header">
+                        <h3>Comensales</h3>
+                        <button class="btn-add-diner" id="btn-add-diner">+ Agregar Comensal</button>
+                    </div>
+                    <div class="diners-list" id="diners-list"></div>
+                </div>
+                <div class="items-to-assign">
+                    <h3>Productos sin asignar</h3>
+                    <div class="unassigned-items" id="unassigned-items"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-divide">Cancelar</button>
+                <button class="btn-pay-all" id="btn-pay-all">💰 Cobrar Todo ($0)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL COBRO POR COMENSAL -->
+    <div id="diner-pay-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="diner-pay-title">Cobrar Comensal</h2>
+                <button class="close-btn" id="btn-close-diner-pay"></button>
+            </div>
+            <div class="modal-body">
+                <div class="order-summary">
+                    <h3>Productos</h3>
+                    <div id="diner-cart-items"></div>
+                    <div class="modal-totals">
+                        <div class="summary-row total"><span>TOTAL</span><span id="diner-total">$0</span></div>
+                    </div>
+                </div>
+                <div class="payment-method">
+                    <h3>Método de Pago</h3>
+                    <div class="method-buttons" id="diner-method-buttons">
+                        <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
+                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
+                        <button class="method-btn" data-method="bizum"> Bizum</button>
+                    </div>
+                </div>
+                <div class="cash-input" id="diner-cash-section">
+                    <label>Efectivo recibido:</label>
+                    <input type="number" id="diner-cash-received" placeholder="0" step="0.01">
+                    <div class="change-display"><span>Cambio:</span><span id="diner-change-amount" class="change-amount">$0</span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-diner-pay">Cancelar</button>
+                <button class="confirm-btn" id="btn-confirm-diner-pay">✓ Cobrar</button>
             </div>
         </div>
     </div>
