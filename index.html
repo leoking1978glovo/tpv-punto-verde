@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon-192.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -34,12 +35,16 @@
                     <span>Mesas</span>
                 </li>
                 <li class="nav-item" data-view="pos">
-                    <span class="nav-icon">🛒</span>
+                    <span class="nav-icon"></span>
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen">
                     <span class="nav-icon">👨‍🍳</span>
                     <span>Cocina</span>
+                </li>
+                <li class="nav-item" data-view="reports">
+                    <span class="nav-icon">📊</span>
+                    <span>Reportes</span>
                 </li>
                 <li class="nav-item" data-view="cash">
                     <span class="nav-icon">💰</span>
@@ -70,13 +75,13 @@
             <section id="view-pos" class="view">
                 <header class="view-header">
                     <div>
-                        <h1 id="pos-title">Caja - Punto de Venta</h1>
+                        <h1 id="pos-title">Caja - Mostrador</h1>
                         <div class="mini-tables-bar" id="mini-tables-bar"></div>
                     </div>
                     <div class="header-actions">
                         <button class="btn-secondary" id="btn-back-to-tables">← Volver a Mesas</button>
                         <button class="notification-bell" id="btn-notifications">
-                            🔔
+                            
                             <span class="notification-badge" id="notif-badge">0</span>
                         </button>
                     </div>
@@ -91,7 +96,7 @@
                     <div class="cart-section">
                         <div class="cart-header">
                             <span>Pedido Actual (Carrito)</span>
-                            <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
+                            <span class="clear-btn" id="btn-clear">️ Limpiar</span>
                         </div>
                         <div class="cart-items" id="cart-items">
                             <div class="empty-cart">Añade productos para empezar</div>
@@ -134,6 +139,78 @@
                 </div>
             </section>
 
+            <!-- NUEVA VISTA: REPORTES -->
+            <section id="view-reports" class="view">
+                <header class="view-header">
+                    <h1>📊 Reportes y Analíticas</h1>
+                    <div class="report-filters">
+                        <button class="report-filter-btn active" data-period="today">Hoy</button>
+                        <button class="report-filter-btn" data-period="week">Esta semana</button>
+                        <button class="report-filter-btn" data-period="month">Este mes</button>
+                    </div>
+                </header>
+                <div class="reports-container">
+                    <!-- KPIs -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Ventas Totales</div>
+                            <div class="kpi-value" id="kpi-ventas">$0</div>
+                            <div class="kpi-trend" id="kpi-ventas-trend">—</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">N° Pedidos</div>
+                            <div class="kpi-value" id="kpi-pedidos">0</div>
+                            <div class="kpi-trend" id="kpi-pedidos-trend">—</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Ticket Promedio</div>
+                            <div class="kpi-value" id="kpi-ticket">$0</div>
+                            <div class="kpi-trend" id="kpi-ticket-trend">—</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Método Top</div>
+                            <div class="kpi-value" id="kpi-metodo">—</div>
+                            <div class="kpi-trend" id="kpi-metodo-detail">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficas -->
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <h3>📈 Ventas por Hora</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="chart-horas"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>🏆 Top 5 Productos</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="chart-productos"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Últimos pedidos -->
+                    <div class="recent-orders-card">
+                        <h3> Últimos Pedidos</h3>
+                        <div class="table-wrapper">
+                            <table class="recent-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Fecha</th>
+                                        <th>Tipo</th>
+                                        <th>Método</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-orders-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="view-cash" class="view">
                 <header class="view-header">
                     <h1>Gestión de Caja</h1>
@@ -154,7 +231,7 @@
 
         <div class="notifications-panel" id="notifications-panel">
             <div class="notif-header">
-                <h3>🔔 Notificaciones</h3>
+                <h3> Notificaciones</h3>
                 <div class="notif-header-actions">
                     <button class="clear-notifs" id="btn-clear-notifs">Limpiar</button>
                     <button class="close-notifs" id="btn-close-notifs">✕</button>

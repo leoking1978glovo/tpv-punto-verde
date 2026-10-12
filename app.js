@@ -16,12 +16,18 @@ let activeTableId = null;
 let tables = [];
 let currentTableOrder = null;
 
+// Variables para gráficas
+let chartHoras = null;
+let chartProductos = null;
+let currentReportPeriod = 'today';
+
 async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) { currentUser = session.user; showApp(); } else { showLogin(); }
     setupLoginEvents();
     setupNavigation();
     setupNotificationsPanel();
+    setupReportFilters();
 }
 
 function showLogin() {
@@ -87,6 +93,10 @@ function setupNavigation() {
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-kitchen').classList.add('active');
                 loadKitchenOrders();
+            } else if (view === 'reports') {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('view-reports').classList.add('active');
+                loadReports(currentReportPeriod);
             } else if (view === 'cash') {
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-cash').classList.add('active');
@@ -107,6 +117,221 @@ function setupNavigation() {
         document.getElementById('view-tables').classList.add('active');
         loadTables();
     });
+}
+
+// ============ REPORTES ============
+function setupReportFilters() {
+    document.querySelectorAll('.report-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.report-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentReportPeriod = btn.dataset.period;
+            loadReports(currentReportPeriod);
+        });
+    });
+}
+
+function getDateRange(period) {
+    const now = new Date();
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    const start = new Date(now);
+    
+    if (period === 'today') {
+        start.setHours(0, 0, 0, 0);
+    } else if (period === 'week') {
+        const day = start.getDay();
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+        start.setDate(diff);
+        start.setHours(0, 0, 0, 0);
+    } else if (period === 'month') {
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+    }
+    
+    return {
+        start: start.toISOString(),
+        end: end.toISOString(),
+        prevStart: getPreviousPeriodStart(start, period),
+        prevEnd: start.toISOString()
+    };
+}
+
+function getPreviousPeriodStart(currentStart, period) {
+    const d = new Date(currentStart);
+    if (period === 'today') d.setDate(d.getDate() - 1);
+    else if (period === 'week') d.setDate(d.getDate() - 7);
+    else if (period === 'month') d.setMonth(d.getMonth() - 1);
+    return d.toISOString();
+}
+
+async function loadReports(period) {
+    const range = getDateRange(period);
+    
+    // Pedidos del período actual
+    const { data: currentOrders, error: err1 } = await supabaseClient
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('paid', true)
+        .gte('created_at', range.start)
+        .lte('created_at', range.end)
+        .order('created_at', { ascending: false });
+    
+    // Pedidos del período anterior (para comparar)
+    const { data: prevOrders, error: err2 } = await supabaseClient
+        .from('orders')
+        .select('*')
+        .eq('paid', true)
+        .gte('created_at', range.prevStart)
+        .lte('created_at', range.prevEnd);
+    
+    if (err1 || err2) {
+        console.error('Error cargando reportes:', err1, err2);
+        return;
+    }
+    
+    const orders = currentOrders || [];
+    const prev = prevOrders || [];
+    
+    // KPIs
+    const totalVentas = orders.reduce((s, o) => s + (o.total || 0), 0);
+    const totalPedidos = orders.length;
+    const ticketPromedio = totalPedidos > 0 ? totalVentas / totalPedidos : 0;
+    
+    const prevVentas = prev.reduce((s, o) => s + (o.total || 0), 0);
+    const prevPedidos = prev.length;
+    
+    // Método top
+    const metodos = {};
+    orders.forEach(o => { metodos[o.pay_method] = (metodos[o.pay_method] || 0) + o.total; });
+    const metodoTop = Object.entries(metodos).sort((a, b) => b[1] - a[1])[0];
+    
+    // Renderizar KPIs
+    document.getElementById('kpi-ventas').textContent = '$' + Math.round(totalVentas).toLocaleString();
+    document.getElementById('kpi-pedidos').textContent = totalPedidos;
+    document.getElementById('kpi-ticket').textContent = '$' + Math.round(ticketPromedio).toLocaleString();
+    document.getElementById('kpi-metodo').textContent = metodoTop ? metodoTop[0].toUpperCase() : '—';
+    document.getElementById('kpi-metodo-detail').textContent = metodoTop ? '$' + Math.round(metodoTop[1]).toLocaleString() : '—';
+    
+    // Tendencias
+    renderTrend('kpi-ventas-trend', totalVentas, prevVentas);
+    renderTrend('kpi-pedidos-trend', totalPedidos, prevPedidos);
+    renderTrend('kpi-ticket-trend', ticketPromedio, prevPedidos > 0 ? prevVentas / prevPedidos : 0);
+    
+    // Gráfica por horas
+    renderChartHoras(orders);
+    
+    // Gráfica top productos
+    renderChartProductos(orders);
+    
+    // Tabla últimos pedidos
+    renderRecentOrders(orders.slice(0, 10));
+}
+
+function renderTrend(elementId, current, previous) {
+    const el = document.getElementById(elementId);
+    if (previous === 0) {
+        el.textContent = '—';
+        el.className = 'kpi-trend neutral';
+        return;
+    }
+    const change = ((current - previous) / previous) * 100;
+    const arrow = change >= 0 ? '↑' : '↓';
+    el.textContent = `${arrow} ${Math.abs(Math.round(change))}% vs período anterior`;
+    el.className = 'kpi-trend ' + (change > 0 ? 'up' : change < 0 ? 'down' : 'neutral');
+}
+
+function renderChartHoras(orders) {
+    const horas = new Array(24).fill(0);
+    orders.forEach(o => {
+        const h = new Date(o.created_at).getHours();
+        horas[h] += o.total;
+    });
+    
+    const labels = Array.from({length: 24}, (_, i) => `${i}:00`);
+    
+    if (chartHoras) chartHoras.destroy();
+    const ctx = document.getElementById('chart-horas').getContext('2d');
+    chartHoras = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Ventas ($)',
+                data: horas,
+                backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                borderColor: '#10b981',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { callback: v => '$' + v } },
+                x: { ticks: { maxTicksLimit: 12 } }
+            }
+        }
+    });
+}
+
+function renderChartProductos(orders) {
+    const productos = {};
+    orders.forEach(o => {
+        (o.order_items || []).forEach(item => {
+            if (!productos[item.name]) productos[item.name] = 0;
+            productos[item.name] += item.qty;
+        });
+    });
+    
+    const sorted = Object.entries(productos).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const labels = sorted.map(p => p[0].length > 20 ? p[0].substring(0, 20) + '...' : p[0]);
+    const data = sorted.map(p => p[1]);
+    const colors = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6'];
+    
+    if (chartProductos) chartProductos.destroy();
+    const ctx = document.getElementById('chart-productos').getContext('2d');
+    chartProductos = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+function renderRecentOrders(orders) {
+    const tbody = document.getElementById('recent-orders-body');
+    if (orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-gray); padding: 1rem;">Sin pedidos</td></tr>';
+        return;
+    }
+    tbody.innerHTML = orders.map(o => {
+        const date = new Date(o.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const tipo = (o.type || 'mostrador').toUpperCase();
+        const metodo = (o.pay_method || '—').toUpperCase();
+        return `<tr>
+            <td>#${o.id}</td>
+            <td>${date}</td>
+            <td>${tipo}</td>
+            <td>${metodo}</td>
+            <td><strong>$${Math.round(o.total).toLocaleString()}</strong></td>
+        </tr>`;
+    }).join('');
 }
 
 async function loadTables() {
@@ -698,7 +923,7 @@ function setupRealtimeGlobal() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
+            addNotification('nuevo', ` Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()} | Total: $${Math.round(order.total).toLocaleString()}`);
             const kitchenView = document.getElementById('view-kitchen');
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
             loadTables();
@@ -729,9 +954,9 @@ async function loadCashStatus() {
         document.getElementById('cash-summary').style.display = 'none';
     } else {
         currentSession = session;
-        document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
+        document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`;
         document.getElementById('action-buttons').innerHTML = `
-            <button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button>
+            <button class="action-btn btn-movement" onclick="openModal('modal-movement')"> Movimiento</button>
             <button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button>
             <button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>
         `;
@@ -761,7 +986,7 @@ async function loadCashSummary() {
         </div>
         <div class="movements-section">
             <h4>Movimientos registrados: ${movements.length}</h4>
-            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
+            ${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : ''} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}
         </div>
     `;
 }
