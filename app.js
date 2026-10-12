@@ -59,21 +59,46 @@ function setupLoginEvents() {
 function setupNavigation() {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
+            const view = item.dataset.view;
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             item.classList.add('active');
-            document.getElementById(`view-${item.dataset.view}`).classList.add('active');
-            if (item.dataset.view === 'kitchen') loadKitchenOrders();
-            if (item.dataset.view === 'cash') loadCashStatus();
-            if (item.dataset.view === 'tables') {
+
+            if (view === 'tables') {
                 activeTableId = null;
                 currentTableOrder = null;
                 cart = [];
                 renderCart();
                 renderTableOrder();
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('view-tables').classList.add('active');
                 loadTables();
+            } else if (view === 'pos') {
+                // Modo Caja (mesas): mantiene la mesa seleccionada si la había
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('view-pos').classList.add('active');
+                document.getElementById('pos-title').textContent = 'Caja - Punto de Venta';
+                renderMiniTables();
+                renderTableOrder();
+            } else if (view === 'mostrador') {
+                // Modo Mostrador: sin mesa, venta directa
+                activeTableId = null;
+                currentTableOrder = null;
+                cart = [];
+                renderCart();
+                renderTableOrder();
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('view-pos').classList.add('active');
+                document.getElementById('pos-title').textContent = 'Mostrador - Venta Directa';
+                renderMiniTables();
+            } else if (view === 'kitchen') {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('view-kitchen').classList.add('active');
+                loadKitchenOrders();
+            } else if (view === 'cash') {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('view-cash').classList.add('active');
+                loadCashStatus();
             }
-            if (item.dataset.view === 'pos') renderMiniTables();
         });
     });
 
@@ -165,13 +190,14 @@ function renderTables() {
                     <span>Total:</span>
                     <span>$${Math.round(table.pendingTotal).toLocaleString()}</span>
                 </div>
-                <button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})"> COBRAR</button>
+                <button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>
             ` : '<div style="flex:1;"></div>'}
         </div>
         `;
     }).join('');
 }
 
+// Barra de mini-mesas: SOLO las 12 mesas (el Mostrador vive en el sidebar)
 function renderMiniTables() {
     const bar = document.getElementById('mini-tables-bar');
     if (!bar) return;
@@ -181,37 +207,12 @@ function renderMiniTables() {
         return;
     }
     
-    // Botón de Mostrador al inicio
-    const isMostrador = activeTableId === null;
-    let html = `<div class="mini-table btn-mostrador ${isMostrador ? 'active' : ''}" onclick="selectMostrador()"> Mostrador</div>`;
-    
-    // Luego las 12 mesas
-    html += tables.map(table => {
+    bar.innerHTML = tables.map(table => {
         const hasOrders = table.pendingItems && table.pendingItems.length > 0;
         const status = hasOrders ? table.visualStatus : 'libre';
         const isActive = table.id === activeTableId ? 'active' : '';
         return `<div class="mini-table status-${status} ${isActive}" onclick="selectTable(${table.id}, '${table.name}')">${table.name}</div>`;
     }).join('');
-    
-    bar.innerHTML = html;
-}
-
-function selectMostrador() {
-    activeTableId = null;
-    currentTableOrder = null;
-    cart = [];
-    renderCart();
-    renderTableOrder();
-    renderMiniTables();
-    document.getElementById('btn-pay').textContent = `COBRAR ($0)`;
-    
-    const posView = document.getElementById('view-pos');
-    if (!posView.classList.contains('active')) {
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        document.querySelector('[data-view="pos"]').classList.add('active');
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        posView.classList.add('active');
-    }
 }
 
 async function selectTable(id, name) {
@@ -236,10 +237,14 @@ async function selectTable(id, name) {
     renderTableOrder();
     renderMiniTables();
     
+    // Al elegir una mesa, pasamos a modo Caja y resaltamos "Caja" en el sidebar
+    document.getElementById('pos-title').textContent = `Caja - ${name}`;
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    const cajaItem = document.querySelector('[data-view="pos"]');
+    if (cajaItem) cajaItem.classList.add('active');
+    
     const posView = document.getElementById('view-pos');
     if (!posView.classList.contains('active')) {
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        document.querySelector('[data-view="pos"]').classList.add('active');
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         posView.classList.add('active');
     }
@@ -537,7 +542,7 @@ async function addToTable() {
 
 function openPayModal() {
     if (cart.length === 0) return alert('Carrito vacío');
-    document.getElementById('modal-title').textContent = 'Finalizar Pedido';
+    document.getElementById('modal-title').textContent = 'Finalizar Pedido (Mostrador)';
     document.getElementById('modal-cart-items').innerHTML = cart.map(item => `
         <div class="cart-item"><div class="cart-item-name">${item.name} x${item.qty}</div><div class="cart-item-price">$${(item.price * item.qty).toLocaleString()}</div></div>
     `).join('');
@@ -729,7 +734,7 @@ async function loadCashStatus() {
     if (error || !session) {
         currentSession = null;
         document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>';
-        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')"> Abrir Caja</button>';
+        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>';
         document.getElementById('cash-summary').style.display = 'none';
     } else {
         currentSession = session;

@@ -12,7 +12,7 @@
 
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
-            <h2> TPV Punto Verde</h2>
+            <h2>🌿 TPV Punto Verde</h2>
             <p>Inicia sesión para continuar</p>
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="Correo electrónico" required>
@@ -37,12 +37,16 @@
                     <span class="nav-icon">🛒</span>
                     <span>Caja</span>
                 </li>
+                <li class="nav-item" data-view="mostrador">
+                    <span class="nav-icon">🏪</span>
+                    <span>Mostrador</span>
+                </li>
                 <li class="nav-item" data-view="kitchen">
-                    <span class="nav-icon">‍🍳</span>
+                    <span class="nav-icon">👨‍🍳</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="cash">
-                    <span class="nav-icon"></span>
+                    <span class="nav-icon">💰</span>
                     <span>Arqueos</span>
                 </li>
             </ul>
@@ -70,7 +74,7 @@
             <section id="view-pos" class="view">
                 <header class="view-header">
                     <div>
-                        <h1>Caja - Punto de Venta</h1>
+                        <h1 id="pos-title">Caja - Punto de Venta</h1>
                         <div class="mini-tables-bar" id="mini-tables-bar"></div>
                     </div>
                     <div class="header-actions">
@@ -99,7 +103,7 @@
 
                         <div class="table-order-section" id="table-order-section" style="display: none;">
                             <div class="table-order-header">
-                                <h3> Pedido Acumulado de la Mesa</h3>
+                                <h3>📋 Pedido Acumulado de la Mesa</h3>
                             </div>
                             <div class="table-order-items" id="table-order-items"></div>
                             <div class="table-order-total">
