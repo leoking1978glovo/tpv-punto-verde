@@ -192,18 +192,19 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .btn-listo { background: var(--status-libre); }
 .btn-entregado { background: var(--text-gray); }
 
-.inventory-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
-.inventory-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.inventory-container, .customers-container, .reservations-container, .invoices-container, .allergens-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+.inventory-stats, .inv-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
 .inv-stat-card { background: var(--bg-card); padding: 1rem; border-radius: 10px; box-shadow: var(--shadow); border-left: 4px solid var(--text-gray); }
 .inv-stat-card.inv-stat-ok { border-left-color: var(--status-libre); }
 .inv-stat-card.inv-stat-low { border-left-color: var(--status-ocupada); }
 .inv-stat-card.inv-stat-out { border-left-color: var(--status-pendiente); }
 .inv-stat-label { font-size: 0.75rem; color: var(--text-gray); text-transform: uppercase; font-weight: 600; margin-bottom: 0.3rem; }
 .inv-stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); }
-.inventory-filters { display: flex; gap: 0.75rem; }
-.inv-search-input { flex: 1; padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; }
+.inv-stat-text { font-size: 1.1rem; }
+.inventory-filters { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.inv-search-input { flex: 1; min-width: 150px; padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; }
 .inv-filter-select { padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: white; }
-.inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.inventory-grid, .customers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
 .ingredient-card { background: var(--bg-card); border-radius: 10px; padding: 1rem; box-shadow: var(--shadow); border-left: 4px solid var(--status-libre); position: relative; }
 .ingredient-card.stock-low { border-left-color: var(--status-ocupada); background: #fffbeb; }
 .ingredient-card.stock-out { border-left-color: var(--status-pendiente); background: #fef2f2; }
@@ -219,13 +220,11 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .ingredient-recipe-btn { width: 100%; padding: 0.5rem; background: var(--bg-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: var(--text-dark); transition: 0.2s; }
 .ingredient-recipe-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
 
-.customers-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
 .cust-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 .cust-stat-card { background: var(--bg-card); padding: 1rem; border-radius: 10px; box-shadow: var(--shadow); border-left: 4px solid var(--primary); }
 .cust-stat-label { font-size: 0.75rem; color: var(--text-gray); text-transform: uppercase; font-weight: 600; margin-bottom: 0.3rem; }
 .cust-stat-value { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); }
 .cust-stat-text { font-size: 1.1rem; }
-.customers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
 .customer-card { background: var(--bg-card); border-radius: 10px; padding: 1rem; box-shadow: var(--shadow); border-left: 4px solid var(--primary); }
 .customer-card.birthday { border-left-color: #f59e0b; background: #fffbeb; }
 .customer-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem; }
@@ -251,8 +250,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .history-pts.neg { color: #f59e0b; }
 .history-date { font-size: 0.7rem; color: var(--text-gray); }
 
-/* ============ RESERVAS ============ */
-.reservations-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
 .reservations-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
 .reservation-card { background: var(--bg-card); border-radius: 10px; padding: 1rem; box-shadow: var(--shadow); border-left: 4px solid var(--text-gray); transition: 0.2s; }
 .reservation-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -3px rgba(0,0,0,0.1); }
@@ -277,6 +274,76 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .res-action-btn.cancel:hover { background: var(--status-pendiente); color: white; }
 .res-action-btn.delete { background: var(--bg-main); color: var(--text-gray); border: 1px solid var(--border); }
 .res-action-btn.delete:hover { background: var(--status-pendiente); color: white; }
+
+.allergen-legend { background: var(--bg-card); padding: 1rem; border-radius: 10px; box-shadow: var(--shadow); margin-bottom: 1rem; }
+.allergen-legend h3 { font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-dark); }
+.allergen-legend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
+.allergen-legend-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: var(--bg-main); border-radius: 6px; font-size: 0.85rem; }
+.allergen-legend-item .allergen-icon { font-size: 1.2rem; }
+.allergen-legend-item .allergen-name { font-weight: 600; }
+
+.allergens-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.product-allergen-card { background: var(--bg-card); border-radius: 10px; padding: 1rem; box-shadow: var(--shadow); border-left: 4px solid var(--primary); }
+.product-allergen-card.has-allergens { border-left-color: var(--status-ocupada); }
+.product-allergen-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+.product-allergen-name { font-size: 1.05rem; font-weight: 700; color: var(--text-dark); }
+.product-allergen-category { font-size: 0.75rem; color: var(--text-gray); background: var(--bg-main); padding: 0.2rem 0.5rem; border-radius: 4px; }
+.product-allergen-list { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+.allergen-badge { background: #fef3c7; color: #92400e; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 0.3rem; }
+.allergen-badge .allergen-icon { font-size: 1rem; }
+.product-allergen-actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; }
+.product-allergen-btn { flex: 1; padding: 0.4rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; transition: 0.2s; }
+.product-allergen-btn.edit { background: var(--bg-main); color: var(--text-dark); border: 1px solid var(--border); }
+.product-allergen-btn.edit:hover { background: var(--primary); color: white; }
+.product-allergen-btn.sheet { background: #eff6ff; color: #3b82f6; border: 1px solid #3b82f6; }
+.product-allergen-btn.sheet:hover { background: #3b82f6; color: white; }
+
+.allergen-checkboxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; }
+.allergen-checkbox { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: var(--bg-main); border-radius: 6px; cursor: pointer; transition: 0.2s; }
+.allergen-checkbox:hover { background: #e5e7eb; }
+.allergen-checkbox input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+.allergen-checkbox label { cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem; }
+.allergen-checkbox .allergen-icon { font-size: 1.2rem; }
+
+.invoices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+.invoice-card { background: var(--bg-card); border-radius: 10px; padding: 1rem; box-shadow: var(--shadow); border-left: 4px solid var(--primary); transition: 0.2s; }
+.invoice-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -3px rgba(0,0,0,0.1); }
+.invoice-card.status-anulada { border-left-color: var(--status-pendiente); opacity: 0.6; }
+.invoice-card.status-enviada { border-left-color: #3b82f6; }
+.invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+.invoice-number { font-size: 1.1rem; font-weight: 800; color: var(--text-dark); }
+.invoice-type-badge { padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: white; background: var(--primary); }
+.invoice-type-badge.completa { background: #3b82f6; }
+.invoice-type-badge.anulada { background: var(--status-pendiente); }
+.invoice-customer { font-size: 0.9rem; color: var(--text-dark); margin-bottom: 0.3rem; }
+.invoice-nif { font-size: 0.8rem; color: var(--text-gray); margin-bottom: 0.5rem; }
+.invoice-details { font-size: 0.8rem; color: var(--text-gray); margin-bottom: 0.75rem; line-height: 1.5; }
+.invoice-details strong { color: var(--text-dark); }
+.invoice-total { font-size: 1.2rem; font-weight: 800; color: var(--primary); margin-bottom: 0.75rem; }
+.invoice-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.invoice-action-btn { flex: 1; padding: 0.4rem 0.6rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; transition: 0.2s; min-width: 70px; }
+.invoice-action-btn.view { background: #eff6ff; color: #3b82f6; border: 1px solid #3b82f6; }
+.invoice-action-btn.view:hover { background: #3b82f6; color: white; }
+.invoice-action-btn.send { background: #ecfdf5; color: var(--primary); border: 1px solid var(--primary); }
+.invoice-action-btn.send:hover { background: var(--primary); color: white; }
+.invoice-action-btn.void { background: #fef2f2; color: var(--status-pendiente); border: 1px solid var(--status-pendiente); }
+.invoice-action-btn.void:hover { background: var(--status-pendiente); color: white; }
+.invoice-action-btn.print { background: var(--bg-main); color: var(--text-dark); border: 1px solid var(--border); }
+.invoice-action-btn.print:hover { background: var(--text-dark); color: white; }
+
+.invoice-view { padding: 1rem; }
+.invoice-view-header { text-align: center; border-bottom: 2px solid var(--border); padding-bottom: 1rem; margin-bottom: 1rem; }
+.invoice-view-header h2 { color: var(--primary); margin-bottom: 0.3rem; }
+.invoice-view-header p { font-size: 0.85rem; color: var(--text-gray); }
+.invoice-view-section { margin-bottom: 1rem; }
+.invoice-view-section h4 { font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-dark); border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+.invoice-view-table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
+.invoice-view-table th, .invoice-view-table td { padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.invoice-view-table th { background: var(--bg-main); font-weight: 600; }
+.invoice-view-totals { background: var(--bg-main); padding: 0.75rem; border-radius: 8px; margin-top: 1rem; }
+.invoice-view-totals .summary-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.9rem; }
+.invoice-view-totals .summary-row.total { font-size: 1.1rem; font-weight: 800; border-top: 1px solid var(--border); padding-top: 0.5rem; margin-top: 0.5rem; }
+.invoice-view-hash { font-size: 0.7rem; color: var(--text-gray); word-break: break-all; background: var(--bg-main); padding: 0.5rem; border-radius: 6px; margin-top: 1rem; }
 
 .staff-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
 .staff-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }

@@ -2,7 +2,6 @@ const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ============ VARIABLES GLOBALES ============
 let currentUser = null;
 let currentProfile = null;
 let cart = [];
@@ -57,15 +56,16 @@ let restaurantSettings = {
 };
 let currentInvoice = null;
 let invoiceItems = [];
+let allergens = [];
+let productAllergens = {};
 
 const ROLE_PERMISSIONS = {
-    admin: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'inventory', 'invoices', 'reports', 'cash', 'staff'],
+    admin: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'inventory', 'allergens', 'invoices', 'reports', 'cash', 'staff'],
     cajero: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'invoices', 'reports', 'cash'],
     mesero: ['tables', 'pos', 'reservations'],
     cocina: ['kitchen']
 };
 
-// ============ INICIALIZACIÓN ============
 async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) { currentUser = session.user; await loadProfile(); showApp(); } else { showLogin(); }
@@ -81,6 +81,7 @@ async function init() {
     setupLoyaltySettingsEvents();
     setupReservationEvents();
     setupInvoiceEvents();
+    setupAllergenEvents();
 }
 
 async function loadProfile() {
@@ -96,6 +97,17 @@ async function loadLoyaltySettings() {
 async function loadRestaurantSettings() {
     const { data } = await supabaseClient.from('restaurant_settings').select('*').eq('id', 1).single();
     if (data) restaurantSettings = data;
+}
+
+async function loadAllergens() {
+    const { data } = await supabaseClient.from('allergens').select('*').order('code');
+    allergens = data || [];
+    const { data: prodAllergens } = await supabaseClient.from('product_allergens').select('*');
+    productAllergens = {};
+    (prodAllergens || []).forEach(pa => {
+        if (!productAllergens[pa.product_id]) productAllergens[pa.product_id] = [];
+        productAllergens[pa.product_id].push(pa.allergen_id);
+    });
 }
 
 function applyPermissions() {
@@ -133,6 +145,7 @@ function showApp() {
     applyPermissions();
     loadLoyaltySettings();
     loadRestaurantSettings();
+    loadAllergens();
     loadProducts();
     loadTables();
     loadReservations();
@@ -145,7 +158,6 @@ function showApp() {
     setupRealtimeGlobal();
 }
 
-// ============ LOGIN ============
 function setupLoginEvents() {
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -173,7 +185,6 @@ function setupLoginEvents() {
     });
 }
 
-// ============ NAVEGACIÓN ============
 function setupNavigation() {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -189,6 +200,7 @@ function setupNavigation() {
             else if (view === 'reservations') loadReservations();
             else if (view === 'customers') loadCustomers();
             else if (view === 'inventory') loadIngredients();
+            else if (view === 'allergens') { loadAllergens(); renderAllergens(); }
             else if (view === 'invoices') loadInvoices();
             else if (view === 'reports') loadReports(currentReportPeriod);
             else if (view === 'cash') loadCashStatus();
@@ -206,7 +218,6 @@ function setupNavigation() {
     });
 }
 
-// ============ NOTIFICACIONES ============
 function setupNotificationsPanel() {
     document.getElementById('btn-notifications').addEventListener('click', () => {
         const panel = document.getElementById('notifications-panel');
@@ -248,7 +259,6 @@ function showToast(tipo, title, message) {
     setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 4000);
 }
 
-// ============ REPORTES ============
 function setupReportFilters() {
     document.querySelectorAll('.report-filter-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -327,7 +337,6 @@ async function loadReports(period) {
     }).join('') || '<tr><td colspan="5" style="text-align:center; color: var(--text-gray); padding: 1rem;">Sin pedidos</td></tr>';
 }
 
-// ============ FACTURACIÓN ELECTRÓNICA ============
 function setupInvoiceEvents() {
     document.getElementById('btn-fiscal-settings').addEventListener('click', openFiscalModal);
     document.getElementById('btn-close-fiscal').addEventListener('click', () => closeModal('fiscal-settings-modal'));
@@ -541,7 +550,7 @@ async function saveInvoice() {
         currentInvoice = invoice;
         closeModal('invoice-modal');
         loadInvoices();
-        showToast('pago', ` Factura ${invoice_number} emitida`, `Total: €${total.toFixed(2)}`);
+        showToast('pago', `📄 Factura ${invoice_number} emitida`, `Total: €${total.toFixed(2)}`);
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -585,11 +594,11 @@ function renderInvoices() {
             <div class="invoice-nif">${inv.customer_nif || 'Sin NIF'}</div>
             <div class="invoice-details">
                 📅 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
-                 Total: <strong>€${inv.total.toFixed(2)}</strong> (IVA: €${inv.iva_amount.toFixed(2)})<br>
-                 Estado: <strong>${inv.status}</strong>
+                💰 Total: <strong>€${inv.total.toFixed(2)}</strong> (IVA: €${inv.iva_amount.toFixed(2)})<br>
+                📊 Estado: <strong>${inv.status}</strong>
             </div>
             <div class="invoice-actions">
-                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">️ Ver</button>
+                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">👁️ Ver</button>
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
                 <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
@@ -732,7 +741,7 @@ function printInvoice() {
                 <div class="row total"><span>TOTAL:</span><span>€${inv.total.toFixed(2)}</span></div>
             </div>
             <div class="hash">
-                <strong>Hash encadenado (Ley Antifraude Veri*factu):</strong><br>
+                <strong>Hash encadenado (Ley Antifraude Verifactu):</strong><br>
                 Previous: ${inv.previous_hash}<br>
                 Current: ${inv.current_hash}
             </div>
@@ -759,7 +768,6 @@ async function sendInvoiceByEmail() {
     showToast('pago', '📧 Factura enviada', inv.invoice_number);
 }
 
-// ============ RESERVAS ============
 function setupReservationEvents() {
     document.getElementById('btn-add-reservation').addEventListener('click', () => openReservationModal());
     document.getElementById('btn-close-reservation').addEventListener('click', () => closeModal('reservation-modal'));
@@ -811,7 +819,7 @@ function renderReservations() {
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
                 ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
                 ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
-                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
+                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">️</button>
             </div>
         </div>`;
     }).join('');
@@ -869,7 +877,6 @@ async function deleteReservation(id) {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
-// ============ CONFIG DE PUNTOS ============
 function setupLoyaltySettingsEvents() {
     document.getElementById('btn-loyalty-settings').addEventListener('click', openLoyaltyModal);
     document.getElementById('btn-close-loyalty').addEventListener('click', () => closeModal('loyalty-settings-modal'));
@@ -917,7 +924,6 @@ async function saveLoyaltySettings() {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
-// ============ FIDELIDAD ============
 function setupCustomerEvents() {
     document.getElementById('btn-add-customer').addEventListener('click', () => openCustomerModal());
     document.getElementById('btn-close-customer').addEventListener('click', () => closeModal('customer-modal'));
@@ -1145,7 +1151,6 @@ function resetLoyaltyUI() {
     updateRedeemLabel();
 }
 
-// ============ QR DE MESA ============
 function openTableQR(tableId, tableName) {
     currentQRTable = { id: tableId, name: tableName };
     document.getElementById('qr-table-title').textContent = `QR - ${tableName}`;
@@ -1162,12 +1167,11 @@ function setupQREvents() {
         if (!currentQRTable) return;
         const url = `${window.location.origin}/menu.html?mesa=${currentQRTable.id}`;
         const win = window.open('', '_blank');
-        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}h2{margin-bottom:0.5rem;}p{color:#666;}</style></head><body><h2> TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
+        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}h2{margin-bottom:0.5rem;}p{color:#666;}</style></head><body><h2>🌿 TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
         win.document.close();
     });
 }
 
-// ============ DIVIDIR CUENTA ============
 function setupDivideEvents() {
     document.getElementById('btn-divide-account').addEventListener('click', openDivideModal);
     document.getElementById('btn-close-divide').addEventListener('click', () => closeModal('divide-modal'));
@@ -1218,7 +1222,7 @@ function renderDivideModal() {
     }).join('');
     if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
     else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
-    document.getElementById('btn-pay-all').textContent = `💰 Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
+    document.getElementById('btn-pay-all').textContent = ` Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
 }
 
 async function openDinerPayModal(dinerId) {
@@ -1260,7 +1264,6 @@ async function confirmDinerPayment() {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
-// ============ INVENTARIO ============
 function setupInventoryEvents() {
     document.getElementById('btn-add-ingredient').addEventListener('click', () => openIngredientModal());
     document.getElementById('btn-close-ingredient').addEventListener('click', () => closeModal('ingredient-modal'));
@@ -1373,15 +1376,14 @@ async function deductInventory(items) {
                 if (!ing) continue;
                 const newStock = Math.max(0, ing.stock - qtyToDeduct);
                 await supabaseClient.from('ingredients').update({ stock: newStock }).eq('id', recipe.ingredient_id);
-                if (newStock <= ing.min_stock && newStock > 0) addNotification('alerta', '️ Stock Bajo', `${ing.name} quedó con ${newStock} (mínimo: ${ing.min_stock})`);
-                else if (newStock === 0) addNotification('alerta', ' Agotado', `${ing.name} se agotó`);
+                if (newStock <= ing.min_stock && newStock > 0) addNotification('alerta', '⚠️ Stock Bajo', `${ing.name} quedó con ${newStock} (mínimo: ${ing.min_stock})`);
+                else if (newStock === 0) addNotification('alerta', '🚨 Agotado', `${ing.name} se agotó`);
             }
         }
         loadIngredients();
     } catch (error) { console.error('Error descontando inventario:', error); }
 }
 
-// ============ PERSONAL ============
 function setupStaffEvents() {
     document.getElementById('btn-add-staff').addEventListener('click', () => openStaffModal());
     document.getElementById('btn-close-staff').addEventListener('click', () => closeModal('staff-modal'));
@@ -1487,7 +1489,6 @@ async function recordEmployeeSale(orderId, amount) {
     await supabaseClient.from('employee_sales').insert([{ order_id: orderId, employee_id: currentProfile.id, amount, commission }]);
 }
 
-// ============ PRODUCTOS Y CARRITO ============
 async function loadProducts() {
     const { data, error } = await supabaseClient.from('products').select('*').eq('active', true).order('position');
     if (error) return;
@@ -1506,7 +1507,14 @@ function renderCategories() {
 function renderProducts() {
     const grid = document.getElementById('product-grid');
     const filtered = currentCategory === 'all' ? products : products.filter(p => p.category === currentCategory);
-    grid.innerHTML = filtered.map(p => `<div class="product-card" data-id="${p.id}"><img class="product-img" src="${p.image || 'https://via.placeholder.com/120x60?text=Sin+Imagen'}" alt="${p.name}"><div class="product-name">${p.name}</div><div class="product-price">$${Number(p.price).toLocaleString()}</div></div>`).join('');
+    grid.innerHTML = filtered.map(p => {
+        const allergens = productAllergens[p.id] || [];
+        const allergenBadges = allergens.map(aid => {
+            const allergen = allergens.find(a => a.id === aid);
+            return allergen ? `<span style="font-size:0.7rem; background:#fef3c7; padding:0.1rem 0.3rem; border-radius:3px; margin-left:0.2rem;">${allergen.icon}</span>` : '';
+        }).join('');
+        return `<div class="product-card" data-id="${p.id}"><img class="product-img" src="${p.image || 'https://via.placeholder.com/120x60?text=Sin+Imagen'}" alt="${p.name}"><div class="product-name">${p.name}${allergenBadges}</div><div class="product-price">$${Number(p.price).toLocaleString()}</div></div>`;
+    }).join('');
 }
 
 function addToCart(productId) {
@@ -1563,7 +1571,6 @@ function setupPOSEvents() {
     document.getElementById('btn-confirm-pay').addEventListener('click', () => { if (currentTableOrder) confirmPaymentForTable(); else confirmPayment(); });
 }
 
-// ============ MESAS ============
 async function loadTables() {
     const { data: tablesData, error: tablesError } = await supabaseClient.from('tables').select('*').order('id');
     if (tablesError) return;
@@ -1669,7 +1676,7 @@ async function addToTable() {
             const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
             if (itemsError) throw itemsError;
             currentTableOrder = order;
-            addNotification('nuevo', '📝 Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
+            addNotification('nuevo', ' Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
         }
         cart = []; renderCart(); renderTableOrder();
         showToast('pago', '✓ Añadido a la mesa', 'Los productos se guardaron en el pedido');
@@ -1677,7 +1684,6 @@ async function addToTable() {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
-// ============ PAGOS ============
 function openPayModal() {
     if (cart.length === 0) return alert('Carrito vacío');
     resetLoyaltyUI();
@@ -1759,7 +1765,6 @@ function printTicket(order, items, loyalty) {
     setTimeout(() => { const qrContainer = document.getElementById('qr-code'); qrContainer.innerHTML = ''; new QRCode(qrContainer, { text: qrUrl, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.L }); setTimeout(() => window.print(), 500); }, 100);
 }
 
-// ============ COCINA ============
 async function loadKitchenOrders() { const { data, error } = await supabaseClient.from('orders').select('*, order_items(*)').neq('status', 'entregado').neq('status', 'pendiente_pago').order('created_at', { ascending: false }); if (error) return; kitchenOrders = data || []; renderKitchenOrders(); updateKitchenStats(); }
 
 function renderKitchenOrders() { ['nuevo', 'cocina', 'listo'].forEach(status => { const container = document.getElementById(`orders-${status}`); const orders = kitchenOrders.filter(o => o.status === status); if (orders.length === 0) { container.innerHTML = '<div class="empty-cart">No hay pedidos</div>'; return; } container.innerHTML = orders.map(order => { const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; const webBadge = order.source === 'web' ? ' 📱' : ''; const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); let actionBtn = ''; if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`; else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`; return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}${dinerText}${webBadge}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`; }).join(''); }); }
@@ -1784,10 +1789,6 @@ async function updateOrderStatus(orderId, newStatus) {
     }
 }
 
-// ============ REALTIME ============
-function setupRealtimeGlobal() { supabaseClient.channel('orders-global').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const webText = order.source === 'web' ? ' 📱 (QR)' : ''; addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); loadTables(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const oldStatus = payload.old.status; const newStatus = order.status; let tipo = '', title = '', message = ''; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = ` Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; } else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); } else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); } if (title) addNotification(tipo, title, message); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); }).subscribe(); }
-
-// ============ CAJA / ARQUEOS ============
 async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
 
 async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
@@ -1797,6 +1798,186 @@ document.getElementById('btn-confirm-movement').addEventListener('click', async 
 document.querySelectorAll('.bill-count').forEach(input => { input.addEventListener('input', () => { let total = 0; document.querySelectorAll('.bill-count').forEach(i => { total += parseInt(i.dataset.value) * (parseInt(i.value) || 0); }); document.getElementById('counted-total').textContent = '$' + total.toLocaleString(); }); });
 document.getElementById('btn-confirm-count').addEventListener('click', async () => { if (!currentSession) return alert('Caja no abierta'); let counted = 0; document.querySelectorAll('.bill-count').forEach(i => { counted += parseInt(i.dataset.value) * (parseInt(i.value) || 0); }); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id).eq('metodo', 'efectivo'); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const { data: orders } = await supabaseClient.from('orders').select('total, pay_method').eq('source', 'tpv').gte('created_at', currentSession.opened_at).eq('paid', true); let ventasEfectivo = 0; orders.forEach(o => { if (o.pay_method === 'efectivo') ventasEfectivo += o.total; }); const esperado = currentSession.fondo + ventasEfectivo + entradas - salidas; const diferencia = counted - esperado; const { error } = await supabaseClient.from('cash_arqueos').insert([{ session_id: currentSession.id, fondo: currentSession.fondo, esperado, contado: counted, dif: diferencia, v_efectivo: ventasEfectivo, entradas, salidas, kind: 'X' }]); if (error) { alert('Error: ' + error.message); } else { closeModal('modal-count'); alert(`Arqueo registrado\nEsperado: $${esperado.toLocaleString()}\nContado: $${counted.toLocaleString()}\nDiferencia: $${diferencia.toLocaleString()}`); loadCashStatus(); } });
 async function closeCashSession() { if (!currentSession) return alert('Caja no abierta'); if (!confirm('¿Cerrar caja?')) return; const { error } = await supabaseClient.from('cash_sessions').update({ closed_at: new Date().toISOString() }).eq('id', currentSession.id); if (error) { alert('Error: ' + error.message); } else { loadCashStatus(); } }
+
+function setupAllergenEvents() {
+    document.getElementById('btn-product-allergens').addEventListener('click', openProductAllergensModal);
+    document.getElementById('btn-close-product-allergens').addEventListener('click', () => closeModal('product-allergens-modal'));
+    document.getElementById('btn-cancel-product-allergens').addEventListener('click', () => closeModal('product-allergens-modal'));
+    document.getElementById('btn-save-product-allergens').addEventListener('click', saveProductAllergens);
+    document.getElementById('allergen-product-select').addEventListener('change', loadProductAllergens);
+    document.getElementById('btn-close-technical-sheet').addEventListener('click', () => closeModal('technical-sheet-modal'));
+    document.getElementById('btn-cancel-technical-sheet').addEventListener('click', () => closeModal('technical-sheet-modal'));
+    document.getElementById('btn-print-technical-sheet').addEventListener('click', printTechnicalSheet);
+    document.getElementById('allergen-product-search').addEventListener('input', renderAllergens);
+}
+
+function openProductAllergensModal() {
+    const select = document.getElementById('allergen-product-select');
+    select.innerHTML = products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    const checkboxes = document.getElementById('allergen-checkboxes');
+    checkboxes.innerHTML = allergens.map(a => `
+        <div class="allergen-checkbox">
+            <input type="checkbox" id="allergen-${a.id}" value="${a.id}">
+            <label for="allergen-${a.id}"><span class="allergen-icon">${a.icon}</span> ${a.name}</label>
+        </div>
+    `).join('');
+    loadProductAllergens();
+    document.getElementById('product-allergens-modal').classList.add('active');
+}
+
+function loadProductAllergens() {
+    const productId = parseInt(document.getElementById('allergen-product-select').value);
+    const allergenIds = productAllergens[productId] || [];
+    allergens.forEach(a => {
+        const checkbox = document.getElementById(`allergen-${a.id}`);
+        if (checkbox) checkbox.checked = allergenIds.includes(a.id);
+    });
+}
+
+async function saveProductAllergens() {
+    const productId = parseInt(document.getElementById('allergen-product-select').value);
+    const selectedAllergens = [];
+    allergens.forEach(a => {
+        const checkbox = document.getElementById(`allergen-${a.id}`);
+        if (checkbox && checkbox.checked) selectedAllergens.push(a.id);
+    });
+    try {
+        await supabaseClient.from('product_allergens').delete().eq('product_id', productId);
+        if (selectedAllergens.length > 0) {
+            const records = selectedAllergens.map(aid => ({ product_id: productId, allergen_id: aid }));
+            const { error } = await supabaseClient.from('product_allergens').insert(records);
+            if (error) throw error;
+        }
+        await loadAllergens();
+        renderAllergens();
+        closeModal('product-allergens-modal');
+        showToast('pago', '✓ Alérgenos guardados', '');
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
+function renderAllergens() {
+    const legend = document.getElementById('allergen-legend-grid');
+    if (legend) {
+        legend.innerHTML = allergens.map(a => `<div class="allergen-legend-item"><span class="allergen-icon">${a.icon}</span><span class="allergen-name">${a.name}</span></div>`).join('');
+    }
+    const grid = document.getElementById('allergens-grid');
+    if (!grid) return;
+    const search = (document.getElementById('allergen-product-search')?.value || '').toLowerCase();
+    const filtered = products.filter(p => (p.name || '').toLowerCase().includes(search));
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay productos</div>';
+        return;
+    }
+    grid.innerHTML = filtered.map(p => {
+        const allergenIds = productAllergens[p.id] || [];
+        const hasAllergens = allergenIds.length > 0;
+        const allergenBadges = allergenIds.map(aid => {
+            const allergen = allergens.find(a => a.id === aid);
+            return allergen ? `<span class="allergen-badge"><span class="allergen-icon">${allergen.icon}</span> ${allergen.name}</span>` : '';
+        }).join('');
+        return `
+        <div class="product-allergen-card ${hasAllergens ? 'has-allergens' : ''}">
+            <div class="product-allergen-header">
+                <div class="product-allergen-name">${p.name}</div>
+                <span class="product-allergen-category">${p.category || 'Sin categoría'}</span>
+            </div>
+            <div class="product-allergen-list">
+                ${allergenBadges || '<span style="color: var(--text-gray); font-size: 0.85rem;">Sin alérgenos declarados</span>'}
+            </div>
+            <div class="product-allergen-actions">
+                <button class="product-allergen-btn edit" onclick="editProductAllergens(${p.id})">✏️ Editar</button>
+                <button class="product-allergen-btn sheet" onclick="viewTechnicalSheet(${p.id})">📋 Ficha Técnica</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function editProductAllergens(productId) {
+    document.getElementById('allergen-product-select').value = productId;
+    loadProductAllergens();
+    document.getElementById('product-allergens-modal').classList.add('active');
+}
+
+function viewTechnicalSheet(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    const allergenIds = productAllergens[productId] || [];
+    const allergenList = allergenIds.map(aid => {
+        const allergen = allergens.find(a => a.id === aid);
+        return allergen ? `<li>${allergen.icon} ${allergen.name}: ${allergen.description}</li>` : '';
+    }).join('');
+    document.getElementById('technical-sheet-title').textContent = `Ficha Técnica - ${product.name}`;
+    document.getElementById('technical-sheet-body').innerHTML = `
+        <div style="padding: 1rem;">
+            <h3 style="margin-bottom: 1rem; color: var(--primary);">${product.name}</h3>
+            <div style="margin-bottom: 1rem;">
+                <strong>Categoría:</strong> ${product.category || 'No especificada'}<br>
+                <strong>Precio:</strong> €${Number(product.price).toFixed(2)}
+            </div>
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem;">
+                <strong>⚠️ Alérgenos presentes:</strong>
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    ${allergenList || '<li>Sin alérgenos declarados</li>'}
+                </ul>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-gray); margin-top: 1rem;">
+                <strong>Nota legal:</strong> Esta ficha cumple con el Reglamento (UE) nº 1169/2011 sobre la información alimentaria facilitada al consumidor.
+            </div>
+        </div>
+    `;
+    document.getElementById('technical-sheet-modal').classList.add('active');
+}
+
+function printTechnicalSheet() {
+    const content = document.getElementById('technical-sheet-body').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Ficha Técnica</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
+                h3 { color: #10b981; }
+                ul { margin: 0.5rem 0; }
+                li { margin-bottom: 0.5rem; }
+                @media print { body { padding: 1rem; } }
+            </style>
+        </head>
+        <body>${content}</body>
+        </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 500);
+}
+
+function setupRealtimeGlobal() {
+    supabaseClient.channel('orders-global')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+            const order = payload.new;
+            const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
+            const webText = order.source === 'web' ? ' 📱 (QR)' : '';
+            addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`);
+            const kitchenView = document.getElementById('view-kitchen');
+            if (kitchenView.classList.contains('active')) loadKitchenOrders();
+            loadTables();
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
+            const order = payload.new;
+            const oldStatus = payload.old.status;
+            const newStatus = order.status;
+            let tipo = '', title = '', message = '';
+            const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
+            if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = `🔥 Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; }
+            else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); }
+            else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); }
+            if (title) addNotification(tipo, title, message);
+            const kitchenView = document.getElementById('view-kitchen');
+            if (kitchenView.classList.contains('active')) loadKitchenOrders();
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); })
+        .subscribe();
+}
 
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -1825,5 +2006,7 @@ window.viewInvoice = viewInvoice;
 window.sendInvoice = sendInvoice;
 window.voidInvoice = voidInvoice;
 window.printInvoiceById = printInvoiceById;
+window.editProductAllergens = editProductAllergens;
+window.viewTechnicalSheet = viewTechnicalSheet;
 
 init();

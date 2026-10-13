@@ -13,7 +13,7 @@
 
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
-            <h2> TPV Punto Verde</h2>
+            <h2>🌿 TPV Punto Verde</h2>
             <p>Inicia sesión para continuar</p>
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="Correo electrónico" required>
@@ -39,7 +39,7 @@
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen" data-perm="kitchen">
-                    <span class="nav-icon">👨‍</span>
+                    <span class="nav-icon">👨‍🍳</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="reservations" data-perm="reservations">
@@ -47,15 +47,19 @@
                     <span>Reservas</span>
                 </li>
                 <li class="nav-item" data-view="customers" data-perm="customers">
-                    <span class="nav-icon">👤</span>
+                    <span class="nav-icon"></span>
                     <span>Clientes</span>
                 </li>
                 <li class="nav-item" data-view="inventory" data-perm="inventory">
                     <span class="nav-icon">📦</span>
                     <span>Inventario</span>
                 </li>
+                <li class="nav-item" data-view="allergens" data-perm="allergens">
+                    <span class="nav-icon">⚠️</span>
+                    <span>Alérgenos</span>
+                </li>
                 <li class="nav-item" data-view="invoices" data-perm="invoices">
-                    <span class="nav-icon">📄</span>
+                    <span class="nav-icon"></span>
                     <span>Facturas</span>
                 </li>
                 <li class="nav-item" data-view="reports" data-perm="reports">
@@ -226,11 +230,28 @@
                 </div>
             </section>
 
+            <section id="view-allergens" class="view">
+                <header class="view-header">
+                    <h1>⚠️ Control de Alérgenos</h1>
+                    <button class="btn-primary" id="btn-product-allergens">🥗 Gestionar Alérgenos</button>
+                </header>
+                <div class="allergens-container">
+                    <div class="allergen-legend">
+                        <h3>Los 14 Alérgenos Oficiales (UE 1169/2011)</h3>
+                        <div class="allergen-legend-grid" id="allergen-legend-grid"></div>
+                    </div>
+                    <div class="inventory-filters">
+                        <input type="text" id="allergen-product-search" placeholder="🔍 Buscar producto..." class="inv-search-input">
+                    </div>
+                    <div class="allergens-grid" id="allergens-grid"></div>
+                </div>
+            </section>
+
             <section id="view-invoices" class="view">
                 <header class="view-header">
                     <h1>📄 Facturación Electrónica</h1>
                     <div style="display:flex; gap:0.5rem;">
-                        <button class="btn-secondary" id="btn-fiscal-settings">️ Config. Fiscal</button>
+                        <button class="btn-secondary" id="btn-fiscal-settings">⚙️ Config. Fiscal</button>
                         <button class="btn-primary" id="btn-new-invoice">+ Nueva Factura</button>
                     </div>
                 </header>
@@ -339,16 +360,55 @@
         </div>
     </div>
 
+    <!-- MODAL ALÉRGENOS DE PRODUCTO -->
+    <div id="product-allergens-modal" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="product-allergens-title">Alérgenos del Producto</h2>
+                <button class="close-btn" id="btn-close-product-allergens">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Seleccionar producto:</label>
+                    <select id="allergen-product-select"></select>
+                </div>
+                <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">
+                    <strong>️ Importante:</strong> Marca TODOS los alérgenos presentes en el producto según la normativa UE 1169/2011.
+                </div>
+                <div class="allergen-checkboxes" id="allergen-checkboxes"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-product-allergens">Cancelar</button>
+                <button class="confirm-btn" id="btn-save-product-allergens">💾 Guardar Alérgenos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FICHA TÉCNICA -->
+    <div id="technical-sheet-modal" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="technical-sheet-title">Ficha Técnica</h2>
+                <button class="close-btn" id="btn-close-technical-sheet">✕</button>
+            </div>
+            <div class="modal-body" id="technical-sheet-body"></div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-technical-sheet">Cerrar</button>
+                <button class="confirm-btn" id="btn-print-technical-sheet">🖨️ Imprimir</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL CONFIG FISCAL -->
     <div id="fiscal-settings-modal" class="modal-overlay">
         <div class="modal-content modal-large">
             <div class="modal-header">
-                <h2>️ Configuración Fiscal</h2>
+                <h2>⚙️ Configuración Fiscal</h2>
                 <button class="close-btn" id="btn-close-fiscal">✕</button>
             </div>
             <div class="modal-body">
                 <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">
-                    <strong>🇪🇸 Ley Antifraude (Verifactu):</strong> Los registros son inalterables con hash encadenado.
+                    <strong>🇪 Ley Antifraude (Verifactu):</strong> Los registros son inalterables con hash encadenado.
                 </div>
                 <h3 style="margin-bottom: 0.75rem; font-size: 1rem;">Datos del Restaurante</h3>
                 <div class="input-group"><label>Razón Social:</label><input type="text" id="set-business-name" placeholder="Ej: Restaurante Punto Verde S.L."></div>
@@ -428,7 +488,7 @@
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-invoice">Cancelar</button>
-                <button class="confirm-btn" id="btn-save-invoice">📄 Emitir Factura</button>
+                <button class="confirm-btn" id="btn-save-invoice"> Emitir Factura</button>
             </div>
         </div>
     </div>
@@ -443,7 +503,7 @@
             <div class="modal-body" id="view-invoice-body"></div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-view-invoice">Cerrar</button>
-                <button class="btn-secondary" id="btn-send-invoice">📧 Enviar por Email</button>
+                <button class="btn-secondary" id="btn-send-invoice"> Enviar por Email</button>
                 <button class="confirm-btn" id="btn-print-invoice">🖨️ Imprimir / PDF</button>
             </div>
         </div>
@@ -519,7 +579,7 @@
                     <div class="type-buttons">
                         <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
                         <button class="type-btn" data-type="recogida">📦 Recogida</button>
-                        <button class="type-btn" data-type="domicilio"> Domicilio</button>
+                        <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
                     </div>
                 </div>
                 <div class="payment-method">
@@ -590,7 +650,7 @@
                     <div class="method-buttons" id="diner-method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum"> Bizum</button>
+                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
                 <div class="cash-input" id="diner-cash-section">
@@ -689,7 +749,7 @@
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-ingredient">Cancelar</button>
-                <button class="confirm-btn" id="btn-save-ingredient"> Guardar</button>
+                <button class="confirm-btn" id="btn-save-ingredient">💾 Guardar</button>
             </div>
         </div>
     </div>
