@@ -42,6 +42,10 @@
                     <span class="nav-icon">👨‍🍳</span>
                     <span>Cocina</span>
                 </li>
+                <li class="nav-item" data-view="reservations" data-perm="reservations">
+                    <span class="nav-icon">📅</span>
+                    <span>Reservas</span>
+                </li>
                 <li class="nav-item" data-view="customers" data-perm="customers">
                     <span class="nav-icon">👤</span>
                     <span>Clientes</span>
@@ -51,7 +55,7 @@
                     <span>Inventario</span>
                 </li>
                 <li class="nav-item" data-view="reports" data-perm="reports">
-                    <span class="nav-icon">📊</span>
+                    <span class="nav-icon"></span>
                     <span>Reportes</span>
                 </li>
                 <li class="nav-item" data-view="cash" data-perm="cash">
@@ -68,7 +72,7 @@
                     <span id="user-name">Usuario</span>
                     <span id="user-role" class="user-role-badge"></span>
                 </div>
-                <button id="btn-logout" class="logout-btn">🚪 Salir</button>
+                <button id="btn-logout" class="logout-btn"> Salir</button>
             </div>
         </nav>
 
@@ -80,6 +84,7 @@
                         <span class="legend-item"><span class="dot status-libre"></span> Libre</span>
                         <span class="legend-item"><span class="dot status-ocupada"></span> Ocupada</span>
                         <span class="legend-item"><span class="dot status-pendiente"></span> Pendiente</span>
+                        <span class="legend-item"><span class="dot status-reservada"></span> Reservada</span>
                     </div>
                 </header>
                 <div class="tables-grid" id="tables-grid"></div>
@@ -153,6 +158,26 @@
                 </div>
             </section>
 
+            <section id="view-reservations" class="view">
+                <header class="view-header">
+                    <h1> Gestión de Reservas</h1>
+                    <button class="btn-primary" id="btn-add-reservation">+ Nueva Reserva</button>
+                </header>
+                <div class="reservations-container">
+                    <div class="inventory-filters">
+                        <input type="date" id="res-date-filter" class="inv-search-input">
+                        <select id="res-status-filter" class="inv-filter-select">
+                            <option value="all">Todos los estados</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="confirmada">Confirmada</option>
+                            <option value="cancelada">Cancelada</option>
+                            <option value="completada">Completada</option>
+                        </select>
+                    </div>
+                    <div class="reservations-grid" id="reservations-grid"></div>
+                </div>
+            </section>
+
             <section id="view-customers" class="view">
                 <header class="view-header">
                     <h1>👤 Clientes y Fidelidad</h1>
@@ -185,7 +210,7 @@
 
             <section id="view-inventory" class="view">
                 <header class="view-header">
-                    <h1>📦 Inventario de Ingredientes</h1>
+                    <h1> Inventario de Ingredientes</h1>
                     <button class="btn-primary" id="btn-add-ingredient">+ Nuevo Ingrediente</button>
                 </header>
                 <div class="inventory-container">
@@ -330,7 +355,7 @@
 
         <div class="notifications-panel" id="notifications-panel">
             <div class="notif-header">
-                <h3>🔔 Notificaciones</h3>
+                <h3> Notificaciones</h3>
                 <div class="notif-header-actions">
                     <button class="clear-notifs" id="btn-clear-notifs">Limpiar</button>
                     <button class="close-notifs" id="btn-close-notifs">✕</button>
@@ -342,7 +367,44 @@
         </div>
     </div>
 
-    <!-- MODAL COBRO NORMAL -->
+    <!-- MODAL RESERVA -->
+    <div id="reservation-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="reservation-modal-title">Nueva Reserva</h2>
+                <button class="close-btn" id="btn-close-reservation">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reservation-id">
+                <div class="input-group">
+                    <label>Nombre del cliente:</label>
+                    <input type="text" id="res-customer-name" placeholder="Ej: María González">
+                </div>
+                <div class="input-group">
+                    <label>Teléfono:</label>
+                    <input type="text" id="res-phone" placeholder="Ej: 3001234567">
+                </div>
+                <div class="input-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div><label>Fecha:</label><input type="date" id="res-date"></div>
+                    <div><label>Hora:</label><input type="time" id="res-time"></div>
+                </div>
+                <div class="input-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div><label>N° de personas:</label><input type="number" id="res-party-size" min="1" placeholder="2"></div>
+                    <div><label>Mesa asignada:</label><select id="res-table-id"><option value="">Sin asignar</option></select></div>
+                </div>
+                <div class="input-group">
+                    <label>Notas:</label>
+                    <input type="text" id="res-notes" placeholder="Ej: Cumpleaños, silla de bebé">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-reservation">Cancelar</button>
+                <button class="confirm-btn" id="btn-save-reservation">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL COBRO -->
     <div id="pay-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -360,7 +422,6 @@
                         <div class="summary-row total"><span>TOTAL</span><span id="modal-total">$0</span></div>
                     </div>
                 </div>
-
                 <div class="loyalty-section">
                     <h3>🎁 Cliente Fidelidad (opcional)</h3>
                     <div id="loyalty-search-box">
@@ -380,7 +441,6 @@
                         <div class="redeem-discount">Descuento: <span id="redeem-discount">$0</span></div>
                     </div>
                 </div>
-
                 <div class="order-type">
                     <h3>Tipo de Pedido</h3>
                     <div class="type-buttons">
@@ -393,7 +453,7 @@
                     <h3>Método de Pago</h3>
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
+                        <button class="method-btn" data-method="tarjeta"> Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
@@ -410,12 +470,12 @@
         </div>
     </div>
 
-    <!-- MODAL: DIVIDIR CUENTA -->
+    <!-- MODAL DIVIDIR CUENTA -->
     <div id="divide-modal" class="modal-overlay">
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>✂️ Dividir Cuenta</h2>
-                <button class="close-btn" id="btn-close-divide">✕</button>
+                <button class="close-btn" id="btn-close-divide"></button>
             </div>
             <div class="modal-body divide-body">
                 <div class="divide-controls">
@@ -437,7 +497,7 @@
         </div>
     </div>
 
-    <!-- MODAL COBRO POR COMENSAL -->
+    <!-- MODAL COBRO COMENSAL -->
     <div id="diner-pay-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -506,12 +566,12 @@
         </div>
     </div>
 
-    <!-- MODAL HISTORIAL DE PUNTOS -->
+    <!-- MODAL HISTORIAL -->
     <div id="history-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="history-modal-title">Historial de Puntos</h2>
-                <button class="close-btn" id="btn-close-history">✕</button>
+                <button class="close-btn" id="btn-close-history"></button>
             </div>
             <div class="modal-body">
                 <div class="history-list" id="history-list"></div>
@@ -522,7 +582,7 @@
         </div>
     </div>
 
-    <!-- MODAL CONFIGURAR PUNTOS -->
+    <!-- MODAL CONFIG PUNTOS -->
     <div id="loyalty-settings-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -531,7 +591,7 @@
             </div>
             <div class="modal-body">
                 <div class="input-group">
-                    <label>Puntos que gana el cliente por cada $1 de compra:</label>
+                    <label>Puntos por cada $1 de compra:</label>
                     <input type="number" id="set-points-per-unit" step="0.1" min="0" placeholder="1">
                 </div>
                 <div class="input-group">
@@ -551,7 +611,7 @@
         </div>
     </div>
 
-    <!-- MODAL: AGREGAR/EDITAR INGREDIENTE -->
+    <!-- MODAL INGREDIENTE -->
     <div id="ingredient-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -594,7 +654,7 @@
         </div>
     </div>
 
-    <!-- MODAL: RECETA -->
+    <!-- MODAL RECETA -->
     <div id="recipe-modal" class="modal-overlay">
         <div class="modal-content modal-large">
             <div class="modal-header">
@@ -618,7 +678,7 @@
         </div>
     </div>
 
-    <!-- MODAL: EMPLEADO -->
+    <!-- MODAL EMPLEADO -->
     <div id="staff-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -667,7 +727,7 @@
         </div>
     </div>
 
-    <!-- MODAL QR DE MESA -->
+    <!-- MODAL QR MESA -->
     <div id="qr-table-modal" class="modal-overlay">
         <div class="modal-content" style="max-width: 360px; text-align: center;">
             <div class="modal-header">
