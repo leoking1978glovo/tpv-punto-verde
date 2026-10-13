@@ -39,7 +39,7 @@
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen" data-perm="kitchen">
-                    <span class="nav-icon">👨‍</span>
+                    <span class="nav-icon">👨‍🍳</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="customers" data-perm="customers">
@@ -153,11 +153,13 @@
                 </div>
             </section>
 
-            <!-- VISTA CLIENTES -->
             <section id="view-customers" class="view">
                 <header class="view-header">
                     <h1>👤 Clientes y Fidelidad</h1>
-                    <button class="btn-primary" id="btn-add-customer">+ Nuevo Cliente</button>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn-secondary" id="btn-loyalty-settings">⚙️ Configurar Puntos</button>
+                        <button class="btn-primary" id="btn-add-customer">+ Nuevo Cliente</button>
+                    </div>
                 </header>
                 <div class="customers-container">
                     <div class="cust-stats">
@@ -359,7 +361,6 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN FIDELIDAD -->
                 <div class="loyalty-section">
                     <h3>🎁 Cliente Fidelidad (opcional)</h3>
                     <div id="loyalty-search-box">
@@ -374,7 +375,7 @@
                         <button class="remove-customer" id="btn-remove-customer">✕</button>
                     </div>
                     <div class="redeem-row" id="redeem-row" style="display:none;">
-                        <label>Canjear puntos (100 pts = $5):</label>
+                        <label id="redeem-label">Canjear puntos:</label>
                         <input type="number" id="redeem-points" placeholder="0" min="0">
                         <div class="redeem-discount">Descuento: <span id="redeem-discount">$0</span></div>
                     </div>
@@ -517,6 +518,35 @@
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-history">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIGURAR PUNTOS -->
+    <div id="loyalty-settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Configurar Sistema de Puntos</h2>
+                <button class="close-btn" id="btn-close-loyalty">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Puntos que gana el cliente por cada $1 de compra:</label>
+                    <input type="number" id="set-points-per-unit" step="0.1" min="0" placeholder="1">
+                </div>
+                <div class="input-group">
+                    <label>Valor de cada punto al canjear ($):</label>
+                    <input type="number" id="set-point-value" step="0.01" min="0" placeholder="0.05">
+                </div>
+                <div class="input-group">
+                    <label>Multiplicador de cumpleaños (x):</label>
+                    <input type="number" id="set-birthday-mult" step="0.5" min="1" placeholder="2">
+                </div>
+                <div style="background: var(--bg-main); padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; color: var(--text-gray);" id="loyalty-preview"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-loyalty">Cancelar</button>
+                <button class="confirm-btn" id="btn-save-loyalty">💾 Guardar Reglas</button>
             </div>
         </div>
     </div>

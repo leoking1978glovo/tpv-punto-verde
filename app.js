@@ -2,9 +2,6 @@ const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const POINTS_PER_UNIT = 1;
-const POINT_VALUE = 0.05;
-
 let currentUser = null;
 let currentProfile = null;
 let cart = [];
@@ -34,6 +31,7 @@ let currentQRTable = null;
 let customers = [];
 let selectedCustomer = null;
 let redeemPoints = 0;
+let loyaltySettings = { points_per_unit: 1, point_value: 0.05, birthday_multiplier: 2 };
 
 const ROLE_PERMISSIONS = {
     admin: ['tables', 'pos', 'kitchen', 'customers', 'inventory', 'reports', 'cash', 'staff'],
@@ -54,11 +52,17 @@ async function init() {
     setupStaffEvents();
     setupQREvents();
     setupCustomerEvents();
+    setupLoyaltySettingsEvents();
 }
 
 async function loadProfile() {
     const { data } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
     currentProfile = data || { id: currentUser.id, email: currentUser.email, full_name: 'Usuario', role: 'admin', commission_rate: 0, active: true };
+}
+
+async function loadLoyaltySettings() {
+    const { data } = await supabaseClient.from('loyalty_settings').select('*').eq('id', 1).single();
+    if (data) loyaltySettings = data;
 }
 
 function applyPermissions() {
@@ -70,6 +74,8 @@ function applyPermissions() {
         else item.classList.remove('hidden');
     });
     document.getElementById('user-role').textContent = role.toUpperCase();
+    const loyaltyBtn = document.getElementById('btn-loyalty-settings');
+    if (loyaltyBtn) loyaltyBtn.style.display = (role === 'admin') ? 'inline-block' : 'none';
     const firstAllowed = perms[0];
     const firstNavItem = document.querySelector(`.nav-item[data-perm="${firstAllowed}"]`);
     if (firstNavItem) {
@@ -90,6 +96,7 @@ function showApp() {
     document.getElementById('main-app').style.display = 'flex';
     document.getElementById('user-name').textContent = currentProfile?.full_name || currentUser.email;
     applyPermissions();
+    loadLoyaltySettings();
     loadProducts();
     loadTables();
     loadCashStatus();
@@ -157,6 +164,54 @@ function setupNavigation() {
     });
 }
 
+// ============ CONFIG DE PUNTOS ============
+function setupLoyaltySettingsEvents() {
+    document.getElementById('btn-loyalty-settings').addEventListener('click', openLoyaltyModal);
+    document.getElementById('btn-close-loyalty').addEventListener('click', () => closeModal('loyalty-settings-modal'));
+    document.getElementById('btn-cancel-loyalty').addEventListener('click', () => closeModal('loyalty-settings-modal'));
+    document.getElementById('btn-save-loyalty').addEventListener('click', saveLoyaltySettings);
+    ['set-points-per-unit', 'set-point-value', 'set-birthday-mult'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateLoyaltyPreview);
+    });
+}
+
+function openLoyaltyModal() {
+    document.getElementById('set-points-per-unit').value = loyaltySettings.points_per_unit;
+    document.getElementById('set-point-value').value = loyaltySettings.point_value;
+    document.getElementById('set-birthday-mult').value = loyaltySettings.birthday_multiplier;
+    updateLoyaltyPreview();
+    document.getElementById('loyalty-settings-modal').classList.add('active');
+}
+
+function updateLoyaltyPreview() {
+    const ppu = parseFloat(document.getElementById('set-points-per-unit').value) || 0;
+    const pv = parseFloat(document.getElementById('set-point-value').value) || 0;
+    const bm = parseFloat(document.getElementById('set-birthday-mult').value) || 1;
+    const ref = 100 * pv;
+    document.getElementById('loyalty-preview').innerHTML = `
+        <strong>Resumen de reglas:</strong><br>
+        • El cliente gana <strong>${ppu} punto(s)</strong> por cada <strong>$1</strong> de compra.<br>
+        • Al canjear, <strong>100 puntos = $${Math.round(ref).toLocaleString()}</strong>.<br>
+        • En su cumpleaños gana <strong>x${bm}</strong> puntos.<br>
+        <em>Ejemplo: una compra de $20.000 genera ${Math.round(20000 * ppu)} puntos.</em>
+    `;
+}
+
+async function saveLoyaltySettings() {
+    const points_per_unit = parseFloat(document.getElementById('set-points-per-unit').value) || 0;
+    const point_value = parseFloat(document.getElementById('set-point-value').value) || 0;
+    const birthday_multiplier = parseFloat(document.getElementById('set-birthday-mult').value) || 1;
+    try {
+        const { error } = await supabaseClient.from('loyalty_settings').update({
+            points_per_unit, point_value, birthday_multiplier, updated_at: new Date().toISOString()
+        }).eq('id', 1);
+        if (error) throw error;
+        loyaltySettings = { ...loyaltySettings, points_per_unit, point_value, birthday_multiplier };
+        closeModal('loyalty-settings-modal');
+        showToast('pago', '⚙️ Reglas de puntos actualizadas', '');
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
 // ============ FIDELIDAD ============
 function setupCustomerEvents() {
     document.getElementById('btn-add-customer').addEventListener('click', () => openCustomerModal());
@@ -188,8 +243,8 @@ function setupCustomerEvents() {
         let val = parseInt(e.target.value) || 0;
         val = Math.max(0, Math.min(val, Math.round(selectedCustomer.points || 0)));
         redeemPoints = val;
-        document.getElementById('redeem-discount').textContent = '$' + Math.round(redeemPoints * POINT_VALUE).toLocaleString();
-        document.getElementById('modal-discount').textContent = '-$' + Math.round(redeemPoints * POINT_VALUE).toLocaleString();
+        document.getElementById('redeem-discount').textContent = '$' + Math.round(redeemPoints * loyaltySettings.point_value).toLocaleString();
+        document.getElementById('modal-discount').textContent = '-$' + Math.round(redeemPoints * loyaltySettings.point_value).toLocaleString();
         document.getElementById('modal-discount-row').style.display = redeemPoints > 0 ? 'flex' : 'none';
         refreshPayTotals();
     });
@@ -327,12 +382,18 @@ function selectCustomer(id) {
     document.getElementById('loyalty-search-box').style.display = 'none';
     document.getElementById('selected-customer').style.display = 'flex';
     document.getElementById('sel-cust-name').textContent = selectedCustomer.name;
-    document.getElementById('sel-cust-points').textContent = `${Math.round(selectedCustomer.points || 0)} puntos disponibles${isBirthday(selectedCustomer) ? ' · 🎂 ¡Cumpleaños hoy (puntos x2)!' : ''}`;
+    document.getElementById('sel-cust-points').textContent = `${Math.round(selectedCustomer.points || 0)} puntos disponibles${isBirthday(selectedCustomer) ? ` · 🎂 ¡Cumpleaños hoy (puntos x${loyaltySettings.birthday_multiplier})!` : ''}`;
     document.getElementById('redeem-row').style.display = 'block';
     document.getElementById('redeem-points').value = '';
     document.getElementById('redeem-discount').textContent = '$0';
     document.getElementById('modal-discount-row').style.display = 'none';
+    updateRedeemLabel();
     refreshPayTotals();
+}
+
+function updateRedeemLabel() {
+    const ref = Math.round(100 * loyaltySettings.point_value);
+    document.getElementById('redeem-label').textContent = `Canjear puntos (100 pts = $${ref}):`;
 }
 
 function getBaseTotal() {
@@ -341,7 +402,7 @@ function getBaseTotal() {
 
 function refreshPayTotals() {
     const base = getBaseTotal();
-    const discount = redeemPoints * POINT_VALUE;
+    const discount = redeemPoints * loyaltySettings.point_value;
     const final = Math.max(0, base - discount);
     document.getElementById('modal-total').textContent = '$' + Math.round(final).toLocaleString();
     const cashInput = document.getElementById('cash-received');
@@ -352,8 +413,8 @@ function refreshPayTotals() {
 async function applyLoyalty(orderId, finalTotal) {
     if (!selectedCustomer) return null;
     const bday = isBirthday(selectedCustomer);
-    let earned = Math.round(finalTotal * POINTS_PER_UNIT);
-    if (bday) earned *= 2;
+    let earned = Math.round(finalTotal * loyaltySettings.points_per_unit);
+    if (bday) earned = Math.round(earned * loyaltySettings.birthday_multiplier);
     const newPoints = (selectedCustomer.points || 0) - redeemPoints + earned;
     await supabaseClient.from('customers').update({
         points: newPoints,
@@ -363,8 +424,8 @@ async function applyLoyalty(orderId, finalTotal) {
     if (redeemPoints > 0) {
         await supabaseClient.from('points_history').insert([{ customer_id: selectedCustomer.id, order_id: orderId, points: -redeemPoints, type: 'canjeados', note: 'Descuento en compra' }]);
     }
-    await supabaseClient.from('points_history').insert([{ customer_id: selectedCustomer.id, order_id: orderId, points: earned, type: 'ganados', note: bday ? 'Puntos x2 cumpleaños' : 'Compra' }]);
-    if (bday) addNotification('pago', `🎂 ¡Cumpleaños de ${selectedCustomer.name}!`, 'Puntos dobles aplicados en esta compra');
+    await supabaseClient.from('points_history').insert([{ customer_id: selectedCustomer.id, order_id: orderId, points: earned, type: 'ganados', note: bday ? `Puntos x${loyaltySettings.birthday_multiplier} cumpleaños` : 'Compra' }]);
+    if (bday) addNotification('pago', `🎂 ¡Cumpleaños de ${selectedCustomer.name}!`, 'Puntos multiplicados en esta compra');
     const result = { name: selectedCustomer.name, earned, newBalance: newPoints };
     selectedCustomer = null;
     redeemPoints = 0;
@@ -380,6 +441,7 @@ function resetLoyaltyUI() {
     document.getElementById('customer-search').value = '';
     document.getElementById('customer-suggestions').innerHTML = '';
     document.getElementById('modal-discount-row').style.display = 'none';
+    updateRedeemLabel();
 }
 
 // ============ QR DE MESA ============
@@ -792,7 +854,7 @@ function setupPOSEvents() {
     document.querySelectorAll('.method-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); payMethod = e.target.dataset.method; document.getElementById('cash-section').style.display = payMethod === 'efectivo' ? 'block' : 'none'; }));
     document.getElementById('cash-received').addEventListener('input', (e) => {
         const base = getBaseTotal();
-        const discount = redeemPoints * POINT_VALUE;
+        const discount = redeemPoints * loyaltySettings.point_value;
         const final = Math.max(0, base - discount);
         const received = parseFloat(e.target.value) || 0;
         document.getElementById('change-amount').textContent = '$' + Math.max(0, Math.round(received - final)).toLocaleString();
@@ -936,7 +998,7 @@ function openPayModalForTable() {
 
 async function confirmPayment() {
     const base = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-    const discount = redeemPoints * POINT_VALUE;
+    const discount = redeemPoints * loyaltySettings.point_value;
     const total = Math.max(0, base - discount);
     if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
     try {
@@ -958,7 +1020,7 @@ async function confirmPayment() {
 
 async function confirmPaymentForTable() {
     const base = currentTableOrder.total;
-    const discount = redeemPoints * POINT_VALUE;
+    const discount = redeemPoints * loyaltySettings.point_value;
     const total = Math.max(0, base - discount);
     if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
     try {
