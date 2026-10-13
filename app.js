@@ -460,7 +460,7 @@ function renderInvoiceItems() {
                     <option value="${restaurantSettings.iva_superreducido}" ${item.iva_rate === restaurantSettings.iva_superreducido ? 'selected' : ''}>${restaurantSettings.iva_superreducido}% (Super)</option>
                 </select>
             </div>
-            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">🗑️</button>
+            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">️</button>
         </div>
     `).join('');
     calculateInvoiceTotals();
@@ -598,7 +598,7 @@ function renderInvoices() {
                 📊 Estado: <strong>${inv.status}</strong>
             </div>
             <div class="invoice-actions">
-                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">👁️ Ver</button>
+                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">️ Ver</button>
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
                 <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
@@ -669,7 +669,7 @@ async function voidInvoice(id) {
     try {
         await supabaseClient.from('invoices').update({ status: 'anulada' }).eq('id', id);
         loadInvoices();
-        showToast('pago', '✕ Factura anulada', '');
+        showToast('pago', ' Factura anulada', '');
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -765,7 +765,7 @@ async function sendInvoiceByEmail() {
     window.location.href = `mailto:${inv.customer_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     await supabaseClient.from('invoices').update({ status: 'enviada' }).eq('id', inv.id);
     loadInvoices();
-    showToast('pago', '📧 Factura enviada', inv.invoice_number);
+    showToast('pago', ' Factura enviada', inv.invoice_number);
 }
 
 function setupReservationEvents() {
@@ -811,15 +811,15 @@ function renderReservations() {
             </div>
             <div class="res-details">
                 📅 ${dateStr} a las ${r.reservation_time}<br>
-                👥 ${r.party_size} personas | 🪑 Mesa: ${tableName}<br>
-                📞 ${r.phone || 'Sin teléfono'}<br>
+                👥 ${r.party_size} personas |  Mesa: ${tableName}<br>
+                 ${r.phone || 'Sin teléfono'}<br>
                 ${r.notes ? `📝 ${r.notes}` : ''}
             </div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
                 ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
                 ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
-                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">️</button>
+                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
             </div>
         </div>`;
     }).join('');
@@ -984,7 +984,7 @@ function renderCustomers() {
     document.getElementById('cust-top').textContent = top ? top.name : '—';
     if (!q) {
         grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 3rem 1rem;">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;"></div>
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
             Escribe un nombre o teléfono para buscar un cliente<br>
             <small>Hay ${customers.length} cliente(s) registrados</small>
         </div>`;
@@ -1009,7 +1009,7 @@ function renderCustomers() {
             <div class="customer-actions">
                 <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">✏️ Editar</button>
                 <button class="customer-action-btn history" onclick="viewHistory(${c.id})">📜 Historial</button>
-                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">🗑️ Eliminar</button>
+                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">️ Eliminar</button>
             </div>
         </div>
     `).join('');
@@ -1222,7 +1222,7 @@ function renderDivideModal() {
     }).join('');
     if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
     else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
-    document.getElementById('btn-pay-all').textContent = ` Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
+    document.getElementById('btn-pay-all').textContent = `💰 Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
 }
 
 async function openDinerPayModal(dinerId) {
@@ -1422,10 +1422,10 @@ function renderStaff() {
                 <span>Ventas mes: <strong>$${Math.round(monthSales).toLocaleString()}</strong></span>
                 <span class="staff-commission">Comisión: $${Math.round(monthComm).toLocaleString()}</span>
             </div>
-            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : ' Inactivo'}</span></div>
+            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : '⛔ Inactivo'}</span></div>
             <div class="staff-actions">
                 <button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button>
-                <button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">🗑️ Eliminar</button>
+                <button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">️ Eliminar</button>
             </div>
         </div>`;
     }).join('');
@@ -1508,8 +1508,8 @@ function renderProducts() {
     const grid = document.getElementById('product-grid');
     const filtered = currentCategory === 'all' ? products : products.filter(p => p.category === currentCategory);
     grid.innerHTML = filtered.map(p => {
-        const allergens = productAllergens[p.id] || [];
-        const allergenBadges = allergens.map(aid => {
+        const allergenIds = productAllergens[p.id] || [];
+        const allergenBadges = allergenIds.map(aid => {
             const allergen = allergens.find(a => a.id === aid);
             return allergen ? `<span style="font-size:0.7rem; background:#fef3c7; padding:0.1rem 0.3rem; border-radius:3px; margin-left:0.2rem;">${allergen.icon}</span>` : '';
         }).join('');
@@ -1676,7 +1676,7 @@ async function addToTable() {
             const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
             if (itemsError) throw itemsError;
             currentTableOrder = order;
-            addNotification('nuevo', ' Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
+            addNotification('nuevo', '📝 Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
         }
         cart = []; renderCart(); renderTableOrder();
         showToast('pago', '✓ Añadido a la mesa', 'Los productos se guardaron en el pedido');
@@ -1789,9 +1789,9 @@ async function updateOrderStatus(orderId, newStatus) {
     }
 }
 
-async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
+async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')"> Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()"> Cerrar Caja</button>`; await loadCashSummary(); } }
 
-async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
+async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : ''} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
 
 document.getElementById('btn-confirm-open').addEventListener('click', async () => { const fund = parseFloat(document.getElementById('opening-fund').value) || 0; const { error } = await supabaseClient.from('cash_sessions').insert([{ fondo: fund, user_email: currentUser.email }]); if (error) { alert('Error: ' + error.message); } else { closeModal('modal-open-cash'); loadCashStatus(); } });
 document.getElementById('btn-confirm-movement').addEventListener('click', async () => { const type = document.getElementById('movement-type').value; const method = document.getElementById('movement-method').value; const amount = parseFloat(document.getElementById('movement-amount').value) || 0; const note = document.getElementById('movement-note').value; if (!currentSession) return alert('Caja no abierta'); const { error } = await supabaseClient.from('cash_movements').insert([{ session_id: currentSession.id, tipo: type, metodo: method, importe: amount, nota: note }]); if (error) { alert('Error: ' + error.message); } else { closeModal('modal-movement'); document.getElementById('movement-amount').value = ''; document.getElementById('movement-note').value = ''; loadCashStatus(); } });
@@ -1863,33 +1863,69 @@ function renderAllergens() {
     const grid = document.getElementById('allergens-grid');
     if (!grid) return;
     const search = (document.getElementById('allergen-product-search')?.value || '').toLowerCase();
-    const filtered = products.filter(p => (p.name || '').toLowerCase().includes(search));
-    if (filtered.length === 0) {
+
+    const categories = {};
+    products.forEach(p => {
+        const cat = p.category || 'Sin categoría';
+        if (!categories[cat]) categories[cat] = [];
+        if (search && !(p.name || '').toLowerCase().includes(search)) return;
+        categories[cat].push(p);
+    });
+
+    if (Object.keys(categories).length === 0) {
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay productos</div>';
         return;
     }
-    grid.innerHTML = filtered.map(p => {
-        const allergenIds = productAllergens[p.id] || [];
-        const hasAllergens = allergenIds.length > 0;
-        const allergenBadges = allergenIds.map(aid => {
-            const allergen = allergens.find(a => a.id === aid);
-            return allergen ? `<span class="allergen-badge"><span class="allergen-icon">${allergen.icon}</span> ${allergen.name}</span>` : '';
-        }).join('');
+
+    grid.innerHTML = Object.entries(categories).map(([catName, prods]) => {
+        if (prods.length === 0) return '';
         return `
-        <div class="product-allergen-card ${hasAllergens ? 'has-allergens' : ''}">
-            <div class="product-allergen-header">
-                <div class="product-allergen-name">${p.name}</div>
-                <span class="product-allergen-category">${p.category || 'Sin categoría'}</span>
+        <div class="allergen-category-section" style="grid-column: 1/-1; margin-bottom: 0.5rem;">
+            <div class="allergen-category-header" onclick="toggleCategory(this)" style="display:flex; justify-content:space-between; align-items:center; padding: 0.75rem 1rem; background: var(--bg-card); border-radius: 8px; cursor: pointer; box-shadow: var(--shadow); margin-bottom: 0.75rem; border-left: 4px solid var(--primary);">
+                <div style="display:flex; align-items:center; gap: 0.75rem;">
+                    <span style="font-size: 1.3rem;">📂</span>
+                    <strong style="font-size: 1.05rem; color: var(--text-dark);">${catName}</strong>
+                    <span style="background: var(--bg-main); padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.75rem; color: var(--text-gray);">${prods.length} producto(s)</span>
+                </div>
+                <span class="toggle-icon" style="font-size: 1.2rem; color: var(--text-gray); transition: transform 0.2s;">▼</span>
             </div>
-            <div class="product-allergen-list">
-                ${allergenBadges || '<span style="color: var(--text-gray); font-size: 0.85rem;">Sin alérgenos declarados</span>'}
-            </div>
-            <div class="product-allergen-actions">
-                <button class="product-allergen-btn edit" onclick="editProductAllergens(${p.id})">✏️ Editar</button>
-                <button class="product-allergen-btn sheet" onclick="viewTechnicalSheet(${p.id})">📋 Ficha Técnica</button>
+            <div class="allergen-category-body" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; padding: 0 0.5rem;">
+                ${prods.map(p => {
+                    const allergenIds = productAllergens[p.id] || [];
+                    const hasAllergens = allergenIds.length > 0;
+                    const allergenBadges = allergenIds.map(aid => {
+                        const allergen = allergens.find(a => a.id === aid);
+                        return allergen ? `<span class="allergen-badge"><span class="allergen-icon">${allergen.icon}</span> ${allergen.name}</span>` : '';
+                    }).join('');
+                    return `
+                    <div class="product-allergen-card ${hasAllergens ? 'has-allergens' : ''}">
+                        <div class="product-allergen-header">
+                            <div class="product-allergen-name">${p.name}</div>
+                        </div>
+                        <div class="product-allergen-list">
+                            ${allergenBadges || '<span style="color: var(--text-gray); font-size: 0.85rem;">Sin alérgenos declarados</span>'}
+                        </div>
+                        <div class="product-allergen-actions">
+                            <button class="product-allergen-btn edit" onclick="editProductAllergens(${p.id})">️ Editar</button>
+                            <button class="product-allergen-btn sheet" onclick="viewTechnicalSheet(${p.id})">📋 Ficha Técnica</button>
+                        </div>
+                    </div>`;
+                }).join('')}
             </div>
         </div>`;
     }).join('');
+}
+
+function toggleCategory(header) {
+    const body = header.nextElementSibling;
+    const icon = header.querySelector('.toggle-icon');
+    if (body.style.display === 'none') {
+        body.style.display = 'grid';
+        icon.style.transform = 'rotate(0deg)';
+    } else {
+        body.style.display = 'none';
+        icon.style.transform = 'rotate(-90deg)';
+    }
 }
 
 function editProductAllergens(productId) {
