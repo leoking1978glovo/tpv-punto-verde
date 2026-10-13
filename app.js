@@ -32,11 +32,12 @@ let customers = [];
 let selectedCustomer = null;
 let redeemPoints = 0;
 let loyaltySettings = { points_per_unit: 1, point_value: 0.05, birthday_multiplier: 2 };
+let reservations = [];
 
 const ROLE_PERMISSIONS = {
-    admin: ['tables', 'pos', 'kitchen', 'customers', 'inventory', 'reports', 'cash', 'staff'],
-    cajero: ['tables', 'pos', 'kitchen', 'customers', 'reports', 'cash'],
-    mesero: ['tables', 'pos'],
+    admin: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'inventory', 'reports', 'cash', 'staff'],
+    cajero: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'reports', 'cash'],
+    mesero: ['tables', 'pos', 'reservations'],
     cocina: ['kitchen']
 };
 
@@ -53,6 +54,7 @@ async function init() {
     setupQREvents();
     setupCustomerEvents();
     setupLoyaltySettingsEvents();
+    setupReservationEvents();
 }
 
 async function loadProfile() {
@@ -99,6 +101,7 @@ function showApp() {
     loadLoyaltySettings();
     loadProducts();
     loadTables();
+    loadReservations();
     loadCashStatus();
     loadIngredients();
     loadStaff();
@@ -146,6 +149,7 @@ function setupNavigation() {
             if (view === 'tables') { activeTableId = null; currentTableOrder = null; cart = []; renderCart(); renderTableOrder(); loadTables(); }
             else if (view === 'pos') { if (!activeTableId) { currentTableOrder = null; cart = []; renderCart(); renderTableOrder(); document.getElementById('pos-title').textContent = 'Caja - Mostrador'; } renderMiniTables(); }
             else if (view === 'kitchen') loadKitchenOrders();
+            else if (view === 'reservations') loadReservations();
             else if (view === 'customers') loadCustomers();
             else if (view === 'inventory') loadIngredients();
             else if (view === 'reports') loadReports(currentReportPeriod);
@@ -162,6 +166,116 @@ function setupNavigation() {
         document.getElementById('view-tables').classList.add('active');
         loadTables();
     });
+}
+
+// ============ RESERVAS ============
+function setupReservationEvents() {
+    document.getElementById('btn-add-reservation').addEventListener('click', () => openReservationModal());
+    document.getElementById('btn-close-reservation').addEventListener('click', () => closeModal('reservation-modal'));
+    document.getElementById('btn-cancel-reservation').addEventListener('click', () => closeModal('reservation-modal'));
+    document.getElementById('btn-save-reservation').addEventListener('click', saveReservation);
+    document.getElementById('res-date-filter').addEventListener('change', renderReservations);
+    document.getElementById('res-status-filter').addEventListener('change', renderReservations);
+}
+
+async function loadReservations() {
+    const { data } = await supabaseClient.from('reservations').select('*').order('reservation_date', { ascending: true }).order('reservation_time', { ascending: true });
+    reservations = data || [];
+    const select = document.getElementById('res-table-id');
+    if (select) {
+        select.innerHTML = '<option value="">Sin asignar</option>' + tables.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    }
+    renderReservations();
+}
+
+function renderReservations() {
+    const grid = document.getElementById('reservations-grid');
+    if (!grid) return;
+    const dateFilter = document.getElementById('res-date-filter').value;
+    const statusFilter = document.getElementById('res-status-filter').value;
+    let filtered = reservations;
+    if (dateFilter) filtered = filtered.filter(r => r.reservation_date === dateFilter);
+    if (statusFilter !== 'all') filtered = filtered.filter(r => r.status === statusFilter);
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay reservas</div>';
+        return;
+    }
+    grid.innerHTML = filtered.map(r => {
+        const table = tables.find(t => t.id === r.table_id);
+        const tableName = table ? table.name : 'Sin asignar';
+        const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+        return `
+        <div class="reservation-card status-${r.status}">
+            <div class="res-header">
+                <div class="res-name">${r.customer_name}</div>
+                <span class="res-status-badge">${r.status}</span>
+            </div>
+            <div class="res-details">
+                 ${dateStr} a las ${r.reservation_time}<br>
+                👥 ${r.party_size} personas | 🪑 Mesa: ${tableName}<br>
+                📞 ${r.phone || 'Sin teléfono'}<br>
+                ${r.notes ? `📝 ${r.notes}` : ''}
+            </div>
+            <div class="res-actions">
+                ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
+                ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
+                ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
+                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openReservationModal(res = null) {
+    document.getElementById('reservation-modal-title').textContent = res ? 'Editar Reserva' : 'Nueva Reserva';
+    document.getElementById('reservation-id').value = res ? res.id : '';
+    document.getElementById('res-customer-name').value = res ? res.customer_name : '';
+    document.getElementById('res-phone').value = res ? (res.phone || '') : '';
+    document.getElementById('res-date').value = res ? res.reservation_date : new Date().toISOString().split('T')[0];
+    document.getElementById('res-time').value = res ? res.reservation_time : '12:00';
+    document.getElementById('res-party-size').value = res ? res.party_size : 2;
+    document.getElementById('res-table-id').value = res ? (res.table_id || '') : '';
+    document.getElementById('res-notes').value = res ? (res.notes || '') : '';
+    document.getElementById('reservation-modal').classList.add('active');
+}
+
+async function saveReservation() {
+    const id = document.getElementById('reservation-id').value;
+    const customer_name = document.getElementById('res-customer-name').value.trim();
+    const phone = document.getElementById('res-phone').value.trim();
+    const reservation_date = document.getElementById('res-date').value;
+    const reservation_time = document.getElementById('res-time').value;
+    const party_size = parseInt(document.getElementById('res-party-size').value) || 1;
+    const table_id = document.getElementById('res-table-id').value ? parseInt(document.getElementById('res-table-id').value) : null;
+    const notes = document.getElementById('res-notes').value.trim();
+    if (!customer_name || !reservation_date || !reservation_time) return alert('Nombre, fecha y hora son obligatorios');
+    try {
+        if (id) {
+            await supabaseClient.from('reservations').update({ customer_name, phone, reservation_date, reservation_time, party_size, table_id, notes }).eq('id', id);
+        } else {
+            await supabaseClient.from('reservations').insert([{ customer_name, phone, reservation_date, reservation_time, party_size, table_id, notes }]);
+        }
+        closeModal('reservation-modal');
+        loadReservations();
+        showToast('pago', '✓ Reserva guardada', customer_name);
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
+async function updateReservationStatus(id, status) {
+    try {
+        await supabaseClient.from('reservations').update({ status }).eq('id', id);
+        loadReservations();
+        showToast('pago', `Reserva ${status}`, '');
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
+async function deleteReservation(id) {
+    if (!confirm('¿Eliminar esta reserva?')) return;
+    try {
+        await supabaseClient.from('reservations').delete().eq('id', id);
+        loadReservations();
+        showToast('pago', '🗑️ Reserva eliminada', '');
+    } catch (error) { alert('Error: ' + error.message); }
 }
 
 // ============ CONFIG DE PUNTOS ============
@@ -208,7 +322,7 @@ async function saveLoyaltySettings() {
         if (error) throw error;
         loyaltySettings = { ...loyaltySettings, points_per_unit, point_value, birthday_multiplier };
         closeModal('loyalty-settings-modal');
-        showToast('pago', '⚙️ Reglas de puntos actualizadas', '');
+        showToast('pago', '️ Reglas de puntos actualizadas', '');
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -267,12 +381,10 @@ function renderCustomers() {
     const grid = document.getElementById('customers-grid');
     if (!grid) return;
     const q = (document.getElementById('cust-search')?.value || '').trim().toLowerCase();
-
     document.getElementById('cust-total').textContent = customers.length;
     document.getElementById('cust-points').textContent = Math.round(customers.reduce((s, c) => s + (c.points || 0), 0)).toLocaleString();
     const top = [...customers].sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0))[0];
     document.getElementById('cust-top').textContent = top ? top.name : '—';
-
     if (!q) {
         grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 3rem 1rem;">
             <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
@@ -281,13 +393,11 @@ function renderCustomers() {
         </div>`;
         return;
     }
-
     const filtered = customers.filter(c => (c.name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q));
     if (filtered.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">Sin resultados para "<strong>${q}</strong>"<br><button class="btn-secondary" style="margin-top:0.75rem;" onclick="clearCustomerSearch()">✕ Limpiar búsqueda</button></div>`;
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">Sin resultados para "<strong>${q}</strong>"<br><button class="btn-secondary" style="margin-top:0.75rem;" onclick="clearCustomerSearch()"> Limpiar búsqueda</button></div>`;
         return;
     }
-
     grid.innerHTML = filtered.map(c => `
         <div class="customer-card ${isBirthday(c) ? 'birthday' : ''}">
             <div class="customer-header">
@@ -322,7 +432,7 @@ async function deleteCustomer(id) {
         const { error } = await supabaseClient.from('customers').delete().eq('id', id);
         if (error) throw error;
         loadCustomers();
-        showToast('pago', '🗑️ Cliente eliminado', c.name);
+        showToast('pago', '️ Cliente eliminado', c.name);
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -365,7 +475,7 @@ async function viewHistory(id) {
         : list.map(h => `
             <div class="history-item ${h.type}">
                 <div>
-                    <div>${h.type === 'ganados' ? '✅ Ganados' : '🎁 Canjeados'} ${h.note ? '· ' + h.note : ''}</div>
+                    <div>${h.type === 'ganados' ? '✅ Ganados' : ' Canjeados'} ${h.note ? '· ' + h.note : ''}</div>
                     <div class="history-date">${new Date(h.created_at).toLocaleString('es-ES')}</div>
                 </div>
                 <span class="history-pts ${h.points >= 0 ? 'pos' : 'neg'}">${h.points >= 0 ? '+' : ''}${Math.round(h.points)}</span>
@@ -870,7 +980,17 @@ async function loadTables() {
     if (ordersError) return;
     const ordersByTable = {};
     (ordersData || []).forEach(order => { if (order.table_id) { if (!ordersByTable[order.table_id]) ordersByTable[order.table_id] = []; ordersByTable[order.table_id].push(order); } });
-    tables = (tablesData || []).map(table => { const tableOrders = ordersByTable[table.id] || []; const pendingItems = tableOrders.flatMap(o => o.order_items || []); const pendingTotal = tableOrders.reduce((sum, o) => sum + (o.total || 0), 0); const visualStatus = pendingItems.length > 0 ? 'ocupada' : 'libre'; return { ...table, pendingOrders: tableOrders, pendingItems: pendingItems, pendingTotal: pendingTotal, visualStatus: visualStatus }; });
+    tables = (tablesData || []).map(table => {
+        const tableOrders = ordersByTable[table.id] || [];
+        const pendingItems = tableOrders.flatMap(o => o.order_items || []);
+        const pendingTotal = tableOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        let visualStatus = pendingItems.length > 0 ? 'ocupada' : 'libre';
+        // Verificar si tiene reserva activa para hoy
+        const today = new Date().toISOString().split('T')[0];
+        const hasReservation = reservations.some(r => r.table_id === table.id && r.reservation_date === today && r.status === 'confirmada');
+        if (hasReservation) visualStatus = 'reservada';
+        return { ...table, pendingOrders: tableOrders, pendingItems, pendingTotal, visualStatus };
+    });
     renderTables();
     renderMiniTables();
 }
@@ -881,14 +1001,15 @@ function renderTables() {
     if (tables.length === 0) { grid.innerHTML = '<p style="text-align:center; color: #6b7280; padding: 2rem;">No hay mesas disponibles</p>'; return; }
     grid.innerHTML = tables.map(table => {
         const hasOrders = table.pendingItems && table.pendingItems.length > 0;
-        const status = hasOrders ? table.visualStatus : 'libre';
+        const status = hasOrders ? table.visualStatus : (table.visualStatus === 'reservada' ? 'reservada' : 'libre');
         const itemsGrouped = {};
         (table.pendingItems || []).forEach(item => { const key = item.name; if (!itemsGrouped[key]) itemsGrouped[key] = { name: item.name, qty: 0, price: item.price }; itemsGrouped[key].qty += item.qty; });
         const itemsHtml = hasOrders ? Object.values(itemsGrouped).map(item => `<div class="table-order-item"><span>${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span></div>`).join('') : '';
+        const statusText = status === 'reservada' ? 'RESERVADA' : (hasOrders ? 'OCUPADA' : 'LIBRE');
         return `<div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')">
             <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')">📱 QR</button>
             <div class="table-name">${table.name}</div>
-            <div class="table-status">${hasOrders ? 'OCUPADA' : 'LIBRE'}</div>
+            <div class="table-status">${statusText}</div>
             ${hasOrders ? `<div class="table-orders-list">${itemsHtml}</div><div class="table-order-total"><span>Total:</span><span>$${Math.round(table.pendingTotal).toLocaleString()}</span></div><button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>` : '<div style="flex:1;"></div>'}
         </div>`;
     }).join('');
@@ -898,7 +1019,7 @@ function renderMiniTables() {
     const bar = document.getElementById('mini-tables-bar');
     if (!bar) return;
     if (tables.length === 0) { bar.innerHTML = '<span style="color: var(--text-gray); font-size: 0.85rem;">Cargando mesas...</span>'; return; }
-    bar.innerHTML = tables.map(table => { const hasOrders = table.pendingItems && table.pendingItems.length > 0; const status = hasOrders ? table.visualStatus : 'libre'; const isActive = table.id === activeTableId ? 'active' : ''; return `<div class="mini-table status-${status} ${isActive}" onclick="selectTable(${table.id}, '${table.name}')">${table.name}</div>`; }).join('');
+    bar.innerHTML = tables.map(table => { const hasOrders = table.pendingItems && table.pendingItems.length > 0; const status = hasOrders ? table.visualStatus : (table.visualStatus === 'reservada' ? 'reservada' : 'libre'); const isActive = table.id === activeTableId ? 'active' : ''; return `<div class="mini-table status-${status} ${isActive}" onclick="selectTable(${table.id}, '${table.name}')">${table.name}</div>`; }).join('');
 }
 
 async function selectTable(id, name) {
@@ -1160,5 +1281,7 @@ window.editCustomer = editCustomer;
 window.viewHistory = viewHistory;
 window.clearCustomerSearch = clearCustomerSearch;
 window.deleteCustomer = deleteCustomer;
+window.updateReservationStatus = updateReservationStatus;
+window.deleteReservation = deleteReservation;
 
 init();
