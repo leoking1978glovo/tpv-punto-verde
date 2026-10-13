@@ -13,7 +13,7 @@
 
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
-            <h2>🌿 TPV Punto Verde</h2>
+            <h2> TPV Punto Verde</h2>
             <p>Inicia sesión para continuar</p>
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="Correo electrónico" required>
@@ -39,7 +39,7 @@
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen" data-perm="kitchen">
-                    <span class="nav-icon">👨‍🍳</span>
+                    <span class="nav-icon">👨‍</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="reservations" data-perm="reservations">
@@ -53,6 +53,10 @@
                 <li class="nav-item" data-view="inventory" data-perm="inventory">
                     <span class="nav-icon">📦</span>
                     <span>Inventario</span>
+                </li>
+                <li class="nav-item" data-view="invoices" data-perm="invoices">
+                    <span class="nav-icon">📄</span>
+                    <span>Facturas</span>
                 </li>
                 <li class="nav-item" data-view="reports" data-perm="reports">
                     <span class="nav-icon">📊</span>
@@ -72,7 +76,7 @@
                     <span id="user-name">Usuario</span>
                     <span id="user-role" class="user-role-badge"></span>
                 </div>
-                <button id="btn-logout" class="logout-btn"> Salir</button>
+                <button id="btn-logout" class="logout-btn">🚪 Salir</button>
             </div>
         </nav>
 
@@ -119,7 +123,6 @@
                         <div class="cart-items" id="cart-items">
                             <div class="empty-cart">Añade productos para empezar</div>
                         </div>
-
                         <div class="table-order-section" id="table-order-section" style="display: none;">
                             <div class="table-order-header">
                                 <h3>📋 Pedido Acumulado de la Mesa</h3>
@@ -131,7 +134,6 @@
                                 <span id="table-order-total">$0</span>
                             </div>
                         </div>
-
                         <div class="cart-footer">
                             <div class="summary-row"><span>Subtotal</span><span id="subtotal">$0</span></div>
                             <div class="summary-row"><span>IVA</span><span id="tax">$0</span></div>
@@ -160,7 +162,7 @@
 
             <section id="view-reservations" class="view">
                 <header class="view-header">
-                    <h1> Gestión de Reservas</h1>
+                    <h1>📅 Gestión de Reservas</h1>
                     <button class="btn-primary" id="btn-add-reservation">+ Nueva Reserva</button>
                 </header>
                 <div class="reservations-container">
@@ -188,18 +190,9 @@
                 </header>
                 <div class="customers-container">
                     <div class="cust-stats">
-                        <div class="cust-stat-card">
-                            <div class="cust-stat-label">Total Clientes</div>
-                            <div class="cust-stat-value" id="cust-total">0</div>
-                        </div>
-                        <div class="cust-stat-card">
-                            <div class="cust-stat-label">Puntos en Circulación</div>
-                            <div class="cust-stat-value" id="cust-points">0</div>
-                        </div>
-                        <div class="cust-stat-card">
-                            <div class="cust-stat-label">Cliente Top</div>
-                            <div class="cust-stat-value cust-stat-text" id="cust-top">—</div>
-                        </div>
+                        <div class="cust-stat-card"><div class="cust-stat-label">Total Clientes</div><div class="cust-stat-value" id="cust-total">0</div></div>
+                        <div class="cust-stat-card"><div class="cust-stat-label">Puntos en Circulación</div><div class="cust-stat-value" id="cust-points">0</div></div>
+                        <div class="cust-stat-card"><div class="cust-stat-label">Cliente Top</div><div class="cust-stat-value cust-stat-text" id="cust-top">—</div></div>
                     </div>
                     <div class="inventory-filters">
                         <input type="text" id="cust-search" placeholder="🔍 Buscar por nombre o teléfono..." class="inv-search-input">
@@ -210,30 +203,18 @@
 
             <section id="view-inventory" class="view">
                 <header class="view-header">
-                    <h1> Inventario de Ingredientes</h1>
+                    <h1>📦 Inventario de Ingredientes</h1>
                     <button class="btn-primary" id="btn-add-ingredient">+ Nuevo Ingrediente</button>
                 </header>
                 <div class="inventory-container">
                     <div class="inventory-stats">
-                        <div class="inv-stat-card">
-                            <div class="inv-stat-label">Total Ingredientes</div>
-                            <div class="inv-stat-value" id="inv-total">0</div>
-                        </div>
-                        <div class="inv-stat-card inv-stat-ok">
-                            <div class="inv-stat-label">Stock OK</div>
-                            <div class="inv-stat-value" id="inv-ok">0</div>
-                        </div>
-                        <div class="inv-stat-card inv-stat-low">
-                            <div class="inv-stat-label">Stock Bajo</div>
-                            <div class="inv-stat-value" id="inv-low">0</div>
-                        </div>
-                        <div class="inv-stat-card inv-stat-out">
-                            <div class="inv-stat-label">Agotados</div>
-                            <div class="inv-stat-value" id="inv-out">0</div>
-                        </div>
+                        <div class="inv-stat-card"><div class="inv-stat-label">Total Ingredientes</div><div class="inv-stat-value" id="inv-total">0</div></div>
+                        <div class="inv-stat-card inv-stat-ok"><div class="inv-stat-label">Stock OK</div><div class="inv-stat-value" id="inv-ok">0</div></div>
+                        <div class="inv-stat-card inv-stat-low"><div class="inv-stat-label">Stock Bajo</div><div class="inv-stat-value" id="inv-low">0</div></div>
+                        <div class="inv-stat-card inv-stat-out"><div class="inv-stat-label">Agotados</div><div class="inv-stat-value" id="inv-out">0</div></div>
                     </div>
                     <div class="inventory-filters">
-                        <input type="text" id="inv-search" placeholder=" Buscar ingrediente..." class="inv-search-input">
+                        <input type="text" id="inv-search" placeholder="🔍 Buscar ingrediente..." class="inv-search-input">
                         <select id="inv-filter-status" class="inv-filter-select">
                             <option value="all">Todos los estados</option>
                             <option value="ok">Stock OK</option>
@@ -242,6 +223,40 @@
                         </select>
                     </div>
                     <div class="inventory-grid" id="inventory-grid"></div>
+                </div>
+            </section>
+
+            <section id="view-invoices" class="view">
+                <header class="view-header">
+                    <h1>📄 Facturación Electrónica</h1>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn-secondary" id="btn-fiscal-settings">️ Config. Fiscal</button>
+                        <button class="btn-primary" id="btn-new-invoice">+ Nueva Factura</button>
+                    </div>
+                </header>
+                <div class="invoices-container">
+                    <div class="inv-stats">
+                        <div class="inv-stat-card"><div class="inv-stat-label">Facturas Emitidas</div><div class="inv-stat-value" id="inv-count">0</div></div>
+                        <div class="inv-stat-card"><div class="inv-stat-label">Total Facturado</div><div class="inv-stat-value" id="inv-total">€0</div></div>
+                        <div class="inv-stat-card"><div class="inv-stat-label">IVA Recaudado</div><div class="inv-stat-value" id="inv-iva">€0</div></div>
+                        <div class="inv-stat-card"><div class="inv-stat-label">Última Factura</div><div class="inv-stat-value inv-stat-text" id="inv-last">—</div></div>
+                    </div>
+                    <div class="inventory-filters">
+                        <input type="date" id="inv-date-from" class="inv-search-input" placeholder="Desde">
+                        <input type="date" id="inv-date-to" class="inv-search-input" placeholder="Hasta">
+                        <select id="inv-type-filter" class="inv-filter-select">
+                            <option value="all">Todos los tipos</option>
+                            <option value="simplificada">Simplificada</option>
+                            <option value="completa">Completa</option>
+                        </select>
+                        <select id="inv-status-filter" class="inv-filter-select">
+                            <option value="all">Todos los estados</option>
+                            <option value="emitida">Emitida</option>
+                            <option value="enviada">Enviada</option>
+                            <option value="anulada">Anulada</option>
+                        </select>
+                    </div>
+                    <div class="invoices-grid" id="invoices-grid"></div>
                 </div>
             </section>
 
@@ -256,54 +271,20 @@
                 </header>
                 <div class="reports-container">
                     <div class="kpi-grid">
-                        <div class="kpi-card">
-                            <div class="kpi-label">Ventas Totales</div>
-                            <div class="kpi-value" id="kpi-ventas">$0</div>
-                            <div class="kpi-trend" id="kpi-ventas-trend">—</div>
-                        </div>
-                        <div class="kpi-card">
-                            <div class="kpi-label">N° Pedidos</div>
-                            <div class="kpi-value" id="kpi-pedidos">0</div>
-                            <div class="kpi-trend" id="kpi-pedidos-trend">—</div>
-                        </div>
-                        <div class="kpi-card">
-                            <div class="kpi-label">Ticket Promedio</div>
-                            <div class="kpi-value" id="kpi-ticket">$0</div>
-                            <div class="kpi-trend" id="kpi-ticket-trend">—</div>
-                        </div>
-                        <div class="kpi-card">
-                            <div class="kpi-label">Método Top</div>
-                            <div class="kpi-value" id="kpi-metodo">—</div>
-                            <div class="kpi-trend" id="kpi-metodo-detail">—</div>
-                        </div>
+                        <div class="kpi-card"><div class="kpi-label">Ventas Totales</div><div class="kpi-value" id="kpi-ventas">$0</div><div class="kpi-trend" id="kpi-ventas-trend">—</div></div>
+                        <div class="kpi-card"><div class="kpi-label">N° Pedidos</div><div class="kpi-value" id="kpi-pedidos">0</div><div class="kpi-trend" id="kpi-pedidos-trend">—</div></div>
+                        <div class="kpi-card"><div class="kpi-label">Ticket Promedio</div><div class="kpi-value" id="kpi-ticket">$0</div><div class="kpi-trend" id="kpi-ticket-trend">—</div></div>
+                        <div class="kpi-card"><div class="kpi-label">Método Top</div><div class="kpi-value" id="kpi-metodo">—</div><div class="kpi-trend" id="kpi-metodo-detail">—</div></div>
                     </div>
                     <div class="charts-grid">
-                        <div class="chart-card">
-                            <h3>📈 Ventas por Hora</h3>
-                            <div class="chart-wrapper">
-                                <canvas id="chart-horas"></canvas>
-                            </div>
-                        </div>
-                        <div class="chart-card">
-                            <h3>🏆 Top 5 Productos</h3>
-                            <div class="chart-wrapper">
-                                <canvas id="chart-productos"></canvas>
-                            </div>
-                        </div>
+                        <div class="chart-card"><h3>📈 Ventas por Hora</h3><div class="chart-wrapper"><canvas id="chart-horas"></canvas></div></div>
+                        <div class="chart-card"><h3>🏆 Top 5 Productos</h3><div class="chart-wrapper"><canvas id="chart-productos"></canvas></div></div>
                     </div>
                     <div class="recent-orders-card">
                         <h3>🕒 Últimos Pedidos</h3>
                         <div class="table-wrapper">
                             <table class="recent-table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Fecha</th>
-                                        <th>Tipo</th>
-                                        <th>Método</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
+                                <thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Método</th><th>Total</th></tr></thead>
                                 <tbody id="recent-orders-body"></tbody>
                             </table>
                         </div>
@@ -318,18 +299,9 @@
                 </header>
                 <div class="staff-container">
                     <div class="staff-stats">
-                        <div class="staff-stat-card">
-                            <div class="staff-stat-label">Total Empleados</div>
-                            <div class="staff-stat-value" id="staff-total">0</div>
-                        </div>
-                        <div class="staff-stat-card">
-                            <div class="staff-stat-label">Activos</div>
-                            <div class="staff-stat-value" id="staff-active">0</div>
-                        </div>
-                        <div class="staff-stat-card">
-                            <div class="staff-stat-label">Comisiones del Mes</div>
-                            <div class="staff-stat-value" id="staff-commissions">$0</div>
-                        </div>
+                        <div class="staff-stat-card"><div class="staff-stat-label">Total Empleados</div><div class="staff-stat-value" id="staff-total">0</div></div>
+                        <div class="staff-stat-card"><div class="staff-stat-label">Activos</div><div class="staff-stat-value" id="staff-active">0</div></div>
+                        <div class="staff-stat-card"><div class="staff-stat-label">Comisiones del Mes</div><div class="staff-stat-value" id="staff-commissions">$0</div></div>
                     </div>
                     <div class="staff-grid" id="staff-grid"></div>
                 </div>
@@ -355,7 +327,7 @@
 
         <div class="notifications-panel" id="notifications-panel">
             <div class="notif-header">
-                <h3> Notificaciones</h3>
+                <h3>🔔 Notificaciones</h3>
                 <div class="notif-header-actions">
                     <button class="clear-notifs" id="btn-clear-notifs">Limpiar</button>
                     <button class="close-notifs" id="btn-close-notifs">✕</button>
@@ -363,6 +335,116 @@
             </div>
             <div class="notif-list" id="notif-list">
                 <div class="notif-empty">No hay notificaciones</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIG FISCAL -->
+    <div id="fiscal-settings-modal" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>️ Configuración Fiscal</h2>
+                <button class="close-btn" id="btn-close-fiscal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">
+                    <strong>🇪🇸 Ley Antifraude (Verifactu):</strong> Los registros son inalterables con hash encadenado.
+                </div>
+                <h3 style="margin-bottom: 0.75rem; font-size: 1rem;">Datos del Restaurante</h3>
+                <div class="input-group"><label>Razón Social:</label><input type="text" id="set-business-name" placeholder="Ej: Restaurante Punto Verde S.L."></div>
+                <div class="input-group"><label>NIF/CIF:</label><input type="text" id="set-nif" placeholder="Ej: B12345678"></div>
+                <div class="input-group"><label>Dirección:</label><input type="text" id="set-address" placeholder="Calle, número, piso"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.75rem;">
+                    <div class="input-group"><label>Ciudad:</label><input type="text" id="set-city" placeholder="Almería"></div>
+                    <div class="input-group"><label>Código Postal:</label><input type="text" id="set-postal" placeholder="04001"></div>
+                    <div class="input-group"><label>Provincia:</label><input type="text" id="set-province" placeholder="Almería"></div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div class="input-group"><label>Teléfono:</label><input type="text" id="set-phone" placeholder="+34 ..."></div>
+                    <div class="input-group"><label>Email:</label><input type="email" id="set-email" placeholder="facturas@puntoverde.com"></div>
+                </div>
+                <h3 style="margin: 1rem 0 0.75rem; font-size: 1rem;">Tipos de IVA (%)</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.75rem;">
+                    <div class="input-group"><label>General (21%):</label><input type="number" id="set-iva-general" step="0.1" placeholder="21"></div>
+                    <div class="input-group"><label>Reducido (10%):</label><input type="number" id="set-iva-reducido" step="0.1" placeholder="10"></div>
+                    <div class="input-group"><label>Superreducido (4%):</label><input type="number" id="set-iva-super" step="0.1" placeholder="4"></div>
+                </div>
+                <div class="input-group">
+                    <label>IVA por defecto para hostelería:</label>
+                    <select id="set-iva-default">
+                        <option value="21">General 21%</option>
+                        <option value="10">Reducido 10% (hostelería)</option>
+                        <option value="4">Superreducido 4%</option>
+                    </select>
+                </div>
+                <h3 style="margin: 1rem 0 0.75rem; font-size: 1rem;">Serie de Facturación</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div class="input-group"><label>Serie (letra):</label><input type="text" id="set-invoice-series" maxlength="1" placeholder="A"></div>
+                    <div class="input-group"><label>Contador actual:</label><input type="number" id="set-invoice-counter" placeholder="0"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-fiscal">Cancelar</button>
+                <button class="confirm-btn" id="btn-save-fiscal">💾 Guardar Configuración</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVA FACTURA -->
+    <div id="invoice-modal" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="invoice-modal-title">Nueva Factura</h2>
+                <button class="close-btn" id="btn-close-invoice">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Tipo de factura:</label>
+                    <select id="inv-type">
+                        <option value="simplificada">Simplificada (ticket) - hasta €400</option>
+                        <option value="completa">Completa - con datos fiscales</option>
+                    </select>
+                </div>
+                <h3 style="margin: 1rem 0 0.75rem; font-size: 1rem;">Datos del Cliente</h3>
+                <div class="input-group"><label>Nombre / Razón Social:</label><input type="text" id="inv-customer-name" placeholder="Consumidor final"></div>
+                <div class="input-group"><label>NIF/CIF del cliente:</label><input type="text" id="inv-customer-nif" placeholder="Obligatorio para completa"></div>
+                <div class="input-group"><label>Dirección:</label><input type="text" id="inv-customer-address" placeholder="Calle, número, ciudad"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div class="input-group"><label>Email:</label><input type="email" id="inv-customer-email" placeholder="cliente@email.com"></div>
+                    <div class="input-group"><label>Teléfono:</label><input type="text" id="inv-customer-phone" placeholder="+34 ..."></div>
+                </div>
+                <h3 style="margin: 1rem 0 0.75rem; font-size: 1rem;">Conceptos</h3>
+                <div id="inv-items-container"></div>
+                <button class="btn-secondary" id="btn-add-invoice-item" style="margin-top: 0.5rem;">+ Añadir línea</button>
+                <div style="background: var(--bg-main); padding: 0.75rem; border-radius: 8px; margin-top: 1rem;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 0.3rem;"><span>Subtotal:</span><strong id="inv-subtotal">€0,00</strong></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 0.3rem;"><span>IVA (<span id="inv-iva-rate">10</span>%):</span><strong id="inv-iva-amount">€0,00</strong></div>
+                    <div style="display:flex; justify-content:space-between; font-size: 1.1rem; border-top: 1px solid var(--border); padding-top: 0.5rem;"><span>TOTAL:</span><strong id="inv-total-amount">€0,00</strong></div>
+                </div>
+                <div class="input-group" style="margin-top: 0.75rem;">
+                    <label>Notas (opcional):</label>
+                    <input type="text" id="inv-notes" placeholder="Observaciones">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-invoice">Cancelar</button>
+                <button class="confirm-btn" id="btn-save-invoice">📄 Emitir Factura</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL VER FACTURA -->
+    <div id="view-invoice-modal" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="view-invoice-title">Factura</h2>
+                <button class="close-btn" id="btn-close-view-invoice">✕</button>
+            </div>
+            <div class="modal-body" id="view-invoice-body"></div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-view-invoice">Cerrar</button>
+                <button class="btn-secondary" id="btn-send-invoice">📧 Enviar por Email</button>
+                <button class="confirm-btn" id="btn-print-invoice">🖨️ Imprimir / PDF</button>
             </div>
         </div>
     </div>
@@ -376,26 +458,17 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="reservation-id">
-                <div class="input-group">
-                    <label>Nombre del cliente:</label>
-                    <input type="text" id="res-customer-name" placeholder="Ej: María González">
+                <div class="input-group"><label>Nombre del cliente:</label><input type="text" id="res-customer-name" placeholder="Ej: María González"></div>
+                <div class="input-group"><label>Teléfono:</label><input type="text" id="res-phone" placeholder="Ej: 3001234567"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div class="input-group"><label>Fecha:</label><input type="date" id="res-date"></div>
+                    <div class="input-group"><label>Hora:</label><input type="time" id="res-time"></div>
                 </div>
-                <div class="input-group">
-                    <label>Teléfono:</label>
-                    <input type="text" id="res-phone" placeholder="Ej: 3001234567">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div class="input-group"><label>N° de personas:</label><input type="number" id="res-party-size" min="1" placeholder="2"></div>
+                    <div class="input-group"><label>Mesa asignada:</label><select id="res-table-id"><option value="">Sin asignar</option></select></div>
                 </div>
-                <div class="input-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
-                    <div><label>Fecha:</label><input type="date" id="res-date"></div>
-                    <div><label>Hora:</label><input type="time" id="res-time"></div>
-                </div>
-                <div class="input-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
-                    <div><label>N° de personas:</label><input type="number" id="res-party-size" min="1" placeholder="2"></div>
-                    <div><label>Mesa asignada:</label><select id="res-table-id"><option value="">Sin asignar</option></select></div>
-                </div>
-                <div class="input-group">
-                    <label>Notas:</label>
-                    <input type="text" id="res-notes" placeholder="Ej: Cumpleaños, silla de bebé">
-                </div>
+                <div class="input-group"><label>Notas:</label><input type="text" id="res-notes" placeholder="Ej: Cumpleaños, silla de bebé"></div>
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-reservation">Cancelar</button>
@@ -446,14 +519,14 @@
                     <div class="type-buttons">
                         <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
                         <button class="type-btn" data-type="recogida">📦 Recogida</button>
-                        <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
+                        <button class="type-btn" data-type="domicilio"> Domicilio</button>
                     </div>
                 </div>
                 <div class="payment-method">
                     <h3>Método de Pago</h3>
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta"> Tarjeta</button>
+                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
@@ -475,7 +548,7 @@
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>✂️ Dividir Cuenta</h2>
-                <button class="close-btn" id="btn-close-divide"></button>
+                <button class="close-btn" id="btn-close-divide">✕</button>
             </div>
             <div class="modal-body divide-body">
                 <div class="divide-controls">
@@ -517,7 +590,7 @@
                     <div class="method-buttons" id="diner-method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
+                        <button class="method-btn" data-method="bizum"> Bizum</button>
                     </div>
                 </div>
                 <div class="cash-input" id="diner-cash-section">
@@ -542,22 +615,10 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="customer-id">
-                <div class="input-group">
-                    <label>Nombre completo:</label>
-                    <input type="text" id="customer-name" placeholder="Ej: María González">
-                </div>
-                <div class="input-group">
-                    <label>Teléfono:</label>
-                    <input type="text" id="customer-phone" placeholder="Ej: 3001234567">
-                </div>
-                <div class="input-group">
-                    <label>Email:</label>
-                    <input type="email" id="customer-email" placeholder="cliente@email.com">
-                </div>
-                <div class="input-group">
-                    <label>Fecha de nacimiento (opcional):</label>
-                    <input type="date" id="customer-birthday">
-                </div>
+                <div class="input-group"><label>Nombre completo:</label><input type="text" id="customer-name" placeholder="Ej: María González"></div>
+                <div class="input-group"><label>Teléfono:</label><input type="text" id="customer-phone" placeholder="Ej: 3001234567"></div>
+                <div class="input-group"><label>Email:</label><input type="email" id="customer-email" placeholder="cliente@email.com"></div>
+                <div class="input-group"><label>Fecha de nacimiento (opcional):</label><input type="date" id="customer-birthday"></div>
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-customer">Cancelar</button>
@@ -571,7 +632,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="history-modal-title">Historial de Puntos</h2>
-                <button class="close-btn" id="btn-close-history"></button>
+                <button class="close-btn" id="btn-close-history">✕</button>
             </div>
             <div class="modal-body">
                 <div class="history-list" id="history-list"></div>
@@ -590,18 +651,9 @@
                 <button class="close-btn" id="btn-close-loyalty">✕</button>
             </div>
             <div class="modal-body">
-                <div class="input-group">
-                    <label>Puntos por cada $1 de compra:</label>
-                    <input type="number" id="set-points-per-unit" step="0.1" min="0" placeholder="1">
-                </div>
-                <div class="input-group">
-                    <label>Valor de cada punto al canjear ($):</label>
-                    <input type="number" id="set-point-value" step="0.01" min="0" placeholder="0.05">
-                </div>
-                <div class="input-group">
-                    <label>Multiplicador de cumpleaños (x):</label>
-                    <input type="number" id="set-birthday-mult" step="0.5" min="1" placeholder="2">
-                </div>
+                <div class="input-group"><label>Puntos por cada $1 de compra:</label><input type="number" id="set-points-per-unit" step="0.1" min="0" placeholder="1"></div>
+                <div class="input-group"><label>Valor de cada punto al canjear ($):</label><input type="number" id="set-point-value" step="0.01" min="0" placeholder="0.05"></div>
+                <div class="input-group"><label>Multiplicador de cumpleaños (x):</label><input type="number" id="set-birthday-mult" step="0.5" min="1" placeholder="2"></div>
                 <div style="background: var(--bg-main); padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; color: var(--text-gray);" id="loyalty-preview"></div>
             </div>
             <div class="modal-footer">
@@ -620,14 +672,8 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="ingredient-id">
-                <div class="input-group">
-                    <label>Nombre del ingrediente:</label>
-                    <input type="text" id="ingredient-name" placeholder="Ej: Arroz">
-                </div>
-                <div class="input-group">
-                    <label>Stock actual:</label>
-                    <input type="number" id="ingredient-stock" placeholder="0" step="0.01">
-                </div>
+                <div class="input-group"><label>Nombre del ingrediente:</label><input type="text" id="ingredient-name" placeholder="Ej: Arroz"></div>
+                <div class="input-group"><label>Stock actual:</label><input type="number" id="ingredient-stock" placeholder="0" step="0.01"></div>
                 <div class="input-group">
                     <label>Unidad de medida:</label>
                     <select id="ingredient-unit">
@@ -638,18 +684,12 @@
                         <option value="mililitro">Mililitro (ml)</option>
                     </select>
                 </div>
-                <div class="input-group">
-                    <label>Stock mínimo (alerta):</label>
-                    <input type="number" id="ingredient-min-stock" placeholder="0" step="0.01">
-                </div>
-                <div class="input-group">
-                    <label>Costo por unidad ($):</label>
-                    <input type="number" id="ingredient-cost" placeholder="0" step="0.01">
-                </div>
+                <div class="input-group"><label>Stock mínimo (alerta):</label><input type="number" id="ingredient-min-stock" placeholder="0" step="0.01"></div>
+                <div class="input-group"><label>Costo por unidad ($):</label><input type="number" id="ingredient-cost" placeholder="0" step="0.01"></div>
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-ingredient">Cancelar</button>
-                <button class="confirm-btn" id="btn-save-ingredient">💾 Guardar</button>
+                <button class="confirm-btn" id="btn-save-ingredient"> Guardar</button>
             </div>
         </div>
     </div>
@@ -664,9 +704,7 @@
             <div class="modal-body">
                 <div class="recipe-product-info" id="recipe-product-info"></div>
                 <div class="recipe-add-row">
-                    <select id="recipe-ingredient-select" class="recipe-select">
-                        <option value="">Seleccionar ingrediente...</option>
-                    </select>
+                    <select id="recipe-ingredient-select" class="recipe-select"><option value="">Seleccionar ingrediente...</option></select>
                     <input type="number" id="recipe-quantity" placeholder="Cantidad" step="0.01" class="recipe-input">
                     <button class="btn-add-recipe-item" id="btn-add-recipe-item">+ Agregar</button>
                 </div>
@@ -687,31 +725,19 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="staff-id">
-                <div class="input-group">
-                    <label>Nombre completo:</label>
-                    <input type="text" id="staff-name" placeholder="Ej: Juan Pérez">
-                </div>
-                <div class="input-group">
-                    <label>Email (para iniciar sesión):</label>
-                    <input type="email" id="staff-email" placeholder="empleado@puntoverde.com">
-                </div>
-                <div class="input-group">
-                    <label>Contraseña temporal:</label>
-                    <input type="text" id="staff-password" placeholder="Mínimo 6 caracteres">
-                </div>
+                <div class="input-group"><label>Nombre completo:</label><input type="text" id="staff-name" placeholder="Ej: Juan Pérez"></div>
+                <div class="input-group"><label>Email (para iniciar sesión):</label><input type="email" id="staff-email" placeholder="empleado@puntoverde.com"></div>
+                <div class="input-group"><label>Contraseña temporal:</label><input type="text" id="staff-password" placeholder="Mínimo 6 caracteres"></div>
                 <div class="input-group">
                     <label>Rol:</label>
                     <select id="staff-role">
                         <option value="cajero">🛒 Cajero</option>
                         <option value="mesero">🪑 Mesero</option>
-                        <option value="cocina">👨‍🍳 Cocina</option>
+                        <option value="cocina">‍🍳 Cocina</option>
                         <option value="admin">👑 Administrador</option>
                     </select>
                 </div>
-                <div class="input-group">
-                    <label>Comisión (% sobre ventas):</label>
-                    <input type="number" id="staff-commission" placeholder="0" step="0.1" min="0" max="100">
-                </div>
+                <div class="input-group"><label>Comisión (% sobre ventas):</label><input type="number" id="staff-commission" placeholder="0" step="0.1" min="0" max="100"></div>
                 <div class="input-group">
                     <label>Estado:</label>
                     <select id="staff-active">
@@ -745,10 +771,7 @@
     <div id="modal-open-cash" class="modal-overlay">
         <div class="modal-content">
             <h3>Abrir Caja</h3>
-            <div class="input-group">
-                <label>Fondo inicial ($):</label>
-                <input type="number" id="opening-fund" placeholder="0" step="0.01">
-            </div>
+            <div class="input-group"><label>Fondo inicial ($):</label><input type="number" id="opening-fund" placeholder="0" step="0.01"></div>
             <button class="btn-primary" id="btn-confirm-open">Confirmar Apertura</button>
             <button class="btn-secondary" onclick="closeModal('modal-open-cash')">Cancelar</button>
         </div>
@@ -757,29 +780,10 @@
     <div id="modal-movement" class="modal-overlay">
         <div class="modal-content">
             <h3>Registrar Movimiento</h3>
-            <div class="input-group">
-                <label>Tipo:</label>
-                <select id="movement-type">
-                    <option value="entrada">Entrada</option>
-                    <option value="salida">Salida</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>Método:</label>
-                <select id="movement-method">
-                    <option value="efectivo">Efectivo</option>
-                    <option value="tarjeta">Tarjeta</option>
-                    <option value="bizum">Bizum</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>Importe ($):</label>
-                <input type="number" id="movement-amount" placeholder="0" step="0.01">
-            </div>
-            <div class="input-group">
-                <label>Nota:</label>
-                <input type="text" id="movement-note" placeholder="Concepto">
-            </div>
+            <div class="input-group"><label>Tipo:</label><select id="movement-type"><option value="entrada">Entrada</option><option value="salida">Salida</option></select></div>
+            <div class="input-group"><label>Método:</label><select id="movement-method"><option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option><option value="bizum">Bizum</option></select></div>
+            <div class="input-group"><label>Importe ($):</label><input type="number" id="movement-amount" placeholder="0" step="0.01"></div>
+            <div class="input-group"><label>Nota:</label><input type="text" id="movement-note" placeholder="Concepto"></div>
             <button class="btn-primary" id="btn-confirm-movement">Registrar</button>
             <button class="btn-secondary" onclick="closeModal('modal-movement')">Cancelar</button>
         </div>
