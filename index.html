@@ -47,7 +47,7 @@
                     <span>Reservas</span>
                 </li>
                 <li class="nav-item" data-view="customers" data-perm="customers">
-                    <span class="nav-icon"></span>
+                    <span class="nav-icon">👤</span>
                     <span>Clientes</span>
                 </li>
                 <li class="nav-item" data-view="inventory" data-perm="inventory">
@@ -59,11 +59,11 @@
                     <span>Alérgenos</span>
                 </li>
                 <li class="nav-item" data-view="invoices" data-perm="invoices">
-                    <span class="nav-icon"></span>
+                    <span class="nav-icon">📄</span>
                     <span>Facturas</span>
                 </li>
                 <li class="nav-item" data-view="reports" data-perm="reports">
-                    <span class="nav-icon">📊</span>
+                    <span class="nav-icon"></span>
                     <span>Reportes</span>
                 </li>
                 <li class="nav-item" data-view="cash" data-perm="cash">
@@ -207,7 +207,7 @@
 
             <section id="view-inventory" class="view">
                 <header class="view-header">
-                    <h1>📦 Inventario de Ingredientes</h1>
+                    <h1> Inventario de Ingredientes</h1>
                     <button class="btn-primary" id="btn-add-ingredient">+ Nuevo Ingrediente</button>
                 </header>
                 <div class="inventory-container">
@@ -232,7 +232,7 @@
 
             <section id="view-allergens" class="view">
                 <header class="view-header">
-                    <h1>⚠️ Control de Alérgenos</h1>
+                    <h1>️ Control de Alérgenos</h1>
                     <button class="btn-primary" id="btn-product-allergens">🥗 Gestionar Alérgenos</button>
                 </header>
                 <div class="allergens-container">
@@ -240,8 +240,8 @@
                         <h3>Los 14 Alérgenos Oficiales (UE 1169/2011)</h3>
                         <div class="allergen-legend-grid" id="allergen-legend-grid"></div>
                     </div>
-                    <div class="inventory-filters">
-                        <input type="text" id="allergen-product-search" placeholder="🔍 Buscar producto..." class="inv-search-input">
+                    <div class="allergen-category-bar" id="allergen-category-bar">
+                        <button class="allergen-cat-btn active" data-cat="all"> Todos</button>
                     </div>
                     <div class="allergens-grid" id="allergens-grid"></div>
                 </div>
@@ -249,7 +249,7 @@
 
             <section id="view-invoices" class="view">
                 <header class="view-header">
-                    <h1>📄 Facturación Electrónica</h1>
+                    <h1> Facturación Electrónica</h1>
                     <div style="display:flex; gap:0.5rem;">
                         <button class="btn-secondary" id="btn-fiscal-settings">⚙️ Config. Fiscal</button>
                         <button class="btn-primary" id="btn-new-invoice">+ Nueva Factura</button>
@@ -283,7 +283,7 @@
 
             <section id="view-reports" class="view">
                 <header class="view-header">
-                    <h1>📊 Reportes y Analíticas</h1>
+                    <h1> Reportes y Analíticas</h1>
                     <div class="report-filters">
                         <button class="report-filter-btn active" data-period="today">Hoy</button>
                         <button class="report-filter-btn" data-period="week">Esta semana</button>
@@ -299,7 +299,7 @@
                     </div>
                     <div class="charts-grid">
                         <div class="chart-card"><h3>📈 Ventas por Hora</h3><div class="chart-wrapper"><canvas id="chart-horas"></canvas></div></div>
-                        <div class="chart-card"><h3>🏆 Top 5 Productos</h3><div class="chart-wrapper"><canvas id="chart-productos"></canvas></div></div>
+                        <div class="chart-card"><h3> Top 5 Productos</h3><div class="chart-wrapper"><canvas id="chart-productos"></canvas></div></div>
                     </div>
                     <div class="recent-orders-card">
                         <h3>🕒 Últimos Pedidos</h3>
@@ -373,7 +373,7 @@
                     <select id="allergen-product-select"></select>
                 </div>
                 <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">
-                    <strong>️ Importante:</strong> Marca TODOS los alérgenos presentes en el producto según la normativa UE 1169/2011.
+                    <strong>⚠️ Importante:</strong> Marca TODOS los alérgenos presentes en el producto según la normativa UE 1169/2011.
                 </div>
                 <div class="allergen-checkboxes" id="allergen-checkboxes"></div>
             </div>
@@ -389,7 +389,7 @@
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2 id="technical-sheet-title">Ficha Técnica</h2>
-                <button class="close-btn" id="btn-close-technical-sheet">✕</button>
+                <button class="close-btn" id="btn-close-technical-sheet"></button>
             </div>
             <div class="modal-body" id="technical-sheet-body"></div>
             <div class="modal-footer">
@@ -408,7 +408,7 @@
             </div>
             <div class="modal-body">
                 <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">
-                    <strong>🇪 Ley Antifraude (Verifactu):</strong> Los registros son inalterables con hash encadenado.
+                    <strong>🇸 Ley Antifraude (Verifactu):</strong> Los registros son inalterables con hash encadenado.
                 </div>
                 <h3 style="margin-bottom: 0.75rem; font-size: 1rem;">Datos del Restaurante</h3>
                 <div class="input-group"><label>Razón Social:</label><input type="text" id="set-business-name" placeholder="Ej: Restaurante Punto Verde S.L."></div>
@@ -556,7 +556,7 @@
                     </div>
                 </div>
                 <div class="loyalty-section">
-                    <h3>🎁 Cliente Fidelidad (opcional)</h3>
+                    <h3> Cliente Fidelidad (opcional)</h3>
                     <div id="loyalty-search-box">
                         <input type="text" id="customer-search" placeholder="Buscar por nombre o teléfono..." class="loyalty-search">
                         <div class="customer-suggestions" id="customer-suggestions"></div>
@@ -587,7 +587,7 @@
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
+                        <button class="method-btn" data-method="bizum"> Bizum</button>
                     </div>
                 </div>
                 <div class="cash-input" id="cash-section">
@@ -791,9 +791,9 @@
                 <div class="input-group">
                     <label>Rol:</label>
                     <select id="staff-role">
-                        <option value="cajero">🛒 Cajero</option>
+                        <option value="cajero"> Cajero</option>
                         <option value="mesero">🪑 Mesero</option>
-                        <option value="cocina">‍🍳 Cocina</option>
+                        <option value="cocina">👨‍🍳 Cocina</option>
                         <option value="admin">👑 Administrador</option>
                     </select>
                 </div>

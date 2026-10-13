@@ -16,7 +16,6 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
 body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overflow: hidden; }
 
-/* LOGIN */
 .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); display: flex; justify-content: center; align-items: center; z-index: 2000; }
 .login-card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); width: 90%; max-width: 400px; text-align: center; }
 .login-card h2 { color: var(--primary); margin-bottom: 0.5rem; }
@@ -25,7 +24,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .login-card button { width: 100%; padding: 0.85rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; }
 .error-msg { color: #ef4444; margin-top: 1rem; font-size: 0.9rem; }
 
-/* LAYOUT PRINCIPAL */
 #main-app { display: flex; height: 100vh; }
 .sidebar { width: var(--sidebar-width); background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
 .sidebar-header { padding: 1.5rem; border-bottom: 1px solid var(--border); }
@@ -53,7 +51,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .notification-bell:hover { background: var(--bg-main); transform: scale(1.05); }
 .notification-badge { position: absolute; top: -5px; right: -5px; background: var(--status-pendiente); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 
-/* NOTIFICACIONES */
 .notifications-panel { position: fixed; top: 0; right: -380px; width: 360px; height: 100vh; background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.1); z-index: 999; transition: right 0.3s ease; display: flex; flex-direction: column; }
 .notifications-panel.open { right: 0; }
 .notif-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); }
@@ -75,7 +72,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .notif-message { font-size: 0.8rem; color: var(--text-gray); }
 .notif-time { font-size: 0.7rem; color: var(--text-gray); margin-top: 0.25rem; }
 
-/* MESAS */
 .legend { display: flex; gap: 1.5rem; font-size: 0.9rem; color: var(--text-gray); }
 .legend-item { display: flex; align-items: center; gap: 0.5rem; }
 .dot { width: 12px; height: 12px; border-radius: 50%; }
@@ -114,7 +110,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .mini-table.status-reservada { background: #8b5cf6; }
 .mini-table.active { border-color: var(--text-dark); box-shadow: 0 0 0 2px var(--text-dark); transform: scale(1.05); }
 
-/* CAJA */
 .pos-container { display: grid; grid-template-columns: 1fr 360px; gap: 1rem; flex: 1; min-height: 0; }
 .products-section { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; overflow: hidden; }
 .categories { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem; background: var(--bg-card); border-radius: 8px; box-shadow: var(--shadow); flex-shrink: 0; }
@@ -151,7 +146,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .pay-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 0.9rem; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 0.75rem; }
 .pay-btn:hover { background: var(--primary-hover); }
 
-/* FIDELIDAD */
 .loyalty-section { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; }
 .loyalty-section h3 { font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--primary-hover); }
 .loyalty-search { width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; }
@@ -170,7 +164,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .redeem-row input { width: 100%; padding: 0.4rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
 .redeem-discount { font-size: 0.8rem; color: var(--primary); font-weight: 700; margin-top: 0.25rem; }
 
-/* COCINA */
 .kitchen-stats { display: flex; gap: 2rem; margin-bottom: 1rem; flex-shrink: 0; }
 .stat { display: flex; flex-direction: column; align-items: center; }
 .stat-number { font-size: 1.75rem; font-weight: 800; color: var(--text-dark); }
@@ -199,7 +192,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .btn-listo { background: var(--status-libre); }
 .btn-entregado { background: var(--text-gray); }
 
-/* INVENTARIO */
 .inventory-container, .customers-container, .reservations-container, .invoices-container, .allergens-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
 .inventory-stats, .inv-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
 .inv-stat-card { background: var(--bg-card); padding: 1rem; border-radius: 10px; box-shadow: var(--shadow); border-left: 4px solid var(--text-gray); }
@@ -228,7 +220,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .ingredient-recipe-btn { width: 100%; padding: 0.5rem; background: var(--bg-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: var(--text-dark); transition: 0.2s; }
 .ingredient-recipe-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
 
-/* CLIENTES */
 .cust-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 .cust-stat-card { background: var(--bg-card); padding: 1rem; border-radius: 10px; box-shadow: var(--shadow); border-left: 4px solid var(--primary); }
 .cust-stat-label { font-size: 0.75rem; color: var(--text-gray); text-transform: uppercase; font-weight: 600; margin-bottom: 0.3rem; }
@@ -259,7 +250,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .history-pts.neg { color: #f59e0b; }
 .history-date { font-size: 0.7rem; color: var(--text-gray); }
 
-/* RESERVAS */
 .reservations-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
 .reservation-card { background: var(--bg-card); border-radius: 10px; padding: 1rem; box-shadow: var(--shadow); border-left: 4px solid var(--text-gray); transition: 0.2s; }
 .reservation-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -3px rgba(0,0,0,0.1); }
@@ -285,7 +275,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .res-action-btn.delete { background: var(--bg-main); color: var(--text-gray); border: 1px solid var(--border); }
 .res-action-btn.delete:hover { background: var(--status-pendiente); color: white; }
 
-/* ALÉRGENOS */
 .allergen-legend { background: var(--bg-card); padding: 1rem; border-radius: 10px; box-shadow: var(--shadow); margin-bottom: 1rem; }
 .allergen-legend h3 { font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-dark); }
 .allergen-legend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
@@ -351,7 +340,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .allergen-checkbox label { cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem; }
 .allergen-checkbox .allergen-icon { font-size: 1.2rem; }
 
-/* FACTURAS */
 .invoices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
 .invoice-card { background: var(--bg-card); border-radius: 10px; padding: 1rem; box-shadow: var(--shadow); border-left: 4px solid var(--primary); transition: 0.2s; }
 .invoice-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -3px rgba(0,0,0,0.1); }
@@ -392,7 +380,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .invoice-view-totals .summary-row.total { font-size: 1.1rem; font-weight: 800; border-top: 1px solid var(--border); padding-top: 0.5rem; margin-top: 0.5rem; }
 .invoice-view-hash { font-size: 0.7rem; color: var(--text-gray); word-break: break-all; background: var(--bg-main); padding: 0.5rem; border-radius: 6px; margin-top: 1rem; }
 
-/* PERSONAL */
 .staff-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
 .staff-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 .staff-stat-card { background: var(--bg-card); padding: 1rem; border-radius: 10px; box-shadow: var(--shadow); border-left: 4px solid var(--primary); }
@@ -418,7 +405,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .staff-action-btn.delete { background: #fef2f2; color: var(--status-pendiente); border: 1px solid var(--status-pendiente); }
 .staff-action-btn.delete:hover { background: var(--status-pendiente); color: white; }
 
-/* REPORTES */
 .report-filters { display: flex; gap: 0.5rem; }
 .report-filter-btn { padding: 0.5rem 1rem; border: 1px solid var(--border); background: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
 .report-filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
@@ -444,7 +430,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .recent-table td { padding: 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
 .recent-table tr:last-child td { border-bottom: none; }
 
-/* CAJA / ARQUEOS */
 .cash-container { max-width: 900px; margin: 0 auto; width: 100%; }
 .status-card { background: var(--bg-card); padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 1.5rem; }
 .status-card h3 { margin-bottom: 1rem; font-size: 1.1rem; }
@@ -471,7 +456,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .movement-item.entrada { color: var(--primary); }
 .movement-item.salida { color: var(--status-pendiente); }
 
-/* MODALES */
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
 .modal-overlay.active { display: flex; }
 .modal-content { background: white; padding: 1.25rem; border-radius: 12px; width: 95%; max-width: 480px; max-height: 95vh; overflow: hidden; display: flex; flex-direction: column; }
@@ -552,7 +536,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .btn-add-recipe-item:hover { background: var(--primary-hover); }
 .recipe-items-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 300px; overflow-y: auto; }
 
-/* TOAST */
 .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1002; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
 .toast { background: white; padding: 1rem 1.25rem; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-left: 4px solid var(--primary); min-width: 280px; max-width: 350px; animation: toastIn 0.3s ease; pointer-events: auto; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
@@ -566,7 +549,6 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .toast-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem; }
 .toast-message { font-size: 0.8rem; color: var(--text-gray); }
 
-/* TICKET */
 #ticket-print-area { display: none; }
 @media print {
     body * { visibility: hidden; }
