@@ -212,20 +212,27 @@ function renderCustomers() {
     const grid = document.getElementById('customers-grid');
     if (!grid) return;
     const q = (document.getElementById('cust-search')?.value || '').trim().toLowerCase();
-    const filtered = customers.filter(c => {
-        if (!q) return true;
-        return (c.name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q);
-    });
+
     document.getElementById('cust-total').textContent = customers.length;
     document.getElementById('cust-points').textContent = Math.round(customers.reduce((s, c) => s + (c.points || 0), 0)).toLocaleString();
     const top = [...customers].sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0))[0];
     document.getElementById('cust-top').textContent = top ? top.name : '—';
-    if (filtered.length === 0) {
-        grid.innerHTML = q
-            ? `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">Sin resultados para "<strong>${q}</strong>"<br><button class="btn-secondary" style="margin-top:0.75rem;" onclick="clearCustomerSearch()">✕ Limpiar búsqueda</button></div>`
-            : '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay clientes registrados</div>';
+
+    if (!q) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 3rem 1rem;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+            Escribe un nombre o teléfono para buscar un cliente<br>
+            <small>Hay ${customers.length} cliente(s) registrados</small>
+        </div>`;
         return;
     }
+
+    const filtered = customers.filter(c => (c.name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q));
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">Sin resultados para "<strong>${q}</strong>"<br><button class="btn-secondary" style="margin-top:0.75rem;" onclick="clearCustomerSearch()">✕ Limpiar búsqueda</button></div>`;
+        return;
+    }
+
     grid.innerHTML = filtered.map(c => `
         <div class="customer-card ${isBirthday(c) ? 'birthday' : ''}">
             <div class="customer-header">
@@ -240,6 +247,7 @@ function renderCustomers() {
             <div class="customer-actions">
                 <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">✏️ Editar</button>
                 <button class="customer-action-btn history" onclick="viewHistory(${c.id})">📜 Historial</button>
+                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">🗑️ Eliminar</button>
             </div>
         </div>
     `).join('');
@@ -248,6 +256,19 @@ function renderCustomers() {
 function clearCustomerSearch() {
     document.getElementById('cust-search').value = '';
     renderCustomers();
+}
+
+async function deleteCustomer(id) {
+    const c = customers.find(x => x.id === id);
+    if (!c) return;
+    if (!confirm(`¿Eliminar definitivamente a ${c.name}?\nSe borrará también su historial de puntos.`)) return;
+    try {
+        await supabaseClient.from('points_history').delete().eq('customer_id', id);
+        const { error } = await supabaseClient.from('customers').delete().eq('id', id);
+        if (error) throw error;
+        loadCustomers();
+        showToast('pago', '🗑️ Cliente eliminado', c.name);
+    } catch (error) { alert('Error: ' + error.message); }
 }
 
 function openCustomerModal(customer = null) {
@@ -1076,5 +1097,6 @@ window.selectCustomer = selectCustomer;
 window.editCustomer = editCustomer;
 window.viewHistory = viewHistory;
 window.clearCustomerSearch = clearCustomerSearch;
+window.deleteCustomer = deleteCustomer;
 
 init();
