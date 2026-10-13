@@ -211,13 +211,21 @@ function isBirthday(c) {
 function renderCustomers() {
     const grid = document.getElementById('customers-grid');
     if (!grid) return;
-    const q = (document.getElementById('cust-search')?.value || '').toLowerCase();
-    const filtered = customers.filter(c => (c.name || '').toLowerCase().includes(q) || (c.phone || '').includes(q));
+    const q = (document.getElementById('cust-search')?.value || '').trim().toLowerCase();
+    const filtered = customers.filter(c => {
+        if (!q) return true;
+        return (c.name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q);
+    });
     document.getElementById('cust-total').textContent = customers.length;
     document.getElementById('cust-points').textContent = Math.round(customers.reduce((s, c) => s + (c.points || 0), 0)).toLocaleString();
     const top = [...customers].sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0))[0];
     document.getElementById('cust-top').textContent = top ? top.name : '—';
-    if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay clientes registrados</div>'; return; }
+    if (filtered.length === 0) {
+        grid.innerHTML = q
+            ? `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">Sin resultados para "<strong>${q}</strong>"<br><button class="btn-secondary" style="margin-top:0.75rem;" onclick="clearCustomerSearch()">✕ Limpiar búsqueda</button></div>`
+            : '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay clientes registrados</div>';
+        return;
+    }
     grid.innerHTML = filtered.map(c => `
         <div class="customer-card ${isBirthday(c) ? 'birthday' : ''}">
             <div class="customer-header">
@@ -235,6 +243,11 @@ function renderCustomers() {
             </div>
         </div>
     `).join('');
+}
+
+function clearCustomerSearch() {
+    document.getElementById('cust-search').value = '';
+    renderCustomers();
 }
 
 function openCustomerModal(customer = null) {
@@ -1062,5 +1075,6 @@ window.openTableQR = openTableQR;
 window.selectCustomer = selectCustomer;
 window.editCustomer = editCustomer;
 window.viewHistory = viewHistory;
+window.clearCustomerSearch = clearCustomerSearch;
 
 init();
