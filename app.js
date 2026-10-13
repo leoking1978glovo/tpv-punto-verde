@@ -2,6 +2,9 @@ const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const POINTS_PER_UNIT = 1;
+const POINT_VALUE = 0.05;
+
 let currentUser = null;
 let currentProfile = null;
 let cart = [];
@@ -28,10 +31,13 @@ let recipes = [];
 let staffList = [];
 let staffSales = [];
 let currentQRTable = null;
+let customers = [];
+let selectedCustomer = null;
+let redeemPoints = 0;
 
 const ROLE_PERMISSIONS = {
-    admin: ['tables', 'pos', 'kitchen', 'inventory', 'reports', 'cash', 'staff'],
-    cajero: ['tables', 'pos', 'kitchen', 'reports', 'cash'],
+    admin: ['tables', 'pos', 'kitchen', 'customers', 'inventory', 'reports', 'cash', 'staff'],
+    cajero: ['tables', 'pos', 'kitchen', 'customers', 'reports', 'cash'],
     mesero: ['tables', 'pos'],
     cocina: ['kitchen']
 };
@@ -47,6 +53,7 @@ async function init() {
     setupInventoryEvents();
     setupStaffEvents();
     setupQREvents();
+    setupCustomerEvents();
 }
 
 async function loadProfile() {
@@ -88,6 +95,7 @@ function showApp() {
     loadCashStatus();
     loadIngredients();
     loadStaff();
+    loadCustomers();
     setupPOSEvents();
     setupRealtimeGlobal();
 }
@@ -131,6 +139,7 @@ function setupNavigation() {
             if (view === 'tables') { activeTableId = null; currentTableOrder = null; cart = []; renderCart(); renderTableOrder(); loadTables(); }
             else if (view === 'pos') { if (!activeTableId) { currentTableOrder = null; cart = []; renderCart(); renderTableOrder(); document.getElementById('pos-title').textContent = 'Caja - Mostrador'; } renderMiniTables(); }
             else if (view === 'kitchen') loadKitchenOrders();
+            else if (view === 'customers') loadCustomers();
             else if (view === 'inventory') loadIngredients();
             else if (view === 'reports') loadReports(currentReportPeriod);
             else if (view === 'cash') loadCashStatus();
@@ -148,6 +157,220 @@ function setupNavigation() {
     });
 }
 
+// ============ FIDELIDAD ============
+function setupCustomerEvents() {
+    document.getElementById('btn-add-customer').addEventListener('click', () => openCustomerModal());
+    document.getElementById('btn-close-customer').addEventListener('click', () => closeModal('customer-modal'));
+    document.getElementById('btn-cancel-customer').addEventListener('click', () => closeModal('customer-modal'));
+    document.getElementById('btn-save-customer').addEventListener('click', saveCustomer);
+    document.getElementById('btn-close-history').addEventListener('click', () => closeModal('history-modal'));
+    document.getElementById('btn-cancel-history').addEventListener('click', () => closeModal('history-modal'));
+    document.getElementById('cust-search').addEventListener('input', renderCustomers);
+
+    document.getElementById('customer-search').addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase().trim();
+        const box = document.getElementById('customer-suggestions');
+        if (!q) { box.innerHTML = ''; return; }
+        const matches = customers.filter(c => (c.name || '').toLowerCase().includes(q) || (c.phone || '').includes(q)).slice(0, 5);
+        box.innerHTML = matches.map(c => `<div class="suggestion-item" onclick="selectCustomer(${c.id})"><span>${c.name} ${c.phone ? '· ' + c.phone : ''}</span><span class="suggestion-pts">${Math.round(c.points || 0)} pts</span></div>`).join('');
+    });
+    document.getElementById('btn-remove-customer').addEventListener('click', () => {
+        selectedCustomer = null; redeemPoints = 0;
+        document.getElementById('selected-customer').style.display = 'none';
+        document.getElementById('redeem-row').style.display = 'none';
+        document.getElementById('loyalty-search-box').style.display = 'block';
+        document.getElementById('customer-search').value = '';
+        document.getElementById('modal-discount-row').style.display = 'none';
+        refreshPayTotals();
+    });
+    document.getElementById('redeem-points').addEventListener('input', (e) => {
+        if (!selectedCustomer) return;
+        let val = parseInt(e.target.value) || 0;
+        val = Math.max(0, Math.min(val, Math.round(selectedCustomer.points || 0)));
+        redeemPoints = val;
+        document.getElementById('redeem-discount').textContent = '$' + Math.round(redeemPoints * POINT_VALUE).toLocaleString();
+        document.getElementById('modal-discount').textContent = '-$' + Math.round(redeemPoints * POINT_VALUE).toLocaleString();
+        document.getElementById('modal-discount-row').style.display = redeemPoints > 0 ? 'flex' : 'none';
+        refreshPayTotals();
+    });
+}
+
+async function loadCustomers() {
+    const { data } = await supabaseClient.from('customers').select('*').order('name');
+    customers = data || [];
+    renderCustomers();
+}
+
+function isBirthday(c) {
+    if (!c.birthday) return false;
+    const b = new Date(c.birthday);
+    const now = new Date();
+    return b.getMonth() === now.getMonth() && b.getDate() === now.getDate();
+}
+
+function renderCustomers() {
+    const grid = document.getElementById('customers-grid');
+    if (!grid) return;
+    const q = (document.getElementById('cust-search')?.value || '').toLowerCase();
+    const filtered = customers.filter(c => (c.name || '').toLowerCase().includes(q) || (c.phone || '').includes(q));
+    document.getElementById('cust-total').textContent = customers.length;
+    document.getElementById('cust-points').textContent = Math.round(customers.reduce((s, c) => s + (c.points || 0), 0)).toLocaleString();
+    const top = [...customers].sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0))[0];
+    document.getElementById('cust-top').textContent = top ? top.name : '—';
+    if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay clientes registrados</div>'; return; }
+    grid.innerHTML = filtered.map(c => `
+        <div class="customer-card ${isBirthday(c) ? 'birthday' : ''}">
+            <div class="customer-header">
+                <div class="customer-name">${isBirthday(c) ? '🎂 ' : ''}${c.name}</div>
+                <span class="customer-points-badge">${Math.round(c.points || 0)} pts</span>
+            </div>
+            <div class="customer-phone">${c.phone || 'Sin teléfono'} ${c.email ? '· ' + c.email : ''}</div>
+            <div class="customer-meta">
+                <div>Visitas: <strong>${c.visits || 0}</strong></div>
+                <div>Gastado: <strong>$${Math.round(c.total_spent || 0).toLocaleString()}</strong></div>
+            </div>
+            <div class="customer-actions">
+                <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">✏️ Editar</button>
+                <button class="customer-action-btn history" onclick="viewHistory(${c.id})">📜 Historial</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openCustomerModal(customer = null) {
+    document.getElementById('customer-modal-title').textContent = customer ? 'Editar Cliente' : 'Nuevo Cliente';
+    document.getElementById('customer-id').value = customer ? customer.id : '';
+    document.getElementById('customer-name').value = customer ? customer.name : '';
+    document.getElementById('customer-phone').value = customer ? (customer.phone || '') : '';
+    document.getElementById('customer-email').value = customer ? (customer.email || '') : '';
+    document.getElementById('customer-birthday').value = customer ? (customer.birthday || '') : '';
+    document.getElementById('customer-modal').classList.add('active');
+}
+
+async function saveCustomer() {
+    const id = document.getElementById('customer-id').value;
+    const name = document.getElementById('customer-name').value.trim();
+    const phone = document.getElementById('customer-phone').value.trim();
+    const email = document.getElementById('customer-email').value.trim();
+    const birthday = document.getElementById('customer-birthday').value || null;
+    if (!name) return alert('El nombre es obligatorio');
+    try {
+        if (id) { await supabaseClient.from('customers').update({ name, phone, email, birthday }).eq('id', id); }
+        else { await supabaseClient.from('customers').insert([{ name, phone, email, birthday }]); }
+        closeModal('customer-modal');
+        loadCustomers();
+        showToast('pago', '✓ Cliente guardado', name);
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
+async function editCustomer(id) { const c = customers.find(x => x.id === id); if (c) openCustomerModal(c); }
+
+async function viewHistory(id) {
+    const c = customers.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('history-modal-title').textContent = `Historial - ${c.name}`;
+    const { data } = await supabaseClient.from('points_history').select('*').eq('customer_id', id).order('created_at', { ascending: false });
+    const list = data || [];
+    document.getElementById('history-list').innerHTML = list.length === 0
+        ? '<div style="text-align:center; color: var(--text-gray); padding: 1.5rem;">Sin movimientos de puntos</div>'
+        : list.map(h => `
+            <div class="history-item ${h.type}">
+                <div>
+                    <div>${h.type === 'ganados' ? '✅ Ganados' : '🎁 Canjeados'} ${h.note ? '· ' + h.note : ''}</div>
+                    <div class="history-date">${new Date(h.created_at).toLocaleString('es-ES')}</div>
+                </div>
+                <span class="history-pts ${h.points >= 0 ? 'pos' : 'neg'}">${h.points >= 0 ? '+' : ''}${Math.round(h.points)}</span>
+            </div>
+        `).join('');
+    document.getElementById('history-modal').classList.add('active');
+}
+
+function selectCustomer(id) {
+    selectedCustomer = customers.find(c => c.id === id) || null;
+    redeemPoints = 0;
+    document.getElementById('customer-suggestions').innerHTML = '';
+    document.getElementById('customer-search').value = '';
+    document.getElementById('loyalty-search-box').style.display = 'none';
+    document.getElementById('selected-customer').style.display = 'flex';
+    document.getElementById('sel-cust-name').textContent = selectedCustomer.name;
+    document.getElementById('sel-cust-points').textContent = `${Math.round(selectedCustomer.points || 0)} puntos disponibles${isBirthday(selectedCustomer) ? ' · 🎂 ¡Cumpleaños hoy (puntos x2)!' : ''}`;
+    document.getElementById('redeem-row').style.display = 'block';
+    document.getElementById('redeem-points').value = '';
+    document.getElementById('redeem-discount').textContent = '$0';
+    document.getElementById('modal-discount-row').style.display = 'none';
+    refreshPayTotals();
+}
+
+function getBaseTotal() {
+    return currentTableOrder ? currentTableOrder.total : cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+}
+
+function refreshPayTotals() {
+    const base = getBaseTotal();
+    const discount = redeemPoints * POINT_VALUE;
+    const final = Math.max(0, base - discount);
+    document.getElementById('modal-total').textContent = '$' + Math.round(final).toLocaleString();
+    const cashInput = document.getElementById('cash-received');
+    const received = parseFloat(cashInput.value) || 0;
+    document.getElementById('change-amount').textContent = '$' + Math.max(0, Math.round(received - final)).toLocaleString();
+}
+
+async function applyLoyalty(orderId, finalTotal) {
+    if (!selectedCustomer) return null;
+    const bday = isBirthday(selectedCustomer);
+    let earned = Math.round(finalTotal * POINTS_PER_UNIT);
+    if (bday) earned *= 2;
+    const newPoints = (selectedCustomer.points || 0) - redeemPoints + earned;
+    await supabaseClient.from('customers').update({
+        points: newPoints,
+        total_spent: (selectedCustomer.total_spent || 0) + finalTotal,
+        visits: (selectedCustomer.visits || 0) + 1
+    }).eq('id', selectedCustomer.id);
+    if (redeemPoints > 0) {
+        await supabaseClient.from('points_history').insert([{ customer_id: selectedCustomer.id, order_id: orderId, points: -redeemPoints, type: 'canjeados', note: 'Descuento en compra' }]);
+    }
+    await supabaseClient.from('points_history').insert([{ customer_id: selectedCustomer.id, order_id: orderId, points: earned, type: 'ganados', note: bday ? 'Puntos x2 cumpleaños' : 'Compra' }]);
+    if (bday) addNotification('pago', `🎂 ¡Cumpleaños de ${selectedCustomer.name}!`, 'Puntos dobles aplicados en esta compra');
+    const result = { name: selectedCustomer.name, earned, newBalance: newPoints };
+    selectedCustomer = null;
+    redeemPoints = 0;
+    return result;
+}
+
+function resetLoyaltyUI() {
+    selectedCustomer = null;
+    redeemPoints = 0;
+    document.getElementById('selected-customer').style.display = 'none';
+    document.getElementById('redeem-row').style.display = 'none';
+    document.getElementById('loyalty-search-box').style.display = 'block';
+    document.getElementById('customer-search').value = '';
+    document.getElementById('customer-suggestions').innerHTML = '';
+    document.getElementById('modal-discount-row').style.display = 'none';
+}
+
+// ============ QR DE MESA ============
+function openTableQR(tableId, tableName) {
+    currentQRTable = { id: tableId, name: tableName };
+    document.getElementById('qr-table-title').textContent = `QR - ${tableName}`;
+    const container = document.getElementById('qr-table-code');
+    container.innerHTML = '';
+    const url = `${window.location.origin}/menu.html?mesa=${tableId}`;
+    new QRCode(container, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+    document.getElementById('qr-table-modal').classList.add('active');
+}
+
+function setupQREvents() {
+    document.getElementById('btn-close-qr-table').addEventListener('click', () => closeModal('qr-table-modal'));
+    document.getElementById('btn-print-qr').addEventListener('click', () => {
+        if (!currentQRTable) return;
+        const url = `${window.location.origin}/menu.html?mesa=${currentQRTable.id}`;
+        const win = window.open('', '_blank');
+        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}h2{margin-bottom:0.5rem;}p{color:#666;}</style></head><body><h2>🌿 TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
+        win.document.close();
+    });
+}
+
+// ============ DIVIDIR CUENTA ============
 function setupDivideEvents() {
     document.getElementById('btn-divide-account').addEventListener('click', openDivideModal);
     document.getElementById('btn-close-divide').addEventListener('click', () => closeModal('divide-modal'));
@@ -174,6 +397,73 @@ function setupDivideEvents() {
     });
 }
 
+function openDivideModal() {
+    if (!currentTableOrder || !currentTableOrder.order_items || currentTableOrder.order_items.length === 0) return alert('No hay productos en el pedido');
+    diners = [{ id: 1, name: 'Comensal 1', items: [] }, { id: 2, name: 'Comensal 2', items: [] }];
+    unassignedItems = currentTableOrder.order_items.map((item, idx) => ({ uid: idx, orderItemId: item.id, name: item.name, price: item.price, qty: item.qty }));
+    renderDivideModal();
+    document.getElementById('divide-modal').classList.add('active');
+}
+
+function addDiner() { const newId = diners.length > 0 ? Math.max(...diners.map(d => d.id)) + 1 : 1; diners.push({ id: newId, name: `Comensal ${newId}`, items: [] }); renderDivideModal(); }
+function removeDiner(dinerId) { const diner = diners.find(d => d.id === dinerId); if (!diner) return; unassignedItems.push(...diner.items); diners = diners.filter(d => d.id !== dinerId); renderDivideModal(); }
+function assignItemToDiner(uid, dinerId) { const itemIdx = unassignedItems.findIndex(i => i.uid === uid); if (itemIdx === -1) return; const item = unassignedItems.splice(itemIdx, 1)[0]; const diner = diners.find(d => d.id === dinerId); if (diner) diner.items.push(item); renderDivideModal(); }
+function removeItemFromDiner(uid, dinerId) { const diner = diners.find(d => d.id === dinerId); if (!diner) return; const itemIdx = diner.items.findIndex(i => i.uid === uid); if (itemIdx === -1) return; const item = diner.items.splice(itemIdx, 1)[0]; unassignedItems.push(item); renderDivideModal(); }
+function updateDinerName(dinerId, newName) { const diner = diners.find(d => d.id === dinerId); if (diner) diner.name = newName; }
+
+function renderDivideModal() {
+    const dinersList = document.getElementById('diners-list');
+    const unassignedList = document.getElementById('unassigned-items');
+    dinersList.innerHTML = diners.map(diner => {
+        const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
+        const itemsHtml = diner.items.map(item => `<div class="diner-item"><span class="diner-item-name">${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span><div class="diner-item-controls"><button class="diner-item-btn remove" onclick="removeItemFromDiner(${item.uid}, ${diner.id})">✕</button></div></div>`).join('');
+        return `<div class="diner-card"><div class="diner-header"><div class="diner-name"><input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)"></div><div style="display:flex; align-items:center; gap:0.5rem;"><span class="diner-total">$${Math.round(total).toLocaleString()}</span>${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})">💰 Cobrar</button>` : ''}${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}</div></div><div class="diner-items">${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}</div></div>`;
+    }).join('');
+    if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
+    else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
+    document.getElementById('btn-pay-all').textContent = `💰 Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
+}
+
+async function openDinerPayModal(dinerId) {
+    const diner = diners.find(d => d.id === dinerId);
+    if (!diner || diner.items.length === 0) return alert('Este comensal no tiene productos');
+    currentDinerPayId = dinerId; currentDinerPayMethod = 'efectivo';
+    document.getElementById('diner-pay-title').textContent = `Cobrar ${diner.name}`;
+    document.getElementById('diner-cart-items').innerHTML = diner.items.map(item => `<div class="cart-item"><div class="cart-item-name">${item.qty}x ${item.name}</div><div class="cart-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div>`).join('');
+    const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
+    document.getElementById('diner-total').textContent = '$' + Math.round(total).toLocaleString();
+    document.getElementById('diner-cash-received').value = '';
+    document.getElementById('diner-change-amount').textContent = '$0';
+    document.querySelectorAll('#diner-method-buttons .method-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('#diner-method-buttons .method-btn[data-method="efectivo"]').classList.add('active');
+    document.getElementById('diner-cash-section').style.display = 'block';
+    document.getElementById('diner-pay-modal').classList.add('active');
+}
+
+async function confirmDinerPayment() {
+    const diner = diners.find(d => d.id === currentDinerPayId);
+    if (!diner) return;
+    const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
+    if (currentDinerPayMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('diner-cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
+    try {
+        const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ type: 'mesa', status: 'nuevo', total: total, paid: true, pay_method: currentDinerPayMethod, source: 'tpv', user_email: currentUser?.email, table_id: activeTableId, diner_name: diner.name }]).select().single();
+        if (orderError) throw orderError;
+        const orderItems = diner.items.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty }));
+        const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
+        if (itemsError) throw itemsError;
+        printTicket(order, diner.items, null);
+        await deductInventory(diner.items);
+        await recordEmployeeSale(order.id, total);
+        const remainingItems = currentTableOrder.order_items.filter(origItem => !diner.items.some(dinerItem => dinerItem.orderItemId === origItem.id));
+        const newTotal = remainingItems.reduce((s, i) => s + (i.price * i.qty), 0);
+        if (remainingItems.length === 0) { await supabaseClient.from('orders').update({ status: 'nuevo', paid: true }).eq('id', currentTableOrder.id); await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId); currentTableOrder = null; }
+        else { await supabaseClient.from('orders').update({ total: newTotal }).eq('id', currentTableOrder.id); const paidItemIds = diner.items.map(i => i.orderItemId); await supabaseClient.from('order_items').delete().in('id', paidItemIds); currentTableOrder.order_items = remainingItems; currentTableOrder.total = newTotal; }
+        addNotification('pago', `✓ ${diner.name} pagó`, `$${Math.round(total).toLocaleString()} | ${currentDinerPayMethod.toUpperCase()}`);
+        closeModal('diner-pay-modal'); closeModal('divide-modal'); renderCart(); renderTableOrder(); loadTables();
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
+// ============ INVENTARIO ============
 function setupInventoryEvents() {
     document.getElementById('btn-add-ingredient').addEventListener('click', () => openIngredientModal());
     document.getElementById('btn-close-ingredient').addEventListener('click', () => closeModal('ingredient-modal'));
@@ -186,169 +476,6 @@ function setupInventoryEvents() {
     document.getElementById('inv-filter-status').addEventListener('change', renderInventory);
 }
 
-function setupStaffEvents() {
-    document.getElementById('btn-add-staff').addEventListener('click', () => openStaffModal());
-    document.getElementById('btn-close-staff').addEventListener('click', () => closeModal('staff-modal'));
-    document.getElementById('btn-cancel-staff').addEventListener('click', () => closeModal('staff-modal'));
-    document.getElementById('btn-save-staff').addEventListener('click', saveStaff);
-}
-
-function setupQREvents() {
-    document.getElementById('btn-close-qr-table').addEventListener('click', () => closeModal('qr-table-modal'));
-    document.getElementById('btn-print-qr').addEventListener('click', () => {
-        if (!currentQRTable) return;
-        const url = `${window.location.origin}/menu.html?mesa=${currentQRTable.id}`;
-        const win = window.open('', '_blank');
-        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}h2{margin-bottom:0.5rem;}p{color:#666;}</style></head><body><h2>🌿 TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
-        win.document.close();
-    });
-}
-
-function setupNotificationsPanel() {
-    document.getElementById('btn-notifications').addEventListener('click', () => {
-        const panel = document.getElementById('notifications-panel');
-        panel.classList.toggle('open');
-        if (panel.classList.contains('open')) { unreadNotifs = 0; updateNotifBadge(); renderNotifications(); }
-    });
-    document.getElementById('btn-clear-notifs').addEventListener('click', () => { notifications = []; renderNotifications(); updateNotifBadge(); });
-    document.getElementById('btn-close-notifs').addEventListener('click', () => { document.getElementById('notifications-panel').classList.remove('open'); });
-}
-
-function setupReportFilters() {
-    document.querySelectorAll('.report-filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.report-filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentReportPeriod = btn.dataset.period;
-            loadReports(currentReportPeriod);
-        });
-    });
-}
-
-function setupPOSEvents() {
-    document.getElementById('product-grid').addEventListener('click', e => { const card = e.target.closest('.product-card'); if (card) addToCart(Number(card.dataset.id)); });
-    document.getElementById('categories-bar').addEventListener('click', e => { const btn = e.target.closest('.cat-btn'); if (btn) { document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentCategory = btn.dataset.cat; renderProducts(); } });
-    document.getElementById('btn-clear').addEventListener('click', () => { if (cart.length > 0 && confirm('¿Limpiar carrito?')) { cart = []; renderCart(); renderTableOrder(); } });
-    document.getElementById('btn-pay').addEventListener('click', () => { if (activeTableId) addToTable(); else openPayModal(); });
-    document.getElementById('btn-close-modal').addEventListener('click', () => closeModal('pay-modal'));
-    document.getElementById('btn-cancel-pay').addEventListener('click', () => closeModal('pay-modal'));
-    document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); orderType = e.target.dataset.type; }));
-    document.querySelectorAll('.method-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); payMethod = e.target.dataset.method; document.getElementById('cash-section').style.display = payMethod === 'efectivo' ? 'block' : 'none'; }));
-    document.getElementById('cash-received').addEventListener('input', (e) => { const total = currentTableOrder ? currentTableOrder.total : cart.reduce((sum, i) => sum + (i.price * i.qty), 0); const received = parseFloat(e.target.value) || 0; document.getElementById('change-amount').textContent = '$' + Math.max(0, Math.round(received - total)).toLocaleString(); });
-    document.getElementById('btn-confirm-pay').addEventListener('click', () => { if (currentTableOrder) confirmPaymentForTable(); else confirmPayment(); });
-}
-
-// ============ QR DE MESA ============
-function openTableQR(tableId, tableName) {
-    currentQRTable = { id: tableId, name: tableName };
-    document.getElementById('qr-table-title').textContent = `QR - ${tableName}`;
-    const container = document.getElementById('qr-table-code');
-    container.innerHTML = '';
-    const url = `${window.location.origin}/menu.html?mesa=${tableId}`;
-    new QRCode(container, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
-    document.getElementById('qr-table-modal').classList.add('active');
-}
-
-// ============ PERSONAL ============
-async function loadStaff() {
-    const { data: staffData } = await supabaseClient.from('profiles').select('*').order('full_name');
-    staffList = staffData || [];
-    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
-    const { data: salesData } = await supabaseClient.from('employee_sales').select('*').gte('created_at', monthStart.toISOString());
-    staffSales = salesData || [];
-    renderStaff();
-}
-
-function renderStaff() {
-    const grid = document.getElementById('staff-grid');
-    if (!grid) return;
-    document.getElementById('staff-total').textContent = staffList.length;
-    document.getElementById('staff-active').textContent = staffList.filter(s => s.active).length;
-    const totalCommissions = staffSales.reduce((s, v) => s + (v.commission || 0), 0);
-    document.getElementById('staff-commissions').textContent = '$' + Math.round(totalCommissions).toLocaleString();
-    if (staffList.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay empleados registrados</div>'; return; }
-    grid.innerHTML = staffList.map(s => {
-        const sales = staffSales.filter(v => v.employee_id === s.id);
-        const monthSales = sales.reduce((sum, v) => sum + (v.amount || 0), 0);
-        const monthComm = sales.reduce((sum, v) => sum + (v.commission || 0), 0);
-        return `<div class="staff-card ${s.active ? '' : 'inactive'}">
-            <div class="staff-header">
-                <div class="staff-name">${s.full_name || s.email}</div>
-                <span class="staff-role-badge staff-role-${s.role}">${s.role}</span>
-            </div>
-            <div class="staff-email">${s.email}</div>
-            <div class="staff-meta">
-                <span>Ventas mes: <strong>$${Math.round(monthSales).toLocaleString()}</strong></span>
-                <span class="staff-commission">Comisión: $${Math.round(monthComm).toLocaleString()}</span>
-            </div>
-            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : '⛔ Inactivo'}</span></div>
-            <div class="staff-actions">
-                <button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button>
-                <button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">🗑️ Eliminar</button>
-            </div>
-        </div>`;
-    }).join('');
-}
-
-function openStaffModal(staff = null) {
-    document.getElementById('staff-modal-title').textContent = staff ? 'Editar Empleado' : 'Nuevo Empleado';
-    document.getElementById('staff-id').value = staff ? staff.id : '';
-    document.getElementById('staff-name').value = staff ? (staff.full_name || '') : '';
-    document.getElementById('staff-email').value = staff ? staff.email : '';
-    document.getElementById('staff-password').value = '';
-    document.getElementById('staff-role').value = staff ? staff.role : 'cajero';
-    document.getElementById('staff-commission').value = staff ? (staff.commission_rate || 0) : 0;
-    document.getElementById('staff-active').value = staff ? String(staff.active) : 'true';
-    document.getElementById('staff-modal').classList.add('active');
-}
-
-async function saveStaff() {
-    const id = document.getElementById('staff-id').value;
-    const full_name = document.getElementById('staff-name').value.trim();
-    const email = document.getElementById('staff-email').value.trim();
-    const password = document.getElementById('staff-password').value;
-    const role = document.getElementById('staff-role').value;
-    const commission_rate = parseFloat(document.getElementById('staff-commission').value) || 0;
-    const active = document.getElementById('staff-active').value === 'true';
-    if (!full_name || !email) return alert('Nombre y email son obligatorios');
-    try {
-        if (id) {
-            const { error } = await supabaseClient.from('profiles').update({ full_name, email, role, commission_rate, active }).eq('id', id);
-            if (error) throw error;
-        } else {
-            if (!password || password.length < 6) return alert('La contraseña debe tener al menos 6 caracteres');
-            const { data: newUser, error: authError } = await supabaseClient.auth.signUp({ email, password });
-            if (authError) throw authError;
-            if (!newUser.user) throw new Error('No se pudo crear el usuario');
-            const { error: profError } = await supabaseClient.from('profiles').insert([{ id: newUser.user.id, email, full_name, role, commission_rate, active }]);
-            if (profError) throw profError;
-        }
-        closeModal('staff-modal');
-        loadStaff();
-        showToast('pago', '✓ Empleado guardado', full_name);
-    } catch (error) { alert('Error: ' + error.message); }
-}
-
-async function editStaff(id) { const s = staffList.find(x => x.id === id); if (s) openStaffModal(s); }
-
-async function deleteStaff(id) {
-    if (id === currentUser.id) return alert('No puedes eliminar tu propia cuenta');
-    if (!confirm('¿Eliminar este empleado?')) return;
-    try {
-        const { error } = await supabaseClient.from('profiles').delete().eq('id', id);
-        if (error) throw error;
-        loadStaff();
-        showToast('pago', '🗑️ Empleado eliminado', '');
-    } catch (error) { alert('Error: ' + error.message); }
-}
-
-async function recordEmployeeSale(orderId, amount) {
-    if (!currentProfile) return;
-    const commission = amount * ((currentProfile.commission_rate || 0) / 100);
-    await supabaseClient.from('employee_sales').insert([{ order_id: orderId, employee_id: currentProfile.id, amount, commission }]);
-}
-
-// ============ INVENTARIO ============
 async function loadIngredients() {
     const { data: ingData } = await supabaseClient.from('ingredients').select('*').order('name');
     ingredients = ingData || [];
@@ -457,71 +584,110 @@ async function deductInventory(items) {
     } catch (error) { console.error('Error descontando inventario:', error); }
 }
 
-// ============ DIVIDIR CUENTA ============
-function openDivideModal() {
-    if (!currentTableOrder || !currentTableOrder.order_items || currentTableOrder.order_items.length === 0) return alert('No hay productos en el pedido');
-    diners = [{ id: 1, name: 'Comensal 1', items: [] }, { id: 2, name: 'Comensal 2', items: [] }];
-    unassignedItems = currentTableOrder.order_items.map((item, idx) => ({ uid: idx, orderItemId: item.id, name: item.name, price: item.price, qty: item.qty }));
-    renderDivideModal();
-    document.getElementById('divide-modal').classList.add('active');
+// ============ PERSONAL ============
+function setupStaffEvents() {
+    document.getElementById('btn-add-staff').addEventListener('click', () => openStaffModal());
+    document.getElementById('btn-close-staff').addEventListener('click', () => closeModal('staff-modal'));
+    document.getElementById('btn-cancel-staff').addEventListener('click', () => closeModal('staff-modal'));
+    document.getElementById('btn-save-staff').addEventListener('click', saveStaff);
 }
 
-function addDiner() { const newId = diners.length > 0 ? Math.max(...diners.map(d => d.id)) + 1 : 1; diners.push({ id: newId, name: `Comensal ${newId}`, items: [] }); renderDivideModal(); }
-function removeDiner(dinerId) { const diner = diners.find(d => d.id === dinerId); if (!diner) return; unassignedItems.push(...diner.items); diners = diners.filter(d => d.id !== dinerId); renderDivideModal(); }
-function assignItemToDiner(uid, dinerId) { const itemIdx = unassignedItems.findIndex(i => i.uid === uid); if (itemIdx === -1) return; const item = unassignedItems.splice(itemIdx, 1)[0]; const diner = diners.find(d => d.id === dinerId); if (diner) diner.items.push(item); renderDivideModal(); }
-function removeItemFromDiner(uid, dinerId) { const diner = diners.find(d => d.id === dinerId); if (!diner) return; const itemIdx = diner.items.findIndex(i => i.uid === uid); if (itemIdx === -1) return; const item = diner.items.splice(itemIdx, 1)[0]; unassignedItems.push(item); renderDivideModal(); }
-function updateDinerName(dinerId, newName) { const diner = diners.find(d => d.id === dinerId); if (diner) diner.name = newName; }
+async function loadStaff() {
+    const { data: staffData } = await supabaseClient.from('profiles').select('*').order('full_name');
+    staffList = staffData || [];
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+    const { data: salesData } = await supabaseClient.from('employee_sales').select('*').gte('created_at', monthStart.toISOString());
+    staffSales = salesData || [];
+    renderStaff();
+}
 
-function renderDivideModal() {
-    const dinersList = document.getElementById('diners-list');
-    const unassignedList = document.getElementById('unassigned-items');
-    dinersList.innerHTML = diners.map(diner => {
-        const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
-        const itemsHtml = diner.items.map(item => `<div class="diner-item"><span class="diner-item-name">${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span><div class="diner-item-controls"><button class="diner-item-btn remove" onclick="removeItemFromDiner(${item.uid}, ${diner.id})">✕</button></div></div>`).join('');
-        return `<div class="diner-card"><div class="diner-header"><div class="diner-name"><input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)"></div><div style="display:flex; align-items:center; gap:0.5rem;"><span class="diner-total">$${Math.round(total).toLocaleString()}</span>${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})">💰 Cobrar</button>` : ''}${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}</div></div><div class="diner-items">${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}</div></div>`;
+function renderStaff() {
+    const grid = document.getElementById('staff-grid');
+    if (!grid) return;
+    document.getElementById('staff-total').textContent = staffList.length;
+    document.getElementById('staff-active').textContent = staffList.filter(s => s.active).length;
+    const totalCommissions = staffSales.reduce((s, v) => s + (v.commission || 0), 0);
+    document.getElementById('staff-commissions').textContent = '$' + Math.round(totalCommissions).toLocaleString();
+    if (staffList.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay empleados registrados</div>'; return; }
+    grid.innerHTML = staffList.map(s => {
+        const sales = staffSales.filter(v => v.employee_id === s.id);
+        const monthSales = sales.reduce((sum, v) => sum + (v.amount || 0), 0);
+        const monthComm = sales.reduce((sum, v) => sum + (v.commission || 0), 0);
+        return `<div class="staff-card ${s.active ? '' : 'inactive'}">
+            <div class="staff-header">
+                <div class="staff-name">${s.full_name || s.email}</div>
+                <span class="staff-role-badge staff-role-${s.role}">${s.role}</span>
+            </div>
+            <div class="staff-email">${s.email}</div>
+            <div class="staff-meta">
+                <span>Ventas mes: <strong>$${Math.round(monthSales).toLocaleString()}</strong></span>
+                <span class="staff-commission">Comisión: $${Math.round(monthComm).toLocaleString()}</span>
+            </div>
+            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : '⛔ Inactivo'}</span></div>
+            <div class="staff-actions">
+                <button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button>
+                <button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">🗑️ Eliminar</button>
+            </div>
+        </div>`;
     }).join('');
-    if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
-    else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
-    document.getElementById('btn-pay-all').textContent = `💰 Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
 }
 
-async function openDinerPayModal(dinerId) {
-    const diner = diners.find(d => d.id === dinerId);
-    if (!diner || diner.items.length === 0) return alert('Este comensal no tiene productos');
-    currentDinerPayId = dinerId; currentDinerPayMethod = 'efectivo';
-    document.getElementById('diner-pay-title').textContent = `Cobrar ${diner.name}`;
-    document.getElementById('diner-cart-items').innerHTML = diner.items.map(item => `<div class="cart-item"><div class="cart-item-name">${item.qty}x ${item.name}</div><div class="cart-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div>`).join('');
-    const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
-    document.getElementById('diner-total').textContent = '$' + Math.round(total).toLocaleString();
-    document.getElementById('diner-cash-received').value = '';
-    document.getElementById('diner-change-amount').textContent = '$0';
-    document.querySelectorAll('#diner-method-buttons .method-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('#diner-method-buttons .method-btn[data-method="efectivo"]').classList.add('active');
-    document.getElementById('diner-cash-section').style.display = 'block';
-    document.getElementById('diner-pay-modal').classList.add('active');
+function openStaffModal(staff = null) {
+    document.getElementById('staff-modal-title').textContent = staff ? 'Editar Empleado' : 'Nuevo Empleado';
+    document.getElementById('staff-id').value = staff ? staff.id : '';
+    document.getElementById('staff-name').value = staff ? (staff.full_name || '') : '';
+    document.getElementById('staff-email').value = staff ? staff.email : '';
+    document.getElementById('staff-password').value = '';
+    document.getElementById('staff-role').value = staff ? staff.role : 'cajero';
+    document.getElementById('staff-commission').value = staff ? (staff.commission_rate || 0) : 0;
+    document.getElementById('staff-active').value = staff ? String(staff.active) : 'true';
+    document.getElementById('staff-modal').classList.add('active');
 }
 
-async function confirmDinerPayment() {
-    const diner = diners.find(d => d.id === currentDinerPayId);
-    if (!diner) return;
-    const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
-    if (currentDinerPayMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('diner-cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
+async function saveStaff() {
+    const id = document.getElementById('staff-id').value;
+    const full_name = document.getElementById('staff-name').value.trim();
+    const email = document.getElementById('staff-email').value.trim();
+    const password = document.getElementById('staff-password').value;
+    const role = document.getElementById('staff-role').value;
+    const commission_rate = parseFloat(document.getElementById('staff-commission').value) || 0;
+    const active = document.getElementById('staff-active').value === 'true';
+    if (!full_name || !email) return alert('Nombre y email son obligatorios');
     try {
-        const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ type: 'mesa', status: 'nuevo', total: total, paid: true, pay_method: currentDinerPayMethod, source: 'tpv', user_email: currentUser?.email, table_id: activeTableId, diner_name: diner.name }]).select().single();
-        if (orderError) throw orderError;
-        const orderItems = diner.items.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty }));
-        const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
-        if (itemsError) throw itemsError;
-        printTicket(order, diner.items);
-        await deductInventory(diner.items);
-        await recordEmployeeSale(order.id, total);
-        const remainingItems = currentTableOrder.order_items.filter(origItem => !diner.items.some(dinerItem => dinerItem.orderItemId === origItem.id));
-        const newTotal = remainingItems.reduce((s, i) => s + (i.price * i.qty), 0);
-        if (remainingItems.length === 0) { await supabaseClient.from('orders').update({ status: 'nuevo', paid: true }).eq('id', currentTableOrder.id); await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId); currentTableOrder = null; }
-        else { await supabaseClient.from('orders').update({ total: newTotal }).eq('id', currentTableOrder.id); const paidItemIds = diner.items.map(i => i.orderItemId); await supabaseClient.from('order_items').delete().in('id', paidItemIds); currentTableOrder.order_items = remainingItems; currentTableOrder.total = newTotal; }
-        addNotification('pago', `✓ ${diner.name} pagó`, `$${Math.round(total).toLocaleString()} | ${currentDinerPayMethod.toUpperCase()}`);
-        closeModal('diner-pay-modal'); closeModal('divide-modal'); renderCart(); renderTableOrder(); loadTables();
+        if (id) {
+            const { error } = await supabaseClient.from('profiles').update({ full_name, email, role, commission_rate, active }).eq('id', id);
+            if (error) throw error;
+        } else {
+            if (!password || password.length < 6) return alert('La contraseña debe tener al menos 6 caracteres');
+            const { data: newUser, error: authError } = await supabaseClient.auth.signUp({ email, password });
+            if (authError) throw authError;
+            if (!newUser.user) throw new Error('No se pudo crear el usuario');
+            const { error: profError } = await supabaseClient.from('profiles').insert([{ id: newUser.user.id, email, full_name, role, commission_rate, active }]);
+            if (profError) throw profError;
+        }
+        closeModal('staff-modal');
+        loadStaff();
+        showToast('pago', '✓ Empleado guardado', full_name);
     } catch (error) { alert('Error: ' + error.message); }
+}
+
+async function editStaff(id) { const s = staffList.find(x => x.id === id); if (s) openStaffModal(s); }
+
+async function deleteStaff(id) {
+    if (id === currentUser.id) return alert('No puedes eliminar tu propia cuenta');
+    if (!confirm('¿Eliminar este empleado?')) return;
+    try {
+        const { error } = await supabaseClient.from('profiles').delete().eq('id', id);
+        if (error) throw error;
+        loadStaff();
+        showToast('pago', '🗑️ Empleado eliminado', '');
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
+async function recordEmployeeSale(orderId, amount) {
+    if (!currentProfile) return;
+    const commission = amount * ((currentProfile.commission_rate || 0) / 100);
+    await supabaseClient.from('employee_sales').insert([{ order_id: orderId, employee_id: currentProfile.id, amount, commission }]);
 }
 
 // ============ PRODUCTOS Y CARRITO ============
@@ -579,6 +745,25 @@ function updateTotals(total) {
     const btnPay = document.getElementById('btn-pay');
     if (activeTableId) { btnPay.textContent = currentTableOrder ? `AÑADIR MÁS A MESA ($${Math.round(total).toLocaleString()})` : `AÑADIR A MESA ($${Math.round(total).toLocaleString()})`; }
     else { btnPay.textContent = `COBRAR ($${Math.round(total).toLocaleString()})`; }
+}
+
+function setupPOSEvents() {
+    document.getElementById('product-grid').addEventListener('click', e => { const card = e.target.closest('.product-card'); if (card) addToCart(Number(card.dataset.id)); });
+    document.getElementById('categories-bar').addEventListener('click', e => { const btn = e.target.closest('.cat-btn'); if (btn) { document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentCategory = btn.dataset.cat; renderProducts(); } });
+    document.getElementById('btn-clear').addEventListener('click', () => { if (cart.length > 0 && confirm('¿Limpiar carrito?')) { cart = []; renderCart(); renderTableOrder(); } });
+    document.getElementById('btn-pay').addEventListener('click', () => { if (activeTableId) addToTable(); else openPayModal(); });
+    document.getElementById('btn-close-modal').addEventListener('click', () => closeModal('pay-modal'));
+    document.getElementById('btn-cancel-pay').addEventListener('click', () => closeModal('pay-modal'));
+    document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); orderType = e.target.dataset.type; }));
+    document.querySelectorAll('.method-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); payMethod = e.target.dataset.method; document.getElementById('cash-section').style.display = payMethod === 'efectivo' ? 'block' : 'none'; }));
+    document.getElementById('cash-received').addEventListener('input', (e) => {
+        const base = getBaseTotal();
+        const discount = redeemPoints * POINT_VALUE;
+        const final = Math.max(0, base - discount);
+        const received = parseFloat(e.target.value) || 0;
+        document.getElementById('change-amount').textContent = '$' + Math.max(0, Math.round(received - final)).toLocaleString();
+    });
+    document.getElementById('btn-confirm-pay').addEventListener('click', () => { if (currentTableOrder) confirmPaymentForTable(); else confirmPayment(); });
 }
 
 // ============ MESAS ============
@@ -688,6 +873,7 @@ async function addToTable() {
 // ============ PAGOS ============
 function openPayModal() {
     if (cart.length === 0) return alert('Carrito vacío');
+    resetLoyaltyUI();
     document.getElementById('modal-title').textContent = 'Finalizar Pedido (Mostrador)';
     document.getElementById('modal-cart-items').innerHTML = cart.map(item => `<div class="cart-item"><div class="cart-item-name">${item.name} x${item.qty}</div><div class="cart-item-price">$${(item.price * item.qty).toLocaleString()}</div></div>`).join('');
     const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
@@ -701,6 +887,7 @@ function openPayModal() {
 
 function openPayModalForTable() {
     if (!currentTableOrder) return;
+    resetLoyaltyUI();
     document.getElementById('modal-title').textContent = `Cobrar Mesa ${tables.find(t => t.id === activeTableId)?.name}`;
     const itemsGrouped = {};
     currentTableOrder.order_items.forEach(item => { const key = item.name; if (!itemsGrouped[key]) itemsGrouped[key] = { name: item.name, qty: 0, price: item.price }; itemsGrouped[key].qty += item.qty; });
@@ -714,7 +901,9 @@ function openPayModalForTable() {
 }
 
 async function confirmPayment() {
-    const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    const base = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    const discount = redeemPoints * POINT_VALUE;
+    const total = Math.max(0, base - discount);
     if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
     try {
         const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, source: 'tpv', user_email: currentUser?.email, table_id: null }]).select().single();
@@ -722,7 +911,8 @@ async function confirmPayment() {
         const orderItems = cart.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty }));
         const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
         if (itemsError) throw itemsError;
-        printTicket(order, cart);
+        const loyalty = await applyLoyalty(order.id, total);
+        printTicket(order, cart, loyalty);
         await deductInventory(cart);
         await recordEmployeeSale(order.id, total);
         addNotification('pago', `✓ Pedido #${order.id} cobrado`, `Total: $${Math.round(total).toLocaleString()} | ${payMethod.toUpperCase()}`);
@@ -733,13 +923,16 @@ async function confirmPayment() {
 }
 
 async function confirmPaymentForTable() {
-    const total = currentTableOrder.total;
+    const base = currentTableOrder.total;
+    const discount = redeemPoints * POINT_VALUE;
+    const total = Math.max(0, base - discount);
     if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
     try {
-        const { error } = await supabaseClient.from('orders').update({ status: 'nuevo', paid: true, pay_method: payMethod }).eq('id', currentTableOrder.id);
+        const { error } = await supabaseClient.from('orders').update({ status: 'nuevo', paid: true, pay_method: payMethod, total }).eq('id', currentTableOrder.id);
         if (error) throw error;
         await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId);
-        printTicket(currentTableOrder, currentTableOrder.order_items);
+        const loyalty = await applyLoyalty(currentTableOrder.id, total);
+        printTicket(currentTableOrder, currentTableOrder.order_items, loyalty);
         await deductInventory(currentTableOrder.order_items);
         await recordEmployeeSale(currentTableOrder.id, total);
         addNotification('pago', `✓ Mesa cobrada`, `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
@@ -748,13 +941,14 @@ async function confirmPaymentForTable() {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
-function printTicket(order, items) {
+function printTicket(order, items, loyalty) {
     const printArea = document.getElementById('ticket-print-area');
     const date = new Date().toLocaleString('es-ES');
     const qrUrl = `${window.location.origin}/valorar.html?p=${order.id}`;
     const tableText = order.table_id ? ` | Mesa: ${order.table_id}` : '';
     const dinerText = order.diner_name ? ` | ${order.diner_name}` : '';
-    printArea.innerHTML = `<div class="ticket-header"><h3>TPV PUNTO VERDE</h3><p>${date}</p><p>Pedido #${order.id}${tableText}${dinerText}</p><p>Cajero: ${currentProfile?.full_name || currentUser?.email || 'N/A'}</p></div><div class="ticket-divider"></div>${items.map(i => `<div class="ticket-item"><span>${i.qty}x ${i.name.substring(0, 20)}</span><span>$${Math.round(i.price * i.qty).toLocaleString()}</span></div>`).join('')}<div class="ticket-divider"></div><div class="ticket-total">TOTAL: $${Math.round(order.total).toLocaleString()}</div><div class="ticket-footer"><p>¡Gracias!</p><div id="qr-code"></div></div>`;
+    const loyaltyHtml = loyalty ? `<div class="ticket-divider"></div><div class="ticket-item"><span>Cliente: ${loyalty.name}</span><span></span></div><div class="ticket-item"><span>Puntos ganados</span><span>+${loyalty.earned}</span></div><div class="ticket-item"><span>Saldo de puntos</span><span>${Math.round(loyalty.newBalance)}</span></div>` : '';
+    printArea.innerHTML = `<div class="ticket-header"><h3>TPV PUNTO VERDE</h3><p>${date}</p><p>Pedido #${order.id}${tableText}${dinerText}</p><p>Cajero: ${currentProfile?.full_name || currentUser?.email || 'N/A'}</p></div><div class="ticket-divider"></div>${items.map(i => `<div class="ticket-item"><span>${i.qty}x ${i.name.substring(0, 20)}</span><span>$${Math.round(i.price * i.qty).toLocaleString()}</span></div>`).join('')}<div class="ticket-divider"></div><div class="ticket-total">TOTAL: $${Math.round(order.total).toLocaleString()}</div>${loyaltyHtml}<div class="ticket-footer"><p>¡Gracias!</p><div id="qr-code"></div></div>`;
     setTimeout(() => { const qrContainer = document.getElementById('qr-code'); qrContainer.innerHTML = ''; new QRCode(qrContainer, { text: qrUrl, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.L }); setTimeout(() => window.print(), 500); }, 100);
 }
 
@@ -784,6 +978,17 @@ async function updateOrderStatus(orderId, newStatus) {
 }
 
 // ============ REPORTES ============
+function setupReportFilters() {
+    document.querySelectorAll('.report-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.report-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentReportPeriod = btn.dataset.period;
+            loadReports(currentReportPeriod);
+        });
+    });
+}
+
 function getDateRange(period) { const now = new Date(); const end = new Date(now); end.setHours(23, 59, 59, 999); const start = new Date(now); if (period === 'today') start.setHours(0, 0, 0, 0); else if (period === 'week') { const day = start.getDay(); const diff = start.getDate() - day + (day === 0 ? -6 : 1); start.setDate(diff); start.setHours(0, 0, 0, 0); } else if (period === 'month') { start.setDate(1); start.setHours(0, 0, 0, 0); } const d = new Date(start); if (period === 'today') d.setDate(d.getDate() - 1); else if (period === 'week') d.setDate(d.getDate() - 7); else if (period === 'month') d.setMonth(d.getMonth() - 1); return { start: start.toISOString(), end: end.toISOString(), prevStart: d.toISOString(), prevEnd: start.toISOString() }; }
 
 async function loadReports(period) {
@@ -811,6 +1016,16 @@ async function loadReports(period) {
 }
 
 // ============ NOTIFICACIONES ============
+function setupNotificationsPanel() {
+    document.getElementById('btn-notifications').addEventListener('click', () => {
+        const panel = document.getElementById('notifications-panel');
+        panel.classList.toggle('open');
+        if (panel.classList.contains('open')) { unreadNotifs = 0; updateNotifBadge(); renderNotifications(); }
+    });
+    document.getElementById('btn-clear-notifs').addEventListener('click', () => { notifications = []; renderNotifications(); updateNotifBadge(); });
+    document.getElementById('btn-close-notifs').addEventListener('click', () => { document.getElementById('notifications-panel').classList.remove('open'); });
+}
+
 function addNotification(tipo, title, message) { const notif = { id: Date.now(), tipo, title, message, time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) }; notifications.unshift(notif); if (notifications.length > 50) notifications.pop(); unreadNotifs++; updateNotifBadge(); showToast(tipo, title, message); renderNotifications(); }
 function updateNotifBadge() { const badge = document.getElementById('notif-badge'); badge.textContent = unreadNotifs; badge.style.display = unreadNotifs > 0 ? 'flex' : 'none'; }
 function renderNotifications() { const list = document.getElementById('notif-list'); if (notifications.length === 0) { list.innerHTML = '<div class="notif-empty">No hay notificaciones</div>'; return; } list.innerHTML = notifications.map(n => `<div class="notif-item tipo-${n.tipo}"><div class="notif-title">${n.title}</div><div class="notif-message">${n.message}</div><div class="notif-time">${n.time}</div></div>`).join(''); }
@@ -844,5 +1059,8 @@ window.openRecipeModal = openRecipeModal;
 window.editStaff = editStaff;
 window.deleteStaff = deleteStaff;
 window.openTableQR = openTableQR;
+window.selectCustomer = selectCustomer;
+window.editCustomer = editCustomer;
+window.viewHistory = viewHistory;
 
 init();

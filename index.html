@@ -39,8 +39,12 @@
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen" data-perm="kitchen">
-                    <span class="nav-icon">👨‍🍳</span>
+                    <span class="nav-icon">👨‍</span>
                     <span>Cocina</span>
+                </li>
+                <li class="nav-item" data-view="customers" data-perm="customers">
+                    <span class="nav-icon">👤</span>
+                    <span>Clientes</span>
                 </li>
                 <li class="nav-item" data-view="inventory" data-perm="inventory">
                     <span class="nav-icon">📦</span>
@@ -146,6 +150,34 @@
                     <div class="column"><h2 class="column-header status-nuevo">🔴 Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
                     <div class="column"><h2 class="column-header status-cocina">🟠 En Cocina</h2><div class="orders-list" id="orders-cocina"></div></div>
                     <div class="column"><h2 class="column-header status-listo">🟢 Listos</h2><div class="orders-list" id="orders-listo"></div></div>
+                </div>
+            </section>
+
+            <!-- VISTA CLIENTES -->
+            <section id="view-customers" class="view">
+                <header class="view-header">
+                    <h1>👤 Clientes y Fidelidad</h1>
+                    <button class="btn-primary" id="btn-add-customer">+ Nuevo Cliente</button>
+                </header>
+                <div class="customers-container">
+                    <div class="cust-stats">
+                        <div class="cust-stat-card">
+                            <div class="cust-stat-label">Total Clientes</div>
+                            <div class="cust-stat-value" id="cust-total">0</div>
+                        </div>
+                        <div class="cust-stat-card">
+                            <div class="cust-stat-label">Puntos en Circulación</div>
+                            <div class="cust-stat-value" id="cust-points">0</div>
+                        </div>
+                        <div class="cust-stat-card">
+                            <div class="cust-stat-label">Cliente Top</div>
+                            <div class="cust-stat-value cust-stat-text" id="cust-top">—</div>
+                        </div>
+                    </div>
+                    <div class="inventory-filters">
+                        <input type="text" id="cust-search" placeholder="🔍 Buscar por nombre o teléfono..." class="inv-search-input">
+                    </div>
+                    <div class="customers-grid" id="customers-grid"></div>
                 </div>
             </section>
 
@@ -322,9 +354,32 @@
                     <div class="modal-totals">
                         <div class="summary-row"><span>Subtotal</span><span id="modal-subtotal">$0</span></div>
                         <div class="summary-row"><span>IVA</span><span id="modal-tax">$0</span></div>
+                        <div class="summary-row" id="modal-discount-row" style="display:none; color: var(--primary);"><span>Descuento puntos</span><span id="modal-discount">-$0</span></div>
                         <div class="summary-row total"><span>TOTAL</span><span id="modal-total">$0</span></div>
                     </div>
                 </div>
+
+                <!-- SECCIÓN FIDELIDAD -->
+                <div class="loyalty-section">
+                    <h3>🎁 Cliente Fidelidad (opcional)</h3>
+                    <div id="loyalty-search-box">
+                        <input type="text" id="customer-search" placeholder="Buscar por nombre o teléfono..." class="loyalty-search">
+                        <div class="customer-suggestions" id="customer-suggestions"></div>
+                    </div>
+                    <div class="selected-customer" id="selected-customer" style="display:none;">
+                        <div class="selected-customer-info">
+                            <strong id="sel-cust-name"></strong>
+                            <span id="sel-cust-points" class="sel-points"></span>
+                        </div>
+                        <button class="remove-customer" id="btn-remove-customer">✕</button>
+                    </div>
+                    <div class="redeem-row" id="redeem-row" style="display:none;">
+                        <label>Canjear puntos (100 pts = $5):</label>
+                        <input type="number" id="redeem-points" placeholder="0" min="0">
+                        <div class="redeem-discount">Descuento: <span id="redeem-discount">$0</span></div>
+                    </div>
+                </div>
+
                 <div class="order-type">
                     <h3>Tipo de Pedido</h3>
                     <div class="type-buttons">
@@ -417,6 +472,55 @@
         </div>
     </div>
 
+    <!-- MODAL CLIENTE -->
+    <div id="customer-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="customer-modal-title">Nuevo Cliente</h2>
+                <button class="close-btn" id="btn-close-customer">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="customer-id">
+                <div class="input-group">
+                    <label>Nombre completo:</label>
+                    <input type="text" id="customer-name" placeholder="Ej: María González">
+                </div>
+                <div class="input-group">
+                    <label>Teléfono:</label>
+                    <input type="text" id="customer-phone" placeholder="Ej: 3001234567">
+                </div>
+                <div class="input-group">
+                    <label>Email:</label>
+                    <input type="email" id="customer-email" placeholder="cliente@email.com">
+                </div>
+                <div class="input-group">
+                    <label>Fecha de nacimiento (opcional):</label>
+                    <input type="date" id="customer-birthday">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-customer">Cancelar</button>
+                <button class="confirm-btn" id="btn-save-customer">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HISTORIAL DE PUNTOS -->
+    <div id="history-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="history-modal-title">Historial de Puntos</h2>
+                <button class="close-btn" id="btn-close-history">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="history-list" id="history-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-history">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: AGREGAR/EDITAR INGREDIENTE -->
     <div id="ingredient-modal" class="modal-overlay">
         <div class="modal-content">
@@ -484,7 +588,7 @@
         </div>
     </div>
 
-    <!-- MODAL: AGREGAR/EDITAR EMPLEADO -->
+    <!-- MODAL: EMPLEADO -->
     <div id="staff-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
