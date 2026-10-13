@@ -2,6 +2,7 @@ const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ============ VARIABLES GLOBALES ============
 let currentUser = null;
 let currentProfile = null;
 let cart = [];
@@ -33,14 +34,38 @@ let selectedCustomer = null;
 let redeemPoints = 0;
 let loyaltySettings = { points_per_unit: 1, point_value: 0.05, birthday_multiplier: 2 };
 let reservations = [];
+let invoices = [];
+let restaurantSettings = {
+    business_name: 'TPV Punto Verde',
+    nif: '',
+    address: '',
+    city: 'Almería',
+    postal_code: '04001',
+    province: 'Almería',
+    country: 'España',
+    phone: '',
+    email: '',
+    website: '',
+    iva_general: 21,
+    iva_reducido: 10,
+    iva_superreducido: 4,
+    iva_default: 10,
+    invoice_series: 'A',
+    invoice_year: 2026,
+    invoice_counter: 0,
+    logo_url: ''
+};
+let currentInvoice = null;
+let invoiceItems = [];
 
 const ROLE_PERMISSIONS = {
-    admin: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'inventory', 'reports', 'cash', 'staff'],
-    cajero: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'reports', 'cash'],
+    admin: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'inventory', 'invoices', 'reports', 'cash', 'staff'],
+    cajero: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'invoices', 'reports', 'cash'],
     mesero: ['tables', 'pos', 'reservations'],
     cocina: ['kitchen']
 };
 
+// ============ INICIALIZACIÓN ============
 async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) { currentUser = session.user; await loadProfile(); showApp(); } else { showLogin(); }
@@ -55,6 +80,7 @@ async function init() {
     setupCustomerEvents();
     setupLoyaltySettingsEvents();
     setupReservationEvents();
+    setupInvoiceEvents();
 }
 
 async function loadProfile() {
@@ -65,6 +91,11 @@ async function loadProfile() {
 async function loadLoyaltySettings() {
     const { data } = await supabaseClient.from('loyalty_settings').select('*').eq('id', 1).single();
     if (data) loyaltySettings = data;
+}
+
+async function loadRestaurantSettings() {
+    const { data } = await supabaseClient.from('restaurant_settings').select('*').eq('id', 1).single();
+    if (data) restaurantSettings = data;
 }
 
 function applyPermissions() {
@@ -78,6 +109,8 @@ function applyPermissions() {
     document.getElementById('user-role').textContent = role.toUpperCase();
     const loyaltyBtn = document.getElementById('btn-loyalty-settings');
     if (loyaltyBtn) loyaltyBtn.style.display = (role === 'admin') ? 'inline-block' : 'none';
+    const fiscalBtn = document.getElementById('btn-fiscal-settings');
+    if (fiscalBtn) fiscalBtn.style.display = (role === 'admin') ? 'inline-block' : 'none';
     const firstAllowed = perms[0];
     const firstNavItem = document.querySelector(`.nav-item[data-perm="${firstAllowed}"]`);
     if (firstNavItem) {
@@ -99,9 +132,11 @@ function showApp() {
     document.getElementById('user-name').textContent = currentProfile?.full_name || currentUser.email;
     applyPermissions();
     loadLoyaltySettings();
+    loadRestaurantSettings();
     loadProducts();
     loadTables();
     loadReservations();
+    loadInvoices();
     loadCashStatus();
     loadIngredients();
     loadStaff();
@@ -110,6 +145,7 @@ function showApp() {
     setupRealtimeGlobal();
 }
 
+// ============ LOGIN ============
 function setupLoginEvents() {
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -137,6 +173,7 @@ function setupLoginEvents() {
     });
 }
 
+// ============ NAVEGACIÓN ============
 function setupNavigation() {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -152,6 +189,7 @@ function setupNavigation() {
             else if (view === 'reservations') loadReservations();
             else if (view === 'customers') loadCustomers();
             else if (view === 'inventory') loadIngredients();
+            else if (view === 'invoices') loadInvoices();
             else if (view === 'reports') loadReports(currentReportPeriod);
             else if (view === 'cash') loadCashStatus();
             else if (view === 'staff') loadStaff();
@@ -166,6 +204,559 @@ function setupNavigation() {
         document.getElementById('view-tables').classList.add('active');
         loadTables();
     });
+}
+
+// ============ NOTIFICACIONES ============
+function setupNotificationsPanel() {
+    document.getElementById('btn-notifications').addEventListener('click', () => {
+        const panel = document.getElementById('notifications-panel');
+        panel.classList.toggle('open');
+        if (panel.classList.contains('open')) { unreadNotifs = 0; updateNotifBadge(); renderNotifications(); }
+    });
+    document.getElementById('btn-clear-notifs').addEventListener('click', () => { notifications = []; renderNotifications(); updateNotifBadge(); });
+    document.getElementById('btn-close-notifs').addEventListener('click', () => { document.getElementById('notifications-panel').classList.remove('open'); });
+}
+
+function addNotification(tipo, title, message) {
+    const notif = { id: Date.now(), tipo, title, message, time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) };
+    notifications.unshift(notif);
+    if (notifications.length > 50) notifications.pop();
+    unreadNotifs++;
+    updateNotifBadge();
+    showToast(tipo, title, message);
+    renderNotifications();
+}
+
+function updateNotifBadge() {
+    const badge = document.getElementById('notif-badge');
+    badge.textContent = unreadNotifs;
+    badge.style.display = unreadNotifs > 0 ? 'flex' : 'none';
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notif-list');
+    if (notifications.length === 0) { list.innerHTML = '<div class="notif-empty">No hay notificaciones</div>'; return; }
+    list.innerHTML = notifications.map(n => `<div class="notif-item tipo-${n.tipo}"><div class="notif-title">${n.title}</div><div class="notif-message">${n.message}</div><div class="notif-time">${n.time}</div></div>`).join('');
+}
+
+function showToast(tipo, title, message) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast tipo-${tipo}`;
+    toast.innerHTML = `<div class="toast-title">${title}</div><div class="toast-message">${message}</div>`;
+    container.appendChild(toast);
+    setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 4000);
+}
+
+// ============ REPORTES ============
+function setupReportFilters() {
+    document.querySelectorAll('.report-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.report-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentReportPeriod = btn.dataset.period;
+            loadReports(currentReportPeriod);
+        });
+    });
+}
+
+function getDateRange(period) {
+    const now = new Date();
+    const end = new Date(now); end.setHours(23, 59, 59, 999);
+    const start = new Date(now);
+    if (period === 'today') start.setHours(0, 0, 0, 0);
+    else if (period === 'week') { const day = start.getDay(); const diff = start.getDate() - day + (day === 0 ? -6 : 1); start.setDate(diff); start.setHours(0, 0, 0, 0); }
+    else if (period === 'month') { start.setDate(1); start.setHours(0, 0, 0, 0); }
+    const d = new Date(start);
+    if (period === 'today') d.setDate(d.getDate() - 1);
+    else if (period === 'week') d.setDate(d.getDate() - 7);
+    else if (period === 'month') d.setMonth(d.getMonth() - 1);
+    return { start: start.toISOString(), end: end.toISOString(), prevStart: d.toISOString(), prevEnd: start.toISOString() };
+}
+
+async function loadReports(period) {
+    const range = getDateRange(period);
+    const { data: currentOrders } = await supabaseClient.from('orders').select('*, order_items(*)').eq('paid', true).gte('created_at', range.start).lte('created_at', range.end).order('created_at', { ascending: false });
+    const { data: prevOrders } = await supabaseClient.from('orders').select('*').eq('paid', true).gte('created_at', range.prevStart).lte('created_at', range.prevEnd);
+    const orders = currentOrders || [];
+    const prev = prevOrders || [];
+    const totalVentas = orders.reduce((s, o) => s + (o.total || 0), 0);
+    const totalPedidos = orders.length;
+    const ticketPromedio = totalPedidos > 0 ? totalVentas / totalPedidos : 0;
+    const prevVentas = prev.reduce((s, o) => s + (o.total || 0), 0);
+    const prevPedidos = prev.length;
+    const metodos = {};
+    orders.forEach(o => { metodos[o.pay_method] = (metodos[o.pay_method] || 0) + o.total; });
+    const metodoTop = Object.entries(metodos).sort((a, b) => b[1] - a[1])[0];
+    document.getElementById('kpi-ventas').textContent = '€' + Math.round(totalVentas).toLocaleString();
+    document.getElementById('kpi-pedidos').textContent = totalPedidos;
+    document.getElementById('kpi-ticket').textContent = '€' + Math.round(ticketPromedio).toLocaleString();
+    document.getElementById('kpi-metodo').textContent = metodoTop ? metodoTop[0].toUpperCase() : '—';
+    document.getElementById('kpi-metodo-detail').textContent = metodoTop ? '€' + Math.round(metodoTop[1]).toLocaleString() : '—';
+    const renderTrend = (elId, cur, prev) => {
+        const el = document.getElementById(elId);
+        if (prev === 0) { el.textContent = '—'; el.className = 'kpi-trend neutral'; return; }
+        const change = ((cur - prev) / prev) * 100;
+        el.textContent = `${change >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(change))}% vs anterior`;
+        el.className = 'kpi-trend ' + (change > 0 ? 'up' : change < 0 ? 'down' : 'neutral');
+    };
+    renderTrend('kpi-ventas-trend', totalVentas, prevVentas);
+    renderTrend('kpi-pedidos-trend', totalPedidos, prevPedidos);
+    renderTrend('kpi-ticket-trend', ticketPromedio, prevPedidos > 0 ? prevVentas / prevPedidos : 0);
+    const horas = new Array(24).fill(0);
+    orders.forEach(o => { horas[new Date(o.created_at).getHours()] += o.total; });
+    if (chartHoras) chartHoras.destroy();
+    chartHoras = new Chart(document.getElementById('chart-horas').getContext('2d'), {
+        type: 'bar',
+        data: { labels: Array.from({length: 24}, (_, i) => `${i}:00`), datasets: [{ label: 'Ventas (€)', data: horas, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '€' + v } }, x: { ticks: { maxTicksLimit: 12 } } } }
+    });
+    const productos = {};
+    orders.forEach(o => { (o.order_items || []).forEach(item => { if (!productos[item.name]) productos[item.name] = 0; productos[item.name] += item.qty; }); });
+    const sorted = Object.entries(productos).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (chartProductos) chartProductos.destroy();
+    chartProductos = new Chart(document.getElementById('chart-productos').getContext('2d'), {
+        type: 'doughnut',
+        data: { labels: sorted.map(p => p[0].length > 20 ? p[0].substring(0, 20) + '...' : p[0]), datasets: [{ data: sorted.map(p => p[1]), backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6'], borderWidth: 2, borderColor: '#fff' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+    });
+    const tbody = document.getElementById('recent-orders-body');
+    tbody.innerHTML = orders.slice(0, 10).map(o => {
+        const date = new Date(o.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        return `<tr><td>#${o.id}</td><td>${date}</td><td>${(o.type || 'mostrador').toUpperCase()}</td><td>${(o.pay_method || '—').toUpperCase()}</td><td><strong>€${Math.round(o.total).toLocaleString()}</strong></td></tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center; color: var(--text-gray); padding: 1rem;">Sin pedidos</td></tr>';
+}
+
+// ============ FACTURACIÓN ELECTRÓNICA ============
+function setupInvoiceEvents() {
+    document.getElementById('btn-fiscal-settings').addEventListener('click', openFiscalModal);
+    document.getElementById('btn-close-fiscal').addEventListener('click', () => closeModal('fiscal-settings-modal'));
+    document.getElementById('btn-cancel-fiscal').addEventListener('click', () => closeModal('fiscal-settings-modal'));
+    document.getElementById('btn-save-fiscal').addEventListener('click', saveFiscalSettings);
+    document.getElementById('btn-new-invoice').addEventListener('click', () => openInvoiceModal());
+    document.getElementById('btn-close-invoice').addEventListener('click', () => closeModal('invoice-modal'));
+    document.getElementById('btn-cancel-invoice').addEventListener('click', () => closeModal('invoice-modal'));
+    document.getElementById('btn-save-invoice').addEventListener('click', saveInvoice);
+    document.getElementById('btn-add-invoice-item').addEventListener('click', addInvoiceItem);
+    document.getElementById('inv-type').addEventListener('change', updateInvoiceForm);
+    document.getElementById('btn-close-view-invoice').addEventListener('click', () => closeModal('view-invoice-modal'));
+    document.getElementById('btn-cancel-view-invoice').addEventListener('click', () => closeModal('view-invoice-modal'));
+    document.getElementById('btn-send-invoice').addEventListener('click', sendInvoiceByEmail);
+    document.getElementById('btn-print-invoice').addEventListener('click', printInvoice);
+    document.getElementById('inv-date-from').addEventListener('change', renderInvoices);
+    document.getElementById('inv-date-to').addEventListener('change', renderInvoices);
+    document.getElementById('inv-type-filter').addEventListener('change', renderInvoices);
+    document.getElementById('inv-status-filter').addEventListener('change', renderInvoices);
+}
+
+function openFiscalModal() {
+    document.getElementById('set-business-name').value = restaurantSettings.business_name || '';
+    document.getElementById('set-nif').value = restaurantSettings.nif || '';
+    document.getElementById('set-address').value = restaurantSettings.address || '';
+    document.getElementById('set-city').value = restaurantSettings.city || 'Almería';
+    document.getElementById('set-postal').value = restaurantSettings.postal_code || '04001';
+    document.getElementById('set-province').value = restaurantSettings.province || 'Almería';
+    document.getElementById('set-phone').value = restaurantSettings.phone || '';
+    document.getElementById('set-email').value = restaurantSettings.email || '';
+    document.getElementById('set-iva-general').value = restaurantSettings.iva_general || 21;
+    document.getElementById('set-iva-reducido').value = restaurantSettings.iva_reducido || 10;
+    document.getElementById('set-iva-super').value = restaurantSettings.iva_superreducido || 4;
+    document.getElementById('set-iva-default').value = restaurantSettings.iva_default || 10;
+    document.getElementById('set-invoice-series').value = restaurantSettings.invoice_series || 'A';
+    document.getElementById('set-invoice-counter').value = restaurantSettings.invoice_counter || 0;
+    document.getElementById('fiscal-settings-modal').classList.add('active');
+}
+
+async function saveFiscalSettings() {
+    const settings = {
+        business_name: document.getElementById('set-business-name').value.trim(),
+        nif: document.getElementById('set-nif').value.trim(),
+        address: document.getElementById('set-address').value.trim(),
+        city: document.getElementById('set-city').value.trim(),
+        postal_code: document.getElementById('set-postal').value.trim(),
+        province: document.getElementById('set-province').value.trim(),
+        phone: document.getElementById('set-phone').value.trim(),
+        email: document.getElementById('set-email').value.trim(),
+        iva_general: parseFloat(document.getElementById('set-iva-general').value) || 21,
+        iva_reducido: parseFloat(document.getElementById('set-iva-reducido').value) || 10,
+        iva_superreducido: parseFloat(document.getElementById('set-iva-super').value) || 4,
+        iva_default: parseFloat(document.getElementById('set-iva-default').value) || 10,
+        invoice_series: document.getElementById('set-invoice-series').value.trim() || 'A',
+        invoice_counter: parseInt(document.getElementById('set-invoice-counter').value) || 0,
+        updated_at: new Date().toISOString()
+    };
+    try {
+        const { error } = await supabaseClient.from('restaurant_settings').update(settings).eq('id', 1);
+        if (error) throw error;
+        restaurantSettings = { ...restaurantSettings, ...settings };
+        closeModal('fiscal-settings-modal');
+        showToast('pago', '⚙️ Configuración fiscal guardada', '');
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
+function openInvoiceModal() {
+    invoiceItems = [{ description: '', quantity: 1, price: 0, iva_rate: restaurantSettings.iva_default }];
+    document.getElementById('invoice-modal-title').textContent = 'Nueva Factura';
+    document.getElementById('inv-type').value = 'simplificada';
+    document.getElementById('inv-customer-name').value = '';
+    document.getElementById('inv-customer-nif').value = '';
+    document.getElementById('inv-customer-address').value = '';
+    document.getElementById('inv-customer-email').value = '';
+    document.getElementById('inv-customer-phone').value = '';
+    document.getElementById('inv-notes').value = '';
+    updateInvoiceForm();
+    renderInvoiceItems();
+    document.getElementById('invoice-modal').classList.add('active');
+}
+
+function updateInvoiceForm() {
+    const type = document.getElementById('inv-type').value;
+    const nifField = document.getElementById('inv-customer-nif');
+    const addressField = document.getElementById('inv-customer-address');
+    if (type === 'completa') { nifField.required = true; addressField.required = true; }
+    else { nifField.required = false; addressField.required = false; }
+}
+
+function addInvoiceItem() {
+    invoiceItems.push({ description: '', quantity: 1, price: 0, iva_rate: restaurantSettings.iva_default });
+    renderInvoiceItems();
+}
+
+function removeInvoiceItem(idx) {
+    invoiceItems.splice(idx, 1);
+    renderInvoiceItems();
+}
+
+function renderInvoiceItems() {
+    const container = document.getElementById('inv-items-container');
+    container.innerHTML = invoiceItems.map((item, idx) => `
+        <div style="display:grid; grid-template-columns: 2fr 0.5fr 1fr 0.8fr auto; gap:0.5rem; margin-bottom:0.5rem; align-items:end;">
+            <div class="input-group" style="margin:0;">
+                <label>Descripción:</label>
+                <input type="text" value="${item.description}" onchange="updateInvoiceItem(${idx}, 'description', this.value)" placeholder="Producto o servicio">
+            </div>
+            <div class="input-group" style="margin:0;">
+                <label>Cant.:</label>
+                <input type="number" value="${item.quantity}" onchange="updateInvoiceItem(${idx}, 'quantity', parseFloat(this.value))" min="0" step="0.01">
+            </div>
+            <div class="input-group" style="margin:0;">
+                <label>Precio (€):</label>
+                <input type="number" value="${item.price}" onchange="updateInvoiceItem(${idx}, 'price', parseFloat(this.value))" min="0" step="0.01">
+            </div>
+            <div class="input-group" style="margin:0;">
+                <label>IVA %:</label>
+                <select onchange="updateInvoiceItem(${idx}, 'iva_rate', parseFloat(this.value))">
+                    <option value="${restaurantSettings.iva_reducido}" ${item.iva_rate === restaurantSettings.iva_reducido ? 'selected' : ''}>${restaurantSettings.iva_reducido}% (Reducido)</option>
+                    <option value="${restaurantSettings.iva_general}" ${item.iva_rate === restaurantSettings.iva_general ? 'selected' : ''}>${restaurantSettings.iva_general}% (General)</option>
+                    <option value="${restaurantSettings.iva_superreducido}" ${item.iva_rate === restaurantSettings.iva_superreducido ? 'selected' : ''}>${restaurantSettings.iva_superreducido}% (Super)</option>
+                </select>
+            </div>
+            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">🗑️</button>
+        </div>
+    `).join('');
+    calculateInvoiceTotals();
+}
+
+function updateInvoiceItem(idx, field, value) {
+    invoiceItems[idx][field] = value;
+    calculateInvoiceTotals();
+}
+
+function calculateInvoiceTotals() {
+    let subtotal = 0;
+    let ivaAmount = 0;
+    invoiceItems.forEach(item => {
+        const lineTotal = (item.quantity || 0) * (item.price || 0);
+        subtotal += lineTotal;
+        ivaAmount += lineTotal * ((item.iva_rate || 0) / 100);
+    });
+    const total = subtotal + ivaAmount;
+    document.getElementById('inv-subtotal').textContent = '€' + subtotal.toFixed(2);
+    document.getElementById('inv-iva-amount').textContent = '€' + ivaAmount.toFixed(2);
+    document.getElementById('inv-total-amount').textContent = '€' + total.toFixed(2);
+    document.getElementById('inv-iva-rate').textContent = restaurantSettings.iva_default;
+}
+
+async function generateHash(data) {
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(data);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function saveInvoice() {
+    const type = document.getElementById('inv-type').value;
+    const customer_name = document.getElementById('inv-customer-name').value.trim() || 'Consumidor final';
+    const customer_nif = document.getElementById('inv-customer-nif').value.trim();
+    const customer_address = document.getElementById('inv-customer-address').value.trim();
+    const customer_email = document.getElementById('inv-customer-email').value.trim();
+    const customer_phone = document.getElementById('inv-customer-phone').value.trim();
+    const notes = document.getElementById('inv-notes').value.trim();
+
+    if (type === 'completa' && !customer_nif) return alert('El NIF es obligatorio para facturas completas');
+    if (invoiceItems.length === 0) return alert('Añade al menos una línea');
+    const hasValidItem = invoiceItems.some(i => i.description && i.price > 0);
+    if (!hasValidItem) return alert('Añade al menos una línea con descripción y precio');
+
+    restaurantSettings.invoice_counter = (restaurantSettings.invoice_counter || 0) + 1;
+    const invoice_number = `F-${restaurantSettings.invoice_series}${restaurantSettings.invoice_year}-${String(restaurantSettings.invoice_counter).padStart(4, '0')}`;
+
+    let subtotal = 0, ivaAmount = 0, total = 0;
+    invoiceItems.forEach(item => {
+        const lineTotal = (item.quantity || 0) * (item.price || 0);
+        subtotal += lineTotal;
+        ivaAmount += lineTotal * ((item.iva_rate || 0) / 100);
+    });
+    total = subtotal + ivaAmount;
+
+    const lastInvoice = invoices[invoices.length - 1];
+    const previous_hash = lastInvoice ? lastInvoice.current_hash : 'GENESIS';
+    const data_to_hash = `${invoice_number}|${new Date().toISOString()}|${subtotal}|${ivaAmount}|${total}|${previous_hash}`;
+    const current_hash = await generateHash(data_to_hash);
+
+    try {
+        const { data: invoice, error } = await supabaseClient.from('invoices').insert([{
+            invoice_number,
+            invoice_date: new Date().toISOString(),
+            customer_name,
+            customer_nif,
+            customer_address,
+            customer_email,
+            customer_phone,
+            subtotal,
+            iva_amount: ivaAmount,
+            total,
+            iva_rate: restaurantSettings.iva_default,
+            invoice_type: type,
+            previous_hash,
+            current_hash,
+            signature: current_hash.substring(0, 16),
+            status: 'emitida',
+            notes
+        }]).select().single();
+
+        if (error) throw error;
+        await supabaseClient.from('restaurant_settings').update({ invoice_counter: restaurantSettings.invoice_counter }).eq('id', 1);
+        currentInvoice = invoice;
+        closeModal('invoice-modal');
+        loadInvoices();
+        showToast('pago', ` Factura ${invoice_number} emitida`, `Total: €${total.toFixed(2)}`);
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
+async function loadInvoices() {
+    const { data } = await supabaseClient.from('invoices').select('*').order('created_at', { ascending: false });
+    invoices = data || [];
+    renderInvoices();
+}
+
+function renderInvoices() {
+    const grid = document.getElementById('invoices-grid');
+    if (!grid) return;
+    const dateFrom = document.getElementById('inv-date-from').value;
+    const dateTo = document.getElementById('inv-date-to').value;
+    const typeFilter = document.getElementById('inv-type-filter').value;
+    const statusFilter = document.getElementById('inv-status-filter').value;
+
+    let filtered = invoices;
+    if (dateFrom) filtered = filtered.filter(i => i.invoice_date >= dateFrom);
+    if (dateTo) filtered = filtered.filter(i => i.invoice_date <= dateTo + 'T23:59:59');
+    if (typeFilter !== 'all') filtered = filtered.filter(i => i.invoice_type === typeFilter);
+    if (statusFilter !== 'all') filtered = filtered.filter(i => i.status === statusFilter);
+
+    document.getElementById('inv-count').textContent = invoices.length;
+    document.getElementById('inv-total').textContent = '€' + invoices.reduce((s, i) => s + (i.total || 0), 0).toFixed(2);
+    document.getElementById('inv-iva').textContent = '€' + invoices.reduce((s, i) => s + (i.iva_amount || 0), 0).toFixed(2);
+    document.getElementById('inv-last').textContent = invoices[0] ? invoices[0].invoice_number : '—';
+
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay facturas</div>';
+        return;
+    }
+
+    grid.innerHTML = filtered.map(inv => `
+        <div class="invoice-card status-${inv.status}">
+            <div class="invoice-header">
+                <div class="invoice-number">${inv.invoice_number}</div>
+                <span class="invoice-type-badge ${inv.invoice_type}">${inv.invoice_type}</span>
+            </div>
+            <div class="invoice-customer">${inv.customer_name}</div>
+            <div class="invoice-nif">${inv.customer_nif || 'Sin NIF'}</div>
+            <div class="invoice-details">
+                📅 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
+                 Total: <strong>€${inv.total.toFixed(2)}</strong> (IVA: €${inv.iva_amount.toFixed(2)})<br>
+                 Estado: <strong>${inv.status}</strong>
+            </div>
+            <div class="invoice-actions">
+                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">️ Ver</button>
+                ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
+                ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
+                <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function viewInvoice(id) {
+    const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+    currentInvoice = inv;
+    document.getElementById('view-invoice-title').textContent = `Factura ${inv.invoice_number}`;
+    document.getElementById('view-invoice-body').innerHTML = `
+        <div class="invoice-view">
+            <div class="invoice-view-header">
+                <h2>${restaurantSettings.business_name}</h2>
+                <p>${restaurantSettings.address}, ${restaurantSettings.postal_code} ${restaurantSettings.city} (${restaurantSettings.province})</p>
+                <p>NIF: ${restaurantSettings.nif} | Tel: ${restaurantSettings.phone} | Email: ${restaurantSettings.email}</p>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div class="invoice-view-section">
+                    <h4>Factura</h4>
+                    <p><strong>Número:</strong> ${inv.invoice_number}</p>
+                    <p><strong>Fecha:</strong> ${new Date(inv.invoice_date).toLocaleString('es-ES')}</p>
+                    <p><strong>Tipo:</strong> ${inv.invoice_type}</p>
+                    <p><strong>Estado:</strong> ${inv.status}</p>
+                </div>
+                <div class="invoice-view-section">
+                    <h4>Cliente</h4>
+                    <p><strong>Nombre:</strong> ${inv.customer_name}</p>
+                    <p><strong>NIF:</strong> ${inv.customer_nif || '—'}</p>
+                    <p><strong>Dirección:</strong> ${inv.customer_address || '—'}</p>
+                    <p><strong>Email:</strong> ${inv.customer_email || '—'}</p>
+                    <p><strong>Teléfono:</strong> ${inv.customer_phone || '—'}</p>
+                </div>
+            </div>
+            <div class="invoice-view-totals">
+                <div class="summary-row"><span>Subtotal:</span><span>€${inv.subtotal.toFixed(2)}</span></div>
+                <div class="summary-row"><span>IVA (${inv.iva_rate}%):</span><span>€${inv.iva_amount.toFixed(2)}</span></div>
+                <div class="summary-row total"><span>TOTAL:</span><span>€${inv.total.toFixed(2)}</span></div>
+            </div>
+            <div class="invoice-view-hash">
+                <strong>Hash (Ley Antifraude):</strong><br>
+                Previous: ${inv.previous_hash}<br>
+                Current: ${inv.current_hash}
+            </div>
+            ${inv.notes ? `<div style="margin-top:1rem; padding:0.75rem; background: var(--bg-main); border-radius:8px;"><strong>Notas:</strong> ${inv.notes}</div>` : ''}
+        </div>
+    `;
+    document.getElementById('view-invoice-modal').classList.add('active');
+}
+
+async function sendInvoice(id) {
+    const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+    if (!inv.customer_email) return alert('El cliente no tiene email registrado');
+    const subject = `Factura ${inv.invoice_number} - ${restaurantSettings.business_name}`;
+    const body = `Estimado/a ${inv.customer_name},\n\nAdjuntamos su factura ${inv.invoice_number} por un total de €${inv.total.toFixed(2)}.\n\nGracias por su confianza.\n\n${restaurantSettings.business_name}\n${restaurantSettings.phone}`;
+    window.location.href = `mailto:${inv.customer_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    await supabaseClient.from('invoices').update({ status: 'enviada' }).eq('id', id);
+    loadInvoices();
+    showToast('pago', '📧 Factura enviada', inv.invoice_number);
+}
+
+async function voidInvoice(id) {
+    if (!confirm('¿Anular esta factura? Esta acción no se puede deshacer.')) return;
+    try {
+        await supabaseClient.from('invoices').update({ status: 'anulada' }).eq('id', id);
+        loadInvoices();
+        showToast('pago', '✕ Factura anulada', '');
+    } catch (error) { alert('Error: ' + error.message); }
+}
+
+async function printInvoiceById(id) {
+    const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+    currentInvoice = inv;
+    printInvoice();
+}
+
+function printInvoice() {
+    if (!currentInvoice) return;
+    const inv = currentInvoice;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Factura ${inv.invoice_number}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
+                .header { text-align: center; border-bottom: 2px solid #10b981; padding-bottom: 1rem; margin-bottom: 2rem; }
+                .header h1 { color: #10b981; margin: 0; }
+                .header p { margin: 0.3rem 0; color: #6b7280; font-size: 0.9rem; }
+                .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+                .info-box { background: #f9fafb; padding: 1rem; border-radius: 8px; }
+                .info-box h3 { margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1rem; }
+                .info-box p { margin: 0.3rem 0; font-size: 0.9rem; color: #4b5563; }
+                table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+                th { background: #f3f4f6; padding: 0.75rem; text-align: left; font-size: 0.85rem; color: #6b7280; text-transform: uppercase; }
+                td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; font-size: 0.9rem; }
+                .totals { background: #f9fafb; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+                .totals .row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem; }
+                .totals .row.total { font-size: 1.2rem; font-weight: 800; border-top: 1px solid #e5e7eb; padding-top: 0.5rem; margin-top: 0.5rem; color: #10b981; }
+                .hash { font-size: 0.7rem; color: #9ca3af; word-break: break-all; background: #f9fafb; padding: 0.75rem; border-radius: 6px; margin-top: 2rem; }
+                .footer { text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 0.85rem; color: #6b7280; }
+                @media print { body { padding: 1rem; } }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>${restaurantSettings.business_name}</h1>
+                <p>${restaurantSettings.address}, ${restaurantSettings.postal_code} ${restaurantSettings.city} (${restaurantSettings.province})</p>
+                <p>NIF: ${restaurantSettings.nif} | Tel: ${restaurantSettings.phone} | Email: ${restaurantSettings.email}</p>
+            </div>
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>Factura</h3>
+                    <p><strong>Número:</strong> ${inv.invoice_number}</p>
+                    <p><strong>Fecha:</strong> ${new Date(inv.invoice_date).toLocaleString('es-ES')}</p>
+                    <p><strong>Tipo:</strong> ${inv.invoice_type}</p>
+                    <p><strong>Estado:</strong> ${inv.status}</p>
+                </div>
+                <div class="info-box">
+                    <h3>Cliente</h3>
+                    <p><strong>Nombre:</strong> ${inv.customer_name}</p>
+                    <p><strong>NIF:</strong> ${inv.customer_nif || '—'}</p>
+                    <p><strong>Dirección:</strong> ${inv.customer_address || '—'}</p>
+                    <p><strong>Email:</strong> ${inv.customer_email || '—'}</p>
+                </div>
+            </div>
+            <table>
+                <thead><tr><th>Descripción</th><th>Cant.</th><th>Precio</th><th>IVA</th><th>Total</th></tr></thead>
+                <tbody><tr><td colspan="5" style="text-align:center;">Factura ${inv.invoice_type}</td></tr></tbody>
+            </table>
+            <div class="totals">
+                <div class="row"><span>Subtotal:</span><span>€${inv.subtotal.toFixed(2)}</span></div>
+                <div class="row"><span>IVA (${inv.iva_rate}%):</span><span>€${inv.iva_amount.toFixed(2)}</span></div>
+                <div class="row total"><span>TOTAL:</span><span>€${inv.total.toFixed(2)}</span></div>
+            </div>
+            <div class="hash">
+                <strong>Hash encadenado (Ley Antifraude Veri*factu):</strong><br>
+                Previous: ${inv.previous_hash}<br>
+                Current: ${inv.current_hash}
+            </div>
+            <div class="footer">
+                <p>Gracias por su confianza</p>
+                <p>${restaurantSettings.business_name} - ${restaurantSettings.city}</p>
+            </div>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 500);
+}
+
+async function sendInvoiceByEmail() {
+    if (!currentInvoice) return;
+    const inv = currentInvoice;
+    if (!inv.customer_email) return alert('El cliente no tiene email registrado');
+    const subject = `Factura ${inv.invoice_number} - ${restaurantSettings.business_name}`;
+    const body = `Estimado/a ${inv.customer_name},\n\nAdjuntamos su factura ${inv.invoice_number} por un total de €${inv.total.toFixed(2)}.\n\nGracias por su confianza.\n\n${restaurantSettings.business_name}\n${restaurantSettings.phone}`;
+    window.location.href = `mailto:${inv.customer_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    await supabaseClient.from('invoices').update({ status: 'enviada' }).eq('id', inv.id);
+    loadInvoices();
+    showToast('pago', '📧 Factura enviada', inv.invoice_number);
 }
 
 // ============ RESERVAS ============
@@ -211,7 +802,7 @@ function renderReservations() {
                 <span class="res-status-badge">${r.status}</span>
             </div>
             <div class="res-details">
-                 ${dateStr} a las ${r.reservation_time}<br>
+                📅 ${dateStr} a las ${r.reservation_time}<br>
                 👥 ${r.party_size} personas | 🪑 Mesa: ${tableName}<br>
                 📞 ${r.phone || 'Sin teléfono'}<br>
                 ${r.notes ? `📝 ${r.notes}` : ''}
@@ -322,7 +913,7 @@ async function saveLoyaltySettings() {
         if (error) throw error;
         loyaltySettings = { ...loyaltySettings, points_per_unit, point_value, birthday_multiplier };
         closeModal('loyalty-settings-modal');
-        showToast('pago', '️ Reglas de puntos actualizadas', '');
+        showToast('pago', '⚙️ Reglas de puntos actualizadas', '');
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -387,7 +978,7 @@ function renderCustomers() {
     document.getElementById('cust-top').textContent = top ? top.name : '—';
     if (!q) {
         grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 3rem 1rem;">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;"></div>
             Escribe un nombre o teléfono para buscar un cliente<br>
             <small>Hay ${customers.length} cliente(s) registrados</small>
         </div>`;
@@ -395,7 +986,7 @@ function renderCustomers() {
     }
     const filtered = customers.filter(c => (c.name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q));
     if (filtered.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">Sin resultados para "<strong>${q}</strong>"<br><button class="btn-secondary" style="margin-top:0.75rem;" onclick="clearCustomerSearch()"> Limpiar búsqueda</button></div>`;
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">Sin resultados para "<strong>${q}</strong>"<br><button class="btn-secondary" style="margin-top:0.75rem;" onclick="clearCustomerSearch()">✕ Limpiar búsqueda</button></div>`;
         return;
     }
     grid.innerHTML = filtered.map(c => `
@@ -432,7 +1023,7 @@ async function deleteCustomer(id) {
         const { error } = await supabaseClient.from('customers').delete().eq('id', id);
         if (error) throw error;
         loadCustomers();
-        showToast('pago', '️ Cliente eliminado', c.name);
+        showToast('pago', '🗑️ Cliente eliminado', c.name);
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -475,7 +1066,7 @@ async function viewHistory(id) {
         : list.map(h => `
             <div class="history-item ${h.type}">
                 <div>
-                    <div>${h.type === 'ganados' ? '✅ Ganados' : ' Canjeados'} ${h.note ? '· ' + h.note : ''}</div>
+                    <div>${h.type === 'ganados' ? '✅ Ganados' : '🎁 Canjeados'} ${h.note ? '· ' + h.note : ''}</div>
                     <div class="history-date">${new Date(h.created_at).toLocaleString('es-ES')}</div>
                 </div>
                 <span class="history-pts ${h.points >= 0 ? 'pos' : 'neg'}">${h.points >= 0 ? '+' : ''}${Math.round(h.points)}</span>
@@ -571,7 +1162,7 @@ function setupQREvents() {
         if (!currentQRTable) return;
         const url = `${window.location.origin}/menu.html?mesa=${currentQRTable.id}`;
         const win = window.open('', '_blank');
-        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}h2{margin-bottom:0.5rem;}p{color:#666;}</style></head><body><h2>🌿 TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
+        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}h2{margin-bottom:0.5rem;}p{color:#666;}</style></head><body><h2> TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
         win.document.close();
     });
 }
@@ -782,8 +1373,8 @@ async function deductInventory(items) {
                 if (!ing) continue;
                 const newStock = Math.max(0, ing.stock - qtyToDeduct);
                 await supabaseClient.from('ingredients').update({ stock: newStock }).eq('id', recipe.ingredient_id);
-                if (newStock <= ing.min_stock && newStock > 0) addNotification('alerta', '⚠️ Stock Bajo', `${ing.name} quedó con ${newStock} (mínimo: ${ing.min_stock})`);
-                else if (newStock === 0) addNotification('alerta', '🚨 Agotado', `${ing.name} se agotó`);
+                if (newStock <= ing.min_stock && newStock > 0) addNotification('alerta', '️ Stock Bajo', `${ing.name} quedó con ${newStock} (mínimo: ${ing.min_stock})`);
+                else if (newStock === 0) addNotification('alerta', ' Agotado', `${ing.name} se agotó`);
             }
         }
         loadIngredients();
@@ -829,7 +1420,7 @@ function renderStaff() {
                 <span>Ventas mes: <strong>$${Math.round(monthSales).toLocaleString()}</strong></span>
                 <span class="staff-commission">Comisión: $${Math.round(monthComm).toLocaleString()}</span>
             </div>
-            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : '⛔ Inactivo'}</span></div>
+            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : ' Inactivo'}</span></div>
             <div class="staff-actions">
                 <button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button>
                 <button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">🗑️ Eliminar</button>
@@ -985,7 +1576,6 @@ async function loadTables() {
         const pendingItems = tableOrders.flatMap(o => o.order_items || []);
         const pendingTotal = tableOrders.reduce((sum, o) => sum + (o.total || 0), 0);
         let visualStatus = pendingItems.length > 0 ? 'ocupada' : 'libre';
-        // Verificar si tiene reserva activa para hoy
         const today = new Date().toISOString().split('T')[0];
         const hasReservation = reservations.some(r => r.table_id === table.id && r.reservation_date === today && r.status === 'confirmada');
         if (hasReservation) visualStatus = 'reservada';
@@ -1194,65 +1784,11 @@ async function updateOrderStatus(orderId, newStatus) {
     }
 }
 
-// ============ REPORTES ============
-function setupReportFilters() {
-    document.querySelectorAll('.report-filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.report-filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentReportPeriod = btn.dataset.period;
-            loadReports(currentReportPeriod);
-        });
-    });
-}
-
-function getDateRange(period) { const now = new Date(); const end = new Date(now); end.setHours(23, 59, 59, 999); const start = new Date(now); if (period === 'today') start.setHours(0, 0, 0, 0); else if (period === 'week') { const day = start.getDay(); const diff = start.getDate() - day + (day === 0 ? -6 : 1); start.setDate(diff); start.setHours(0, 0, 0, 0); } else if (period === 'month') { start.setDate(1); start.setHours(0, 0, 0, 0); } const d = new Date(start); if (period === 'today') d.setDate(d.getDate() - 1); else if (period === 'week') d.setDate(d.getDate() - 7); else if (period === 'month') d.setMonth(d.getMonth() - 1); return { start: start.toISOString(), end: end.toISOString(), prevStart: d.toISOString(), prevEnd: start.toISOString() }; }
-
-async function loadReports(period) {
-    const range = getDateRange(period);
-    const { data: currentOrders } = await supabaseClient.from('orders').select('*, order_items(*)').eq('paid', true).gte('created_at', range.start).lte('created_at', range.end).order('created_at', { ascending: false });
-    const { data: prevOrders } = await supabaseClient.from('orders').select('*').eq('paid', true).gte('created_at', range.prevStart).lte('created_at', range.prevEnd);
-    const orders = currentOrders || []; const prev = prevOrders || [];
-    const totalVentas = orders.reduce((s, o) => s + (o.total || 0), 0); const totalPedidos = orders.length; const ticketPromedio = totalPedidos > 0 ? totalVentas / totalPedidos : 0;
-    const prevVentas = prev.reduce((s, o) => s + (o.total || 0), 0); const prevPedidos = prev.length;
-    const metodos = {}; orders.forEach(o => { metodos[o.pay_method] = (metodos[o.pay_method] || 0) + o.total; }); const metodoTop = Object.entries(metodos).sort((a, b) => b[1] - a[1])[0];
-    document.getElementById('kpi-ventas').textContent = '$' + Math.round(totalVentas).toLocaleString();
-    document.getElementById('kpi-pedidos').textContent = totalPedidos;
-    document.getElementById('kpi-ticket').textContent = '$' + Math.round(ticketPromedio).toLocaleString();
-    document.getElementById('kpi-metodo').textContent = metodoTop ? metodoTop[0].toUpperCase() : '—';
-    document.getElementById('kpi-metodo-detail').textContent = metodoTop ? '$' + Math.round(metodoTop[1]).toLocaleString() : '—';
-    const renderTrend = (elId, cur, prev) => { const el = document.getElementById(elId); if (prev === 0) { el.textContent = '—'; el.className = 'kpi-trend neutral'; return; } const change = ((cur - prev) / prev) * 100; el.textContent = `${change >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(change))}% vs anterior`; el.className = 'kpi-trend ' + (change > 0 ? 'up' : change < 0 ? 'down' : 'neutral'); };
-    renderTrend('kpi-ventas-trend', totalVentas, prevVentas); renderTrend('kpi-pedidos-trend', totalPedidos, prevPedidos); renderTrend('kpi-ticket-trend', ticketPromedio, prevPedidos > 0 ? prevVentas / prevPedidos : 0);
-    const horas = new Array(24).fill(0); orders.forEach(o => { horas[new Date(o.created_at).getHours()] += o.total; });
-    if (chartHoras) chartHoras.destroy(); chartHoras = new Chart(document.getElementById('chart-horas').getContext('2d'), { type: 'bar', data: { labels: Array.from({length: 24}, (_, i) => `${i}:00`), datasets: [{ label: 'Ventas ($)', data: horas, backgroundColor: 'rgba(16, 185, 129, 0.7)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v } }, x: { ticks: { maxTicksLimit: 12 } } } } });
-    const productos = {}; orders.forEach(o => { (o.order_items || []).forEach(item => { if (!productos[item.name]) productos[item.name] = 0; productos[item.name] += item.qty; }); });
-    const sorted = Object.entries(productos).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    if (chartProductos) chartProductos.destroy(); chartProductos = new Chart(document.getElementById('chart-productos').getContext('2d'), { type: 'doughnut', data: { labels: sorted.map(p => p[0].length > 20 ? p[0].substring(0, 20) + '...' : p[0]), datasets: [{ data: sorted.map(p => p[1]), backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6'], borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } } });
-    const tbody = document.getElementById('recent-orders-body');
-    tbody.innerHTML = orders.slice(0, 10).map(o => { const date = new Date(o.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); return `<tr><td>#${o.id}</td><td>${date}</td><td>${(o.type || 'mostrador').toUpperCase()}</td><td>${(o.pay_method || '—').toUpperCase()}</td><td><strong>$${Math.round(o.total).toLocaleString()}</strong></td></tr>`; }).join('') || '<tr><td colspan="5" style="text-align:center; color: var(--text-gray); padding: 1rem;">Sin pedidos</td></tr>';
-}
-
-// ============ NOTIFICACIONES ============
-function setupNotificationsPanel() {
-    document.getElementById('btn-notifications').addEventListener('click', () => {
-        const panel = document.getElementById('notifications-panel');
-        panel.classList.toggle('open');
-        if (panel.classList.contains('open')) { unreadNotifs = 0; updateNotifBadge(); renderNotifications(); }
-    });
-    document.getElementById('btn-clear-notifs').addEventListener('click', () => { notifications = []; renderNotifications(); updateNotifBadge(); });
-    document.getElementById('btn-close-notifs').addEventListener('click', () => { document.getElementById('notifications-panel').classList.remove('open'); });
-}
-
-function addNotification(tipo, title, message) { const notif = { id: Date.now(), tipo, title, message, time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) }; notifications.unshift(notif); if (notifications.length > 50) notifications.pop(); unreadNotifs++; updateNotifBadge(); showToast(tipo, title, message); renderNotifications(); }
-function updateNotifBadge() { const badge = document.getElementById('notif-badge'); badge.textContent = unreadNotifs; badge.style.display = unreadNotifs > 0 ? 'flex' : 'none'; }
-function renderNotifications() { const list = document.getElementById('notif-list'); if (notifications.length === 0) { list.innerHTML = '<div class="notif-empty">No hay notificaciones</div>'; return; } list.innerHTML = notifications.map(n => `<div class="notif-item tipo-${n.tipo}"><div class="notif-title">${n.title}</div><div class="notif-message">${n.message}</div><div class="notif-time">${n.time}</div></div>`).join(''); }
-function showToast(tipo, title, message) { const container = document.getElementById('toast-container'); const toast = document.createElement('div'); toast.className = `toast tipo-${tipo}`; toast.innerHTML = `<div class="toast-title">${title}</div><div class="toast-message">${message}</div>`; container.appendChild(toast); setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 4000); }
-
 // ============ REALTIME ============
-function setupRealtimeGlobal() { supabaseClient.channel('orders-global').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const webText = order.source === 'web' ? ' 📱 (QR)' : ''; addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); loadTables(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const oldStatus = payload.old.status; const newStatus = order.status; let tipo = '', title = '', message = ''; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = `🔥 Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; } else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); } else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); } if (title) addNotification(tipo, title, message); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); }).subscribe(); }
+function setupRealtimeGlobal() { supabaseClient.channel('orders-global').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const webText = order.source === 'web' ? ' 📱 (QR)' : ''; addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); loadTables(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => { const order = payload.new; const oldStatus = payload.old.status; const newStatus = order.status; let tipo = '', title = '', message = ''; const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; if (oldStatus === 'nuevo' && newStatus === 'cocina') { tipo = 'cocina'; title = ` Pedido #${order.id}${tableText} en preparación`; message = 'La cocina está preparando el pedido'; } else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); } else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); } if (title) addNotification(tipo, title, message); const kitchenView = document.getElementById('view-kitchen'); if (kitchenView.classList.contains('active')) loadKitchenOrders(); }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); }).subscribe(); }
 
 // ============ CAJA / ARQUEOS ============
-async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
+async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
 
 async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
 
@@ -1283,5 +1819,11 @@ window.clearCustomerSearch = clearCustomerSearch;
 window.deleteCustomer = deleteCustomer;
 window.updateReservationStatus = updateReservationStatus;
 window.deleteReservation = deleteReservation;
+window.updateInvoiceItem = updateInvoiceItem;
+window.removeInvoiceItem = removeInvoiceItem;
+window.viewInvoice = viewInvoice;
+window.sendInvoice = sendInvoice;
+window.voidInvoice = voidInvoice;
+window.printInvoiceById = printInvoiceById;
 
 init();
