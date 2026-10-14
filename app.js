@@ -46,6 +46,8 @@ let allergens = [];
 let productAllergens = {};
 let currentAllergenCategory = 'all';
 let currentProductForImage = null;
+let realtimeChannel = null;
+let pollingInterval = null;
 
 const ROLE_PERMISSIONS = {
     admin: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'inventory', 'products', 'allergens', 'invoices', 'reports', 'cash', 'staff'],
@@ -545,12 +547,12 @@ function renderInvoices() {
             <div class="invoice-customer">${inv.customer_name}</div>
             <div class="invoice-nif">${inv.customer_nif || 'Sin NIF'}</div>
             <div class="invoice-details">
-                 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
+                📅 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
                 💰 Total: <strong>€${inv.total.toFixed(2)}</strong> (IVA: €${inv.iva_amount.toFixed(2)})<br>
                 📊 Estado: <strong>${inv.status}</strong>
             </div>
             <div class="invoice-actions">
-                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">👁️ Ver</button>
+                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">️ Ver</button>
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
                 <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
@@ -676,12 +678,12 @@ function renderReservations() {
         const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
         return `<div class="reservation-card status-${r.status}">
             <div class="res-header"><div class="res-name">${r.customer_name}</div><span class="res-status-badge">${r.status}</span></div>
-            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br> ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br> ${r.notes}` : ''}</div>
+            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br> ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
                 ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
                 ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
-                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">️</button>
+                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
             </div>
         </div>`;
     }).join('');
@@ -729,7 +731,7 @@ async function deleteReservation(id) {
     if (!confirm('¿Eliminar esta reserva?')) return;
     await supabaseClient.from('reservations').delete().eq('id', id);
     loadReservations();
-    showToast('pago', '🗑️ Reserva eliminada', '');
+    showToast('pago', '️ Reserva eliminada', '');
 }
 
 function setupLoyaltySettingsEvents() {
@@ -896,7 +898,7 @@ async function viewHistory(id) {
     const list = data || [];
     document.getElementById('history-list').innerHTML = list.length === 0
         ? '<div style="text-align:center; color: var(--text-gray); padding: 1.5rem;">Sin movimientos de puntos</div>'
-        : list.map(h => `<div class="history-item ${h.type}"><div><div>${h.type === 'ganados' ? '✅ Ganados' : '🎁 Canjeados'} ${h.note ? '· ' + h.note : ''}</div><div class="history-date">${new Date(h.created_at).toLocaleString('es-ES')}</div></div><span class="history-pts ${h.points >= 0 ? 'pos' : 'neg'}">${h.points >= 0 ? '+' : ''}${Math.round(h.points)}</span></div>`).join('');
+        : list.map(h => `<div class="history-item ${h.type}"><div><div>${h.type === 'ganados' ? '✅ Ganados' : ' Canjeados'} ${h.note ? '· ' + h.note : ''}</div><div class="history-date">${new Date(h.created_at).toLocaleString('es-ES')}</div></div><span class="history-pts ${h.points >= 0 ? 'pos' : 'neg'}">${h.points >= 0 ? '+' : ''}${Math.round(h.points)}</span></div>`).join('');
     document.getElementById('history-modal').classList.add('active');
 }
 
@@ -1028,7 +1030,7 @@ function renderDivideModal() {
     }).join('');
     if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
     else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
-    document.getElementById('btn-pay-all').textContent = ` Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
+    document.getElementById('btn-pay-all').textContent = `💰 Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
 }
 
 async function openDinerPayModal(dinerId) {
@@ -1263,7 +1265,7 @@ async function deleteStaff(id) {
     if (!confirm('¿Eliminar este empleado?')) return;
     await supabaseClient.from('profiles').delete().eq('id', id);
     loadStaff();
-    showToast('pago', '️ Empleado eliminado', '');
+    showToast('pago', '🗑️ Empleado eliminado', '');
 }
 
 async function recordEmployeeSale(orderId, amount) {
@@ -1465,7 +1467,7 @@ async function addToTable() {
             if (orderError) throw orderError;
             await supabaseClient.from('order_items').insert(cart.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty })));
             currentTableOrder = order;
-            addNotification('nuevo', '📝 Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
+            addNotification('nuevo', ' Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
         }
         cart = []; renderCart(); renderTableOrder();
         showToast('pago', '✓ Añadido a la mesa', 'Los productos se guardaron en el pedido');
@@ -1553,7 +1555,7 @@ function printTicket(order, items, loyalty) {
 
 async function loadKitchenOrders() { const { data, error } = await supabaseClient.from('orders').select('*, order_items(*)').neq('status', 'entregado').neq('status', 'pendiente_pago').order('created_at', { ascending: false }); if (error) return; kitchenOrders = data || []; renderKitchenOrders(); updateKitchenStats(); }
 
-function renderKitchenOrders() { ['nuevo', 'cocina', 'listo'].forEach(status => { const container = document.getElementById(`orders-${status}`); const orders = kitchenOrders.filter(o => o.status === status); if (orders.length === 0) { container.innerHTML = '<div class="empty-cart">No hay pedidos</div>'; return; } container.innerHTML = orders.map(order => { const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; const webBadge = order.source === 'web' ? ' ' : ''; const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); let actionBtn = ''; if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`; else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`; return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}${dinerText}${webBadge}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`; }).join(''); }); }
+function renderKitchenOrders() { ['nuevo', 'cocina', 'listo'].forEach(status => { const container = document.getElementById(`orders-${status}`); const orders = kitchenOrders.filter(o => o.status === status); if (orders.length === 0) { container.innerHTML = '<div class="empty-cart">No hay pedidos</div>'; return; } container.innerHTML = orders.map(order => { const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; const webBadge = order.source === 'web' ? ' 📱' : ''; const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); let actionBtn = ''; if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`; else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`; return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}${dinerText}${webBadge}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`; }).join(''); }); }
 
 function updateKitchenStats() { document.getElementById('count-nuevo').textContent = kitchenOrders.filter(o => o.status === 'nuevo').length; document.getElementById('count-cocina').textContent = kitchenOrders.filter(o => o.status === 'cocina').length; document.getElementById('count-listo').textContent = kitchenOrders.filter(o => o.status === 'listo').length; }
 
@@ -1568,7 +1570,7 @@ async function updateOrderStatus(orderId, newStatus) {
     } else if (newStatus === 'listo') { if (order && order.table_id) await supabaseClient.from('tables').update({ status: 'pendiente' }).eq('id', order.table_id); }
 }
 
-async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed"> Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()"> Cerrar Caja</button>`; await loadCashSummary(); } }
+async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
 
 async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
 
@@ -1681,7 +1683,7 @@ function renderAllergens() {
             </div>
             <div class="product-allergen-actions">
                 <button class="product-allergen-btn edit" onclick="editProductAllergens(${p.id})">✏️ Editar</button>
-                <button class="product-allergen-btn sheet" onclick="viewTechnicalSheet(${p.id})">📋 Ficha Técnica</button>
+                <button class="product-allergen-btn sheet" onclick="viewTechnicalSheet(${p.id})"> Ficha Técnica</button>
             </div>
         </div>`;
     }).join('');
@@ -1707,7 +1709,7 @@ function viewTechnicalSheet(productId) {
             <h3 style="margin-bottom: 1rem; color: var(--primary);">${product.name}</h3>
             <div style="margin-bottom: 1rem;"><strong>Categoría:</strong> ${product.category || 'No especificada'}<br><strong>Precio:</strong> €${Number(product.price).toFixed(2)}</div>
             <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem;">
-                <strong>️ Alérgenos presentes:</strong>
+                <strong>⚠️ Alérgenos presentes:</strong>
                 <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">${allergenList || '<li>Sin alérgenos declarados</li>'}</ul>
             </div>
             <div style="font-size: 0.85rem; color: var(--text-gray); margin-top: 1rem;"><strong>Nota legal:</strong> Esta ficha cumple con el Reglamento (UE) nº 1169/2011.</div>
@@ -1981,18 +1983,39 @@ async function deleteProductImage() {
     }
 }
 
-// ============ REALTIME CORREGIDO ============
+// ============ REALTIME + POLLING AUTOMÁTICO ============
 function setupRealtimeGlobal() {
-    supabaseClient.channel('orders-global')
+    // Limpiar suscripciones anteriores
+    if (realtimeChannel) {
+        supabaseClient.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+    }
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+    }
+
+    // ✅ POLLING: Consulta cada 3 segundos (funciona siempre)
+    pollingInterval = setInterval(() => {
+        const tablesView = document.getElementById('view-tables');
+        const posView = document.getElementById('view-pos');
+        
+        if (tablesView.classList.contains('active') || posView.classList.contains('active')) {
+            loadTables();
+        }
+    }, 3000);
+
+    // ✅ REALTIME (funcionará cuando actives la replicación en Supabase)
+    realtimeChannel = supabaseClient
+        .channel('orders-global')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
             const webText = order.source === 'web' ? ' 📱 (QR)' : '';
             
-            // ✅ NUEVO: Si el pedido es de mesa y está pendiente de pago, actualizar mesas automáticamente
             if (order.status === 'pendiente_pago' && order.table_id) {
-                addNotification('nuevo', ` Nuevo pedido QR - Mesa ${order.table_id}`, `Total: €${Math.round(order.total).toLocaleString()}`);
-                loadTables(); // ← Actualiza automáticamente las tarjetas de mesa
+                addNotification('nuevo', `📝 Nuevo pedido QR - Mesa ${order.table_id}`, `Total: €${Math.round(order.total).toLocaleString()}`);
+                loadTables();
                 renderMiniTables();
                 return;
             }
@@ -2017,7 +2040,14 @@ function setupRealtimeGlobal() {
             if (kitchenView.classList.contains('active')) loadKitchenOrders();
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); })
-        .subscribe();
+        .subscribe((status) => {
+            console.log('📡 Realtime status:', status);
+            if (status === 'SUBSCRIBED') {
+                console.log('✅ Realtime conectado correctamente');
+            } else if (status === 'CHANNEL_ERROR') {
+                console.log('❌ Realtime con error - usando solo polling');
+            }
+        });
 }
 
 function openModal(id) { document.getElementById(id).classList.add('active'); }
