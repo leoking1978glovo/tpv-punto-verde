@@ -545,7 +545,7 @@ function renderInvoices() {
             <div class="invoice-customer">${inv.customer_name}</div>
             <div class="invoice-nif">${inv.customer_nif || 'Sin NIF'}</div>
             <div class="invoice-details">
-                 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
+                📅 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
                 💰 Total: <strong>€${inv.total.toFixed(2)}</strong> (IVA: €${inv.iva_amount.toFixed(2)})<br>
                 📊 Estado: <strong>${inv.status}</strong>
             </div>
@@ -553,7 +553,7 @@ function renderInvoices() {
                 <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">👁️ Ver</button>
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
-                <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">️ PDF</button>
+                <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
             </div>
         </div>
     `).join('');
@@ -676,7 +676,7 @@ function renderReservations() {
         const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
         return `<div class="reservation-card status-${r.status}">
             <div class="res-header"><div class="res-name">${r.customer_name}</div><span class="res-status-badge">${r.status}</span></div>
-            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
+            <div class="res-details"> ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
                 ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
@@ -841,7 +841,7 @@ function renderCustomers() {
             <div class="customer-meta"><div>Visitas: <strong>${c.visits || 0}</strong></div><div>Gastado: <strong>$${Math.round(c.total_spent || 0).toLocaleString()}</strong></div></div>
             <div class="customer-actions">
                 <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">✏️ Editar</button>
-                <button class="customer-action-btn history" onclick="viewHistory(${c.id})">📜 Historial</button>
+                <button class="customer-action-btn history" onclick="viewHistory(${c.id})"> Historial</button>
                 <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">🗑️ Eliminar</button>
             </div>
         </div>
@@ -857,7 +857,7 @@ async function deleteCustomer(id) {
     await supabaseClient.from('points_history').delete().eq('customer_id', id);
     await supabaseClient.from('customers').delete().eq('id', id);
     loadCustomers();
-    showToast('pago', '🗑️ Cliente eliminado', c.name);
+    showToast('pago', '️ Cliente eliminado', c.name);
 }
 
 function openCustomerModal(customer = null) {
@@ -1023,12 +1023,12 @@ function renderDivideModal() {
     const unassignedList = document.getElementById('unassigned-items');
     dinersList.innerHTML = diners.map(diner => {
         const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
-        const itemsHtml = diner.items.map(item => `<div class="diner-item"><span class="diner-item-name">${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span><div class="diner-item-controls"><button class="diner-item-btn remove" onclick="removeItemFromDiner(${item.uid}, ${diner.id})">✕</button></div></div>`).join('');
+        const itemsHtml = diner.items.map(item => `<div class="diner-item"><span class="diner-item-name">${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span><div class="diner-item-controls"><button class="diner-item-btn remove" onclick="removeItemFromDiner(${item.uid}, ${diner.id})"></button></div></div>`).join('');
         return `<div class="diner-card"><div class="diner-header"><div class="diner-name"><input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)"></div><div style="display:flex; align-items:center; gap:0.5rem;"><span class="diner-total">$${Math.round(total).toLocaleString()}</span>${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})">💰 Cobrar</button>` : ''}${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}</div></div><div class="diner-items">${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}</div></div>`;
     }).join('');
     if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
     else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
-    document.getElementById('btn-pay-all').textContent = `💰 Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
+    document.getElementById('btn-pay-all').textContent = ` Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
 }
 
 async function openDinerPayModal(dinerId) {
@@ -1104,7 +1104,7 @@ function renderInventory() {
         const status = getIngredientStatus(ing);
         const statusClass = status === 'out' ? 'stock-out' : status === 'low' ? 'stock-low' : '';
         const unitLabel = ing.unit === 'gramo' ? 'g' : ing.unit === 'kilogramo' ? 'kg' : ing.unit === 'litro' ? 'L' : ing.unit === 'mililitro' ? 'ml' : 'und';
-        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
+        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})"> Ver Recetas</button></div>`;
     }).join('');
 }
 
@@ -1135,7 +1135,7 @@ async function saveIngredient() {
 }
 
 async function editIngredient(id) { const ing = ingredients.find(i => i.id === id); if (ing) openIngredientModal(ing); }
-async function deleteIngredient(id) { if (!confirm('¿Eliminar este ingrediente?')) return; try { await supabaseClient.from('recipes').delete().eq('ingredient_id', id); await supabaseClient.from('ingredients').delete().eq('id', id); loadIngredients(); showToast('pago', '️ Ingrediente eliminado', ''); } catch (error) { alert('Error: ' + error.message); } }
+async function deleteIngredient(id) { if (!confirm('¿Eliminar este ingrediente?')) return; try { await supabaseClient.from('recipes').delete().eq('ingredient_id', id); await supabaseClient.from('ingredients').delete().eq('id', id); loadIngredients(); showToast('pago', '🗑️ Ingrediente eliminado', ''); } catch (error) { alert('Error: ' + error.message); } }
 
 async function openRecipeModal(ingredientId) {
     const ing = ingredients.find(i => i.id === ingredientId);
@@ -1179,7 +1179,7 @@ async function deductInventory(items) {
                 const newStock = Math.max(0, ing.stock - qtyToDeduct);
                 await supabaseClient.from('ingredients').update({ stock: newStock }).eq('id', recipe.ingredient_id);
                 if (newStock <= ing.min_stock && newStock > 0) addNotification('alerta', '⚠️ Stock Bajo', `${ing.name} quedó con ${newStock} (mínimo: ${ing.min_stock})`);
-                else if (newStock === 0) addNotification('alerta', '🚨 Agotado', `${ing.name} se agotó`);
+                else if (newStock === 0) addNotification('alerta', ' Agotado', `${ing.name} se agotó`);
             }
         }
         loadIngredients();
@@ -1568,7 +1568,7 @@ async function updateOrderStatus(orderId, newStatus) {
     } else if (newStatus === 'listo') { if (order && order.table_id) await supabaseClient.from('tables').update({ status: 'pendiente' }).eq('id', order.table_id); }
 }
 
-async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed"> Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
+async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
 
 async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
 
@@ -1601,7 +1601,7 @@ function renderAllergenCategories() {
     const bar = document.getElementById('allergen-category-bar');
     if (!bar) return;
     const cats = [...new Set(products.map(p => p.category || 'Sin categoría'))];
-    bar.innerHTML = '<button class="allergen-cat-btn active" data-cat="all">📋 Todos</button>' + cats.map(cat => `<button class="allergen-cat-btn" data-cat="${cat}">${cat}</button>`).join('');
+    bar.innerHTML = '<button class="allergen-cat-btn active" data-cat="all"> Todos</button>' + cats.map(cat => `<button class="allergen-cat-btn" data-cat="${cat}">${cat}</button>`).join('');
 }
 
 function openProductAllergensModal() {
@@ -1681,7 +1681,7 @@ function renderAllergens() {
             </div>
             <div class="product-allergen-actions">
                 <button class="product-allergen-btn edit" onclick="editProductAllergens(${p.id})">✏️ Editar</button>
-                <button class="product-allergen-btn sheet" onclick="viewTechnicalSheet(${p.id})">📋 Ficha Técnica</button>
+                <button class="product-allergen-btn sheet" onclick="viewTechnicalSheet(${p.id})"> Ficha Técnica</button>
             </div>
         </div>`;
     }).join('');
@@ -1733,6 +1733,14 @@ function setupProductManagementEvents() {
     document.getElementById('btn-save-image').addEventListener('click', saveProductImage);
     document.getElementById('btn-delete-image').addEventListener('click', deleteProductImage);
     document.getElementById('image-file-input').addEventListener('change', previewImage);
+    setupProductEvents();
+}
+
+function setupProductEvents() {
+    document.getElementById('btn-add-product').addEventListener('click', () => openProductModal());
+    document.getElementById('btn-close-product').addEventListener('click', () => closeModal('product-modal'));
+    document.getElementById('btn-cancel-product').addEventListener('click', () => closeModal('product-modal'));
+    document.getElementById('btn-save-product').addEventListener('click', saveProduct);
 }
 
 async function loadProductManagement() {
@@ -1768,7 +1776,7 @@ function renderProductManagement() {
         const imageUrl = p.image_url || '';
         const imageHtml = imageUrl 
             ? `<img src="${imageUrl}" alt="${p.name}">`
-            : '<div class="no-image">📷 Sin imagen</div>';
+            : '<div class="no-image"> Sin imagen</div>';
         
         return `
         <div class="product-management-card">
@@ -1780,9 +1788,70 @@ function renderProductManagement() {
             <div class="product-management-price">€${Number(p.price).toFixed(2)}</div>
             <div class="product-management-actions">
                 <button class="product-management-btn image" onclick="openImageModal(${p.id})">📷 ${imageUrl ? 'Cambiar' : 'Añadir'} Imagen</button>
+                <button class="product-management-btn edit" onclick="openProductModalById(${p.id})">️ Editar</button>
             </div>
         </div>`;
     }).join('');
+}
+
+function openProductModal(product = null) {
+    document.getElementById('product-modal-title').textContent = product ? 'Editar Producto' : 'Nuevo Producto';
+    document.getElementById('product-id').value = product ? product.id : '';
+    document.getElementById('product-name').value = product ? product.name : '';
+    document.getElementById('product-category').value = product ? (product.category || '') : '';
+    document.getElementById('product-description').value = product ? (product.description || '') : '';
+    document.getElementById('product-price').value = product ? product.price : '';
+    document.getElementById('product-iva').value = product ? (product.iva_rate || 10) : '10';
+    document.getElementById('product-active').value = product ? String(product.active) : 'true';
+    document.getElementById('product-image-url').value = product ? (product.image_url || '') : '';
+    
+    const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+    document.getElementById('category-list').innerHTML = categories.map(c => `<option value="${c}">`).join('');
+    
+    document.getElementById('product-modal').classList.add('active');
+}
+
+function openProductModalById(productId) {
+    const product = products.find(p => p.id === productId);
+    if (product) openProductModal(product);
+}
+
+async function saveProduct() {
+    const id = document.getElementById('product-id').value;
+    const name = document.getElementById('product-name').value.trim();
+    const category = document.getElementById('product-category').value.trim();
+    const description = document.getElementById('product-description').value.trim();
+    const price = parseFloat(document.getElementById('product-price').value) || 0;
+    const iva_rate = parseFloat(document.getElementById('product-iva').value) || 10;
+    const active = document.getElementById('product-active').value === 'true';
+    const image_url = document.getElementById('product-image-url').value.trim();
+    
+    if (!name) return alert('El nombre es obligatorio');
+    if (price <= 0) return alert('El precio debe ser mayor a 0');
+    
+    try {
+        if (id) {
+            const { error } = await supabaseClient
+                .from('products')
+                .update({ name, category, description, price, iva_rate, active, image_url, updated_at: new Date().toISOString() })
+                .eq('id', id);
+            if (error) throw error;
+            showToast('pago', '✓ Producto actualizado', name);
+        } else {
+            const { error } = await supabaseClient
+                .from('products')
+                .insert([{ name, category, description, price, iva_rate, active, image_url }]);
+            if (error) throw error;
+            showToast('pago', '✓ Producto creado', name);
+        }
+        
+        closeModal('product-modal');
+        loadProductManagement();
+        loadProducts();
+        loadAllergens();
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
 }
 
 function openImageModal(productId) {
@@ -1907,7 +1976,7 @@ async function deleteProductImage() {
         closeModal('image-modal');
         loadProductManagement();
         loadProducts();
-        showToast('pago', '️ Imagen eliminada', currentProductForImage.name);
+        showToast('pago', '🗑️ Imagen eliminada', currentProductForImage.name);
     } catch (error) {
         alert('Error al eliminar la imagen: ' + error.message);
     }
@@ -1971,5 +2040,7 @@ window.printInvoiceById = printInvoiceById;
 window.editProductAllergens = editProductAllergens;
 window.viewTechnicalSheet = viewTechnicalSheet;
 window.openImageModal = openImageModal;
+window.openProductModal = openProductModal;
+window.openProductModalById = openProductModalById;
 
 init();

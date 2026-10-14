@@ -27,11 +27,11 @@
     <div id="main-app" style="display: none;">
         <nav class="sidebar">
             <div class="sidebar-header">
-                <h2> TPV</h2>
+                <h2>🌿 TPV</h2>
             </div>
             <ul class="nav-menu">
                 <li class="nav-item active" data-view="tables" data-perm="tables">
-                    <span class="nav-icon">🪑</span>
+                    <span class="nav-icon"></span>
                     <span>Mesas</span>
                 </li>
                 <li class="nav-item" data-view="pos" data-perm="pos">
@@ -39,7 +39,7 @@
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="kitchen" data-perm="kitchen">
-                    <span class="nav-icon">👨🍳</span>
+                    <span class="nav-icon">👨‍</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="reservations" data-perm="reservations">
@@ -67,7 +67,7 @@
                     <span>Facturas</span>
                 </li>
                 <li class="nav-item" data-view="reports" data-perm="reports">
-                    <span class="nav-icon"></span>
+                    <span class="nav-icon">📊</span>
                     <span>Reportes</span>
                 </li>
                 <li class="nav-item" data-view="cash" data-perm="cash">
@@ -126,7 +126,7 @@
                     <div class="cart-section">
                         <div class="cart-header">
                             <span>Pedido Actual (Carrito)</span>
-                            <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
+                            <span class="clear-btn" id="btn-clear">️ Limpiar</span>
                         </div>
                         <div class="cart-items" id="cart-items">
                             <div class="empty-cart">Añade productos para empezar</div>
@@ -162,7 +162,7 @@
                     <div class="stat"><span class="stat-number" id="count-listo">0</span><span class="stat-label">Listos</span></div>
                 </div>
                 <div class="kitchen-container">
-                    <div class="column"><h2 class="column-header status-nuevo">🔴 Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
+                    <div class="column"><h2 class="column-header status-nuevo"> Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
                     <div class="column"><h2 class="column-header status-cocina">🟠 En Cocina</h2><div class="orders-list" id="orders-cocina"></div></div>
                     <div class="column"><h2 class="column-header status-listo">🟢 Listos</h2><div class="orders-list" id="orders-listo"></div></div>
                 </div>
@@ -236,7 +236,8 @@
 
             <section id="view-products" class="view">
                 <header class="view-header">
-                    <h1>🍽️ Gestión de Productos</h1>
+                    <h1>️ Gestión de Productos</h1>
+                    <button class="btn-primary" id="btn-add-product">+ Nuevo Producto</button>
                 </header>
                 <div class="products-management-container">
                     <div class="inventory-filters">
@@ -252,7 +253,7 @@
             <section id="view-allergens" class="view">
                 <header class="view-header">
                     <h1>⚠️ Control de Alérgenos</h1>
-                    <button class="btn-primary" id="btn-product-allergens"> Gestionar Alérgenos</button>
+                    <button class="btn-primary" id="btn-product-allergens">🥗 Gestionar Alérgenos</button>
                 </header>
                 <div class="allergens-container">
                     <div class="allergen-legend">
@@ -317,7 +318,7 @@
                         <div class="kpi-card"><div class="kpi-label">Método Top</div><div class="kpi-value" id="kpi-metodo">—</div><div class="kpi-trend" id="kpi-metodo-detail">—</div></div>
                     </div>
                     <div class="charts-grid">
-                        <div class="chart-card"><h3> Ventas por Hora</h3><div class="chart-wrapper"><canvas id="chart-horas"></canvas></div></div>
+                        <div class="chart-card"><h3>📈 Ventas por Hora</h3><div class="chart-wrapper"><canvas id="chart-horas"></canvas></div></div>
                         <div class="chart-card"><h3>🏆 Top 5 Productos</h3><div class="chart-wrapper"><canvas id="chart-productos"></canvas></div></div>
                     </div>
                     <div class="recent-orders-card">
@@ -411,6 +412,64 @@
         </div>
     </div>
 
+    <!-- MODAL AGREGAR/EDITAR PRODUCTO -->
+    <div id="product-modal" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="product-modal-title">Nuevo Producto</h2>
+                <button class="close-btn" id="btn-close-product">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="product-id">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div class="input-group">
+                        <label>Nombre del producto:</label>
+                        <input type="text" id="product-name" placeholder="Ej: Calentado con chicharrón" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Categoría:</label>
+                        <input type="text" id="product-category" placeholder="Ej: Desayunos" list="category-list">
+                        <datalist id="category-list"></datalist>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Descripción:</label>
+                    <input type="text" id="product-description" placeholder="Ej: Con arepa y queso">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.75rem;">
+                    <div class="input-group">
+                        <label>Precio (€):</label>
+                        <input type="number" id="product-price" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
+                    <div class="input-group">
+                        <label>IVA (%):</label>
+                        <select id="product-iva">
+                            <option value="10">10% (Reducido - hostelería)</option>
+                            <option value="21">21% (General)</option>
+                            <option value="4">4% (Superreducido)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Estado:</label>
+                        <select id="product-active">
+                            <option value="true">✅ Activo</option>
+                            <option value="false">⛔ Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>URL de imagen (opcional):</label>
+                    <input type="text" id="product-image-url" placeholder="https://...">
+                    <small style="color: var(--text-gray); font-size: 0.75rem;">O usa el botón "📷 Imagen" en la lista de productos</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="btn-cancel-product">Cancelar</button>
+                <button class="confirm-btn" id="btn-save-product">💾 Guardar Producto</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL ALÉRGENOS DE PRODUCTO -->
     <div id="product-allergens-modal" class="modal-overlay">
         <div class="modal-content modal-large">
@@ -454,12 +513,12 @@
     <div id="fiscal-settings-modal" class="modal-overlay">
         <div class="modal-content modal-large">
             <div class="modal-header">
-                <h2>️ Configuración Fiscal</h2>
+                <h2>⚙️ Configuración Fiscal</h2>
                 <button class="close-btn" id="btn-close-fiscal">✕</button>
             </div>
             <div class="modal-body">
                 <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">
-                    <strong>🇪🇸 Ley Antifraude (Verifactu):</strong> Los registros son inalterables con hash encadenado.
+                    <strong>🇸 Ley Antifraude (Verifactu):</strong> Los registros son inalterables con hash encadenado.
                 </div>
                 <h3 style="margin-bottom: 0.75rem; font-size: 1rem;">Datos del Restaurante</h3>
                 <div class="input-group"><label>Razón Social:</label><input type="text" id="set-business-name" placeholder="Ej: Restaurante Punto Verde S.L."></div>
@@ -506,7 +565,7 @@
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2 id="invoice-modal-title">Nueva Factura</h2>
-                <button class="close-btn" id="btn-close-invoice">✕</button>
+                <button class="close-btn" id="btn-close-invoice"></button>
             </div>
             <div class="modal-body">
                 <div class="input-group">
@@ -630,15 +689,15 @@
                     <div class="type-buttons">
                         <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
                         <button class="type-btn" data-type="recogida">📦 Recogida</button>
-                        <button class="type-btn" data-type="domicilio"> Domicilio</button>
+                        <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
                     </div>
                 </div>
                 <div class="payment-method">
                     <h3>Método de Pago</h3>
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
+                        <button class="method-btn" data-method="tarjeta"> Tarjeta</button>
+                        <button class="method-btn" data-method="bizum"> Bizum</button>
                     </div>
                 </div>
                 <div class="cash-input" id="cash-section">
@@ -700,7 +759,7 @@
                     <h3>Método de Pago</h3>
                     <div class="method-buttons" id="diner-method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta"> Tarjeta</button>
+                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
@@ -758,7 +817,7 @@
     <div id="loyalty-settings-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>️ Configurar Sistema de Puntos</h2>
+                <h2>⚙️ Configurar Sistema de Puntos</h2>
                 <button class="close-btn" id="btn-close-loyalty">✕</button>
             </div>
             <div class="modal-body">
@@ -769,7 +828,7 @@
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-loyalty">Cancelar</button>
-                <button class="confirm-btn" id="btn-save-loyalty">💾 Guardar Reglas</button>
+                <button class="confirm-btn" id="btn-save-loyalty"> Guardar Reglas</button>
             </div>
         </div>
     </div>
@@ -832,7 +891,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="staff-modal-title">Nuevo Empleado</h2>
-                <button class="close-btn" id="btn-close-staff"></button>
+                <button class="close-btn" id="btn-close-staff">✕</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="staff-id">
@@ -844,8 +903,8 @@
                     <select id="staff-role">
                         <option value="cajero">🛒 Cajero</option>
                         <option value="mesero">🪑 Mesero</option>
-                        <option value="cocina">👨‍🍳 Cocina</option>
-                        <option value="admin"> Administrador</option>
+                        <option value="cocina">👨🍳 Cocina</option>
+                        <option value="admin">👑 Administrador</option>
                     </select>
                 </div>
                 <div class="input-group"><label>Comisión (% sobre ventas):</label><input type="number" id="staff-commission" placeholder="0" step="0.1" min="0" max="100"></div>
