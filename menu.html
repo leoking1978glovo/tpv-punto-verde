@@ -42,11 +42,13 @@
         .cart-total-row { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin: 1rem 0; padding-top: 1rem; border-top: 2px solid #e5e7eb; }
         .send-btn { width: 100%; background: #10b981; color: white; border: none; padding: 1rem; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; margin-top: 1rem; }
         .close-modal { background: #f3f4f6; color: #1f2937; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; width: 100%; }
+        .added-feedback { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; z-index: 300; animation: fadeOut 1.5s forwards; }
+        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🌿 TPV Punto Verde</h1>
+        <h1> TPV Punto Verde</h1>
         <p>Escanea, pide y disfruta</p>
         <div class="mesa-badge" id="mesa-badge">Mesa</div>
     </div>
@@ -70,7 +72,7 @@
                 <span>Total:</span>
                 <span id="modal-total">€0</span>
             </div>
-            <button class="send-btn" onclick="sendOrder()">📤 Enviar pedido</button>
+            <button class="send-btn" onclick="sendOrder()">📤 Enviar a cocina</button>
             <button class="close-modal" onclick="closeCart()">Seguir pidiendo</button>
         </div>
     </div>
@@ -153,6 +155,15 @@
             }
             
             updateCartBar();
+            showFeedback(`✓ ${product.name} añadido`);
+        }
+
+        function showFeedback(message) {
+            const feedback = document.createElement('div');
+            feedback.className = 'added-feedback';
+            feedback.textContent = message;
+            document.body.appendChild(feedback);
+            setTimeout(() => feedback.remove(), 1500);
         }
 
         function updateCartBar() {
@@ -216,14 +227,14 @@
             const total = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
             
             try {
-                // ✅ CORRECCIÓN CLAVE: status 'pendiente_pago' para que la mesa se ocupe y pase por caja
+                // ✅ CAMBIO CLAVE: status 'nuevo' para que vaya directo a cocina
                 const { data: order, error: orderError } = await supabaseClient
                     .from('orders')
                     .insert([{
                         type: 'mesa',
-                        status: 'pendiente_pago',  // ← CAMBIO CLAVE
+                        status: 'nuevo',  // ← CAMBIADO de 'pendiente_pago' a 'nuevo'
                         total: total,
-                        paid: false,
+                        paid: false,      // ← paid: false para saber que falta cobrar
                         pay_method: 'pendiente',
                         source: 'web',
                         table_id: mesaId ? parseInt(mesaId) : null
@@ -233,7 +244,6 @@
                 
                 if (orderError) throw orderError;
                 
-                // Insertar los items del pedido
                 const orderItems = items.map(item => ({
                     order_id: order.id,
                     name: item.name,
@@ -247,7 +257,7 @@
                 
                 if (itemsError) throw itemsError;
                 
-                // ✅ CORRECCIÓN CLAVE: Marcar la mesa como OCUPADA inmediatamente
+                // Marcar mesa como ocupada
                 if (mesaId) {
                     await supabaseClient
                         .from('tables')
@@ -255,7 +265,7 @@
                         .eq('id', parseInt(mesaId));
                 }
                 
-                alert('✅ ¡Pedido enviado! El mesero se acercará a tu mesa para confirmar.');
+                alert('✅ ¡Pedido enviado a cocina! El mesero te atenderá pronto.');
                 cart = {};
                 updateCartBar();
                 closeCart();

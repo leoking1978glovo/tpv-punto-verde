@@ -504,7 +504,7 @@ async function saveInvoice() {
         currentInvoice = invoice;
         closeModal('invoice-modal');
         loadInvoices();
-        showToast('pago', ` Factura ${invoice_number} emitida`, `Total: €${total.toFixed(2)}`);
+        showToast('pago', `📄 Factura ${invoice_number} emitida`, `Total: €${total.toFixed(2)}`);
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -547,12 +547,12 @@ function renderInvoices() {
             <div class="invoice-customer">${inv.customer_name}</div>
             <div class="invoice-nif">${inv.customer_nif || 'Sin NIF'}</div>
             <div class="invoice-details">
-                📅 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
+                 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
                 💰 Total: <strong>€${inv.total.toFixed(2)}</strong> (IVA: €${inv.iva_amount.toFixed(2)})<br>
                 📊 Estado: <strong>${inv.status}</strong>
             </div>
             <div class="invoice-actions">
-                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">👁️ Ver</button>
+                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">️ Ver</button>
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
                 <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
@@ -678,12 +678,12 @@ function renderReservations() {
         const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
         return `<div class="reservation-card status-${r.status}">
             <div class="res-header"><div class="res-name">${r.customer_name}</div><span class="res-status-badge">${r.status}</span></div>
-            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
+            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br> ${r.notes}` : ''}</div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
                 ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
                 ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
-                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
+                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">️</button>
             </div>
         </div>`;
     }).join('');
@@ -731,7 +731,7 @@ async function deleteReservation(id) {
     if (!confirm('¿Eliminar esta reserva?')) return;
     await supabaseClient.from('reservations').delete().eq('id', id);
     loadReservations();
-    showToast('pago', '🗑️ Reserva eliminada', '');
+    showToast('pago', '️ Reserva eliminada', '');
 }
 
 function setupLoyaltySettingsEvents() {
@@ -838,13 +838,13 @@ function renderCustomers() {
     }
     grid.innerHTML = filtered.map(c => `
         <div class="customer-card ${isBirthday(c) ? 'birthday' : ''}">
-            <div class="customer-header"><div class="customer-name">${isBirthday(c) ? ' ' : ''}${c.name}</div><span class="customer-points-badge">${Math.round(c.points || 0)} pts</span></div>
+            <div class="customer-header"><div class="customer-name">${isBirthday(c) ? '🎂 ' : ''}${c.name}</div><span class="customer-points-badge">${Math.round(c.points || 0)} pts</span></div>
             <div class="customer-phone">${c.phone || 'Sin teléfono'} ${c.email ? '· ' + c.email : ''}</div>
             <div class="customer-meta"><div>Visitas: <strong>${c.visits || 0}</strong></div><div>Gastado: <strong>$${Math.round(c.total_spent || 0).toLocaleString()}</strong></div></div>
             <div class="customer-actions">
                 <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">✏️ Editar</button>
                 <button class="customer-action-btn history" onclick="viewHistory(${c.id})">📜 Historial</button>
-                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">🗑️ Eliminar</button>
+                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">️ Eliminar</button>
             </div>
         </div>
     `).join('');
@@ -910,7 +910,7 @@ function selectCustomer(id) {
     document.getElementById('loyalty-search-box').style.display = 'none';
     document.getElementById('selected-customer').style.display = 'flex';
     document.getElementById('sel-cust-name').textContent = selectedCustomer.name;
-    document.getElementById('sel-cust-points').textContent = `${Math.round(selectedCustomer.points || 0)} puntos disponibles${isBirthday(selectedCustomer) ? ` ·  ¡Cumpleaños hoy (x${loyaltySettings.birthday_multiplier})!` : ''}`;
+    document.getElementById('sel-cust-points').textContent = `${Math.round(selectedCustomer.points || 0)} puntos disponibles${isBirthday(selectedCustomer) ? ` · 🎂 ¡Cumpleaños hoy (x${loyaltySettings.birthday_multiplier})!` : ''}`;
     document.getElementById('redeem-row').style.display = 'block';
     document.getElementById('redeem-points').value = '';
     document.getElementById('redeem-discount').textContent = '$0';
@@ -1026,7 +1026,7 @@ function renderDivideModal() {
     dinersList.innerHTML = diners.map(diner => {
         const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
         const itemsHtml = diner.items.map(item => `<div class="diner-item"><span class="diner-item-name">${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span><div class="diner-item-controls"><button class="diner-item-btn remove" onclick="removeItemFromDiner(${item.uid}, ${diner.id})">✕</button></div></div>`).join('');
-        return `<div class="diner-card"><div class="diner-header"><div class="diner-name"><input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)"></div><div style="display:flex; align-items:center; gap:0.5rem;"><span class="diner-total">$${Math.round(total).toLocaleString()}</span>${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})"> Cobrar</button>` : ''}${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}</div></div><div class="diner-items">${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}</div></div>`;
+        return `<div class="diner-card"><div class="diner-header"><div class="diner-name"><input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)"></div><div style="display:flex; align-items:center; gap:0.5rem;"><span class="diner-total">$${Math.round(total).toLocaleString()}</span>${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})">💰 Cobrar</button>` : ''}${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}</div></div><div class="diner-items">${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}</div></div>`;
     }).join('');
     if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
     else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
@@ -1062,7 +1062,7 @@ async function confirmDinerPayment() {
         await recordEmployeeSale(order.id, total);
         const remainingItems = currentTableOrder.order_items.filter(origItem => !diner.items.some(dinerItem => dinerItem.orderItemId === origItem.id));
         const newTotal = remainingItems.reduce((s, i) => s + (i.price * i.qty), 0);
-        if (remainingItems.length === 0) { await supabaseClient.from('orders').update({ status: 'nuevo', paid: true }).eq('id', currentTableOrder.id); await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId); currentTableOrder = null; }
+        if (remainingItems.length === 0) { await supabaseClient.from('orders').update({ status: 'entregado', paid: true }).eq('id', currentTableOrder.id); await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId); currentTableOrder = null; }
         else { await supabaseClient.from('orders').update({ total: newTotal }).eq('id', currentTableOrder.id); await supabaseClient.from('order_items').delete().in('id', diner.items.map(i => i.orderItemId)); currentTableOrder.order_items = remainingItems; currentTableOrder.total = newTotal; }
         addNotification('pago', `✓ ${diner.name} pagó`, `$${Math.round(total).toLocaleString()} | ${currentDinerPayMethod.toUpperCase()}`);
         closeModal('diner-pay-modal'); closeModal('divide-modal'); renderCart(); renderTableOrder(); loadTables();
@@ -1106,7 +1106,7 @@ function renderInventory() {
         const status = getIngredientStatus(ing);
         const statusClass = status === 'out' ? 'stock-out' : status === 'low' ? 'stock-low' : '';
         const unitLabel = ing.unit === 'gramo' ? 'g' : ing.unit === 'kilogramo' ? 'kg' : ing.unit === 'litro' ? 'L' : ing.unit === 'mililitro' ? 'ml' : 'und';
-        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
+        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})"> Ver Recetas</button></div>`;
     }).join('');
 }
 
@@ -1355,11 +1355,12 @@ function setupPOSEvents() {
     document.getElementById('btn-confirm-pay').addEventListener('click', () => { if (currentTableOrder) confirmPaymentForTable(); else confirmPayment(); });
 }
 
-// ✅ CORREGIDO: loadTables unifica pedidos por mesa
+// ✅ CORREGIDO: loadTables busca pedidos con paid: false (independiente del status)
 async function loadTables() {
     const { data: tablesData, error: tablesError } = await supabaseClient.from('tables').select('*').order('id');
     if (tablesError) return;
-    const { data: ordersData, error: ordersError } = await supabaseClient.from('orders').select('*, order_items(*)').eq('status', 'pendiente_pago');
+    // ✅ Buscar pedidos de mesa que NO estén pagados (independiente del status)
+    const { data: ordersData, error: ordersError } = await supabaseClient.from('orders').select('*, order_items(*)').eq('paid', false).neq('status', 'entregado');
     if (ordersError) return;
     const ordersByTable = {};
     (ordersData || []).forEach(order => { 
@@ -1411,7 +1412,6 @@ function renderMiniTables() {
     }).join('');
 }
 
-// ✅ CORREGIDO: selectTable unifica todos los pedidos de la mesa
 async function selectTable(id, name) {
     activeTableId = id; cart = [];
     const table = tables.find(t => t.id === id);
@@ -1434,7 +1434,6 @@ async function selectTable(id, name) {
     if (!posView.classList.contains('active')) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); posView.classList.add('active'); }
 }
 
-// ✅ CORREGIDO: cobrarMesaDirecta unifica todos los pedidos
 async function cobrarMesaDirecta(tableId) {
     const table = tables.find(t => t.id === tableId);
     if (!table || !table.pendingOrders || table.pendingOrders.length === 0) return;
@@ -1482,7 +1481,7 @@ async function addToTable() {
             currentTableOrder.total += total;
             currentTableOrder.order_items = [...currentTableOrder.order_items, ...cart];
         } else {
-            const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ type: 'mesa', status: 'pendiente_pago', total, paid: false, pay_method: 'pendiente', source: 'tpv', user_email: currentUser?.email, table_id: activeTableId }]).select().single();
+            const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ type: 'mesa', status: 'nuevo', total, paid: false, pay_method: 'pendiente', source: 'tpv', user_email: currentUser?.email, table_id: activeTableId }]).select().single();
             if (orderError) throw orderError;
             await supabaseClient.from('order_items').insert(cart.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty })));
             currentTableOrder = order;
@@ -1543,7 +1542,7 @@ async function confirmPayment() {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
-// ✅ CORREGIDO: confirmPaymentForTable cobra TODOS los pedidos unificados
+// ✅ CORREGIDO: confirmPaymentForTable marca paid: true en lugar de cambiar status
 async function confirmPaymentForTable() {
     const base = currentTableOrder.total;
     const discount = redeemPoints * loyaltySettings.point_value;
@@ -1552,10 +1551,12 @@ async function confirmPaymentForTable() {
     try {
         const orderIds = currentTableOrder._allOrderIds || [currentTableOrder.id];
         
-        for (let i = 0; i < orderIds.length; i++) {
-            const updateData = { status: 'nuevo', paid: true, pay_method: payMethod };
-            if (i === 0) updateData.total = total;
-            await supabaseClient.from('orders').update(updateData).eq('id', orderIds[i]);
+        // ✅ Marcar todos los pedidos como pagados (sin cambiar status)
+        for (const orderId of orderIds) {
+            await supabaseClient.from('orders').update({ 
+                paid: true, 
+                pay_method: payMethod 
+            }).eq('id', orderId);
         }
         
         await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId);
@@ -1580,7 +1581,14 @@ function printTicket(order, items, loyalty) {
     setTimeout(() => { const qrContainer = document.getElementById('qr-code'); qrContainer.innerHTML = ''; new QRCode(qrContainer, { text: qrUrl, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.L }); setTimeout(() => window.print(), 500); }, 100);
 }
 
-async function loadKitchenOrders() { const { data, error } = await supabaseClient.from('orders').select('*, order_items(*)').neq('status', 'entregado').neq('status', 'pendiente_pago').order('created_at', { ascending: false }); if (error) return; kitchenOrders = data || []; renderKitchenOrders(); updateKitchenStats(); }
+// ✅ CORREGIDO: loadKitchenOrders incluye pedidos con status 'nuevo' (incluye QR)
+async function loadKitchenOrders() { 
+    const { data, error } = await supabaseClient.from('orders').select('*, order_items(*)').neq('status', 'entregado').order('created_at', { ascending: false }); 
+    if (error) return; 
+    kitchenOrders = data || []; 
+    renderKitchenOrders(); 
+    updateKitchenStats(); 
+}
 
 function renderKitchenOrders() { ['nuevo', 'cocina', 'listo'].forEach(status => { const container = document.getElementById(`orders-${status}`); const orders = kitchenOrders.filter(o => o.status === status); if (orders.length === 0) { container.innerHTML = '<div class="empty-cart">No hay pedidos</div>'; return; } container.innerHTML = orders.map(order => { const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; const webBadge = order.source === 'web' ? ' 📱' : ''; const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); let actionBtn = ''; if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`; else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`; return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}${dinerText}${webBadge}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`; }).join(''); }); }
 
@@ -1591,15 +1599,19 @@ async function updateOrderStatus(orderId, newStatus) {
     await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId);
     loadKitchenOrders();
     if (newStatus === 'entregado') {
-        if (order && order.table_id && !order.paid) { await supabaseClient.from('orders').update({ status: 'pendiente_pago' }).eq('id', orderId); await supabaseClient.from('tables').update({ status: 'ocupada' }).eq('id', order.table_id); }
-        else if (order && order.table_id) { await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', order.table_id); }
+        // ✅ Cuando se entrega, el pedido queda pendiente de pago (si es de mesa)
+        if (order && order.table_id) {
+            await supabaseClient.from('tables').update({ status: 'ocupada' }).eq('id', order.table_id);
+        }
         loadTables();
-    } else if (newStatus === 'listo') { if (order && order.table_id) await supabaseClient.from('tables').update({ status: 'pendiente' }).eq('id', order.table_id); }
+    } else if (newStatus === 'listo') { 
+        if (order && order.table_id) await supabaseClient.from('tables').update({ status: 'ocupada' }).eq('id', order.table_id); 
+    }
 }
 
-async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
+async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed"> Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
 
-async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : ''} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
+async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
 
 document.getElementById('btn-confirm-open').addEventListener('click', async () => { const fund = parseFloat(document.getElementById('opening-fund').value) || 0; const { error } = await supabaseClient.from('cash_sessions').insert([{ fondo: fund, user_email: currentUser.email }]); if (error) { alert('Error: ' + error.message); } else { closeModal('modal-open-cash'); loadCashStatus(); } });
 document.getElementById('btn-confirm-movement').addEventListener('click', async () => { const type = document.getElementById('movement-type').value; const method = document.getElementById('movement-method').value; const amount = parseFloat(document.getElementById('movement-amount').value) || 0; const note = document.getElementById('movement-note').value; if (!currentSession) return alert('Caja no abierta'); const { error } = await supabaseClient.from('cash_movements').insert([{ session_id: currentSession.id, tipo: type, metodo: method, importe: amount, nota: note }]); if (error) { alert('Error: ' + error.message); } else { closeModal('modal-movement'); document.getElementById('movement-amount').value = ''; document.getElementById('movement-note').value = ''; loadCashStatus(); } });
@@ -1804,7 +1816,7 @@ function renderProductManagement() {
         const imageUrl = p.image_url || '';
         const imageHtml = imageUrl 
             ? `<img src="${imageUrl}" alt="${p.name}">`
-            : '<div class="no-image"> Sin imagen</div>';
+            : '<div class="no-image">📷 Sin imagen</div>';
         
         return `
         <div class="product-management-card">
@@ -1815,7 +1827,7 @@ function renderProductManagement() {
             <div class="product-management-image">${imageHtml}</div>
             <div class="product-management-price">€${Number(p.price).toFixed(2)}</div>
             <div class="product-management-actions">
-                <button class="product-management-btn image" onclick="openImageModal(${p.id})"> ${imageUrl ? 'Cambiar' : 'Añadir'} Imagen</button>
+                <button class="product-management-btn image" onclick="openImageModal(${p.id})">📷 ${imageUrl ? 'Cambiar' : 'Añadir'} Imagen</button>
                 <button class="product-management-btn edit" onclick="openProductModalById(${p.id})">✏️ Editar</button>
             </div>
         </div>`;
@@ -2024,9 +2036,13 @@ function setupRealtimeGlobal() {
     pollingInterval = setInterval(() => {
         const tablesView = document.getElementById('view-tables');
         const posView = document.getElementById('view-pos');
+        const kitchenView = document.getElementById('view-kitchen');
         
         if (tablesView.classList.contains('active') || posView.classList.contains('active')) {
             loadTables();
+        }
+        if (kitchenView.classList.contains('active')) {
+            loadKitchenOrders();
         }
     }, 3000);
 
@@ -2037,17 +2053,9 @@ function setupRealtimeGlobal() {
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
             const webText = order.source === 'web' ? ' 📱 (QR)' : '';
             
-            if (order.status === 'pendiente_pago' && order.table_id) {
-                addNotification('nuevo', `📝 Nuevo pedido QR - Mesa ${order.table_id}`, `Total: €${Math.round(order.total).toLocaleString()}`);
-                loadTables();
-                renderMiniTables();
-                return;
-            }
-            
             addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`);
-            const kitchenView = document.getElementById('view-kitchen');
-            if (kitchenView.classList.contains('active')) loadKitchenOrders();
             loadTables();
+            loadKitchenOrders();
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
@@ -2060,8 +2068,8 @@ function setupRealtimeGlobal() {
             else if (oldStatus === 'cocina' && newStatus === 'listo') { tipo = 'listo'; title = `✅ Pedido #${order.id}${tableText} listo`; message = 'El pedido está listo para entregar'; loadTables(); }
             else if (newStatus === 'entregado') { tipo = 'pago'; title = `✓ Pedido #${order.id}${tableText} entregado`; message = 'Pedido completado'; loadTables(); }
             if (title) addNotification(tipo, title, message);
-            const kitchenView = document.getElementById('view-kitchen');
-            if (kitchenView.classList.contains('active')) loadKitchenOrders();
+            loadTables();
+            loadKitchenOrders();
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); })
         .subscribe((status) => {
