@@ -70,7 +70,7 @@
                 <span>Total:</span>
                 <span id="modal-total">€0</span>
             </div>
-            <button class="send-btn" onclick="sendOrder()">📤 Enviar a cocina</button>
+            <button class="send-btn" onclick="sendOrder()">📤 Enviar pedido</button>
             <button class="close-modal" onclick="closeCart()">Seguir pidiendo</button>
         </div>
     </div>
@@ -128,7 +128,6 @@
             }
 
             container.innerHTML = filtered.map(p => {
-                // ✅ AQUÍ ESTÁ LA CORRECCIÓN: usa p.image_url
                 const imgUrl = p.image_url || 'https://via.placeholder.com/70?text=Sin+Imagen';
                 return `
                 <div class="prod-card">
@@ -217,11 +216,12 @@
             const total = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
             
             try {
+                // ✅ CORRECCIÓN CLAVE: status 'pendiente_pago' para que la mesa se ocupe y pase por caja
                 const { data: order, error: orderError } = await supabaseClient
                     .from('orders')
                     .insert([{
                         type: 'mesa',
-                        status: 'nuevo',
+                        status: 'pendiente_pago',  // ← CAMBIO CLAVE
                         total: total,
                         paid: false,
                         pay_method: 'pendiente',
@@ -233,6 +233,7 @@
                 
                 if (orderError) throw orderError;
                 
+                // Insertar los items del pedido
                 const orderItems = items.map(item => ({
                     order_id: order.id,
                     name: item.name,
@@ -246,7 +247,15 @@
                 
                 if (itemsError) throw itemsError;
                 
-                alert('✅ ¡Pedido enviado a cocina!');
+                // ✅ CORRECCIÓN CLAVE: Marcar la mesa como OCUPADA inmediatamente
+                if (mesaId) {
+                    await supabaseClient
+                        .from('tables')
+                        .update({ status: 'ocupada', current_order_id: order.id })
+                        .eq('id', parseInt(mesaId));
+                }
+                
+                alert('✅ ¡Pedido enviado! El mesero se acercará a tu mesa para confirmar.');
                 cart = {};
                 updateCartBar();
                 closeCart();
