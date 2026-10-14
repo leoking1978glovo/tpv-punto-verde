@@ -45,10 +45,11 @@ let invoiceItems = [];
 let allergens = [];
 let productAllergens = {};
 let currentAllergenCategory = 'all';
+let currentProductForImage = null;
 
 const ROLE_PERMISSIONS = {
-    admin: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'inventory', 'allergens', 'invoices', 'reports', 'cash', 'staff'],
-    cajero: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'invoices', 'reports', 'cash'],
+    admin: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'inventory', 'products', 'allergens', 'invoices', 'reports', 'cash', 'staff'],
+    cajero: ['tables', 'pos', 'kitchen', 'reservations', 'customers', 'inventory', 'products', 'invoices', 'reports', 'cash'],
     mesero: ['tables', 'pos', 'reservations'],
     cocina: ['kitchen']
 };
@@ -69,6 +70,7 @@ async function init() {
     setupReservationEvents();
     setupInvoiceEvents();
     setupAllergenEvents();
+    setupProductManagementEvents();
 }
 
 async function loadProfile() {
@@ -141,6 +143,7 @@ function showApp() {
     loadIngredients();
     loadStaff();
     loadCustomers();
+    loadProductManagement();
     setupPOSEvents();
     setupRealtimeGlobal();
 }
@@ -186,6 +189,7 @@ function setupNavigation() {
             else if (view === 'reservations') loadReservations();
             else if (view === 'customers') loadCustomers();
             else if (view === 'inventory') loadIngredients();
+            else if (view === 'products') loadProductManagement();
             else if (view === 'allergens') { loadAllergens(); renderAllergenCategories(); renderAllergens(); }
             else if (view === 'invoices') loadInvoices();
             else if (view === 'reports') loadReports(currentReportPeriod);
@@ -541,7 +545,7 @@ function renderInvoices() {
             <div class="invoice-customer">${inv.customer_name}</div>
             <div class="invoice-nif">${inv.customer_nif || 'Sin NIF'}</div>
             <div class="invoice-details">
-                📅 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
+                 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
                 💰 Total: <strong>€${inv.total.toFixed(2)}</strong> (IVA: €${inv.iva_amount.toFixed(2)})<br>
                 📊 Estado: <strong>${inv.status}</strong>
             </div>
@@ -549,7 +553,7 @@ function renderInvoices() {
                 <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">👁️ Ver</button>
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
-                <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
+                <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">️ PDF</button>
             </div>
         </div>
     `).join('');
@@ -672,7 +676,7 @@ function renderReservations() {
         const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
         return `<div class="reservation-card status-${r.status}">
             <div class="res-header"><div class="res-name">${r.customer_name}</div><span class="res-status-badge">${r.status}</span></div>
-            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br> ${r.notes}` : ''}</div>
+            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
                 ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
@@ -969,7 +973,7 @@ function setupQREvents() {
         if (!currentQRTable) return;
         const url = `${window.location.origin}/menu.html?mesa=${currentQRTable.id}`;
         const win = window.open('', '_blank');
-        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}</style></head><body><h2> TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
+        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}</style></head><body><h2>🌿 TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
         win.document.close();
     });
 }
@@ -1100,7 +1104,7 @@ function renderInventory() {
         const status = getIngredientStatus(ing);
         const statusClass = status === 'out' ? 'stock-out' : status === 'low' ? 'stock-low' : '';
         const unitLabel = ing.unit === 'gramo' ? 'g' : ing.unit === 'kilogramo' ? 'kg' : ing.unit === 'litro' ? 'L' : ing.unit === 'mililitro' ? 'ml' : 'und';
-        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})"> Ver Recetas</button></div>`;
+        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
     }).join('');
 }
 
@@ -1131,7 +1135,7 @@ async function saveIngredient() {
 }
 
 async function editIngredient(id) { const ing = ingredients.find(i => i.id === id); if (ing) openIngredientModal(ing); }
-async function deleteIngredient(id) { if (!confirm('¿Eliminar este ingrediente?')) return; try { await supabaseClient.from('recipes').delete().eq('ingredient_id', id); await supabaseClient.from('ingredients').delete().eq('id', id); loadIngredients(); showToast('pago', '🗑️ Ingrediente eliminado', ''); } catch (error) { alert('Error: ' + error.message); } }
+async function deleteIngredient(id) { if (!confirm('¿Eliminar este ingrediente?')) return; try { await supabaseClient.from('recipes').delete().eq('ingredient_id', id); await supabaseClient.from('ingredients').delete().eq('id', id); loadIngredients(); showToast('pago', '️ Ingrediente eliminado', ''); } catch (error) { alert('Error: ' + error.message); } }
 
 async function openRecipeModal(ingredientId) {
     const ing = ingredients.find(i => i.id === ingredientId);
@@ -1215,7 +1219,7 @@ function renderStaff() {
             <div class="staff-email">${s.email}</div>
             <div class="staff-meta"><span>Ventas mes: <strong>$${Math.round(monthSales).toLocaleString()}</strong></span><span class="staff-commission">Comisión: $${Math.round(monthComm).toLocaleString()}</span></div>
             <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : '⛔ Inactivo'}</span></div>
-            <div class="staff-actions"><button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button><button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">️ Eliminar</button></div>
+            <div class="staff-actions"><button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button><button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">🗑️ Eliminar</button></div>
         </div>`;
     }).join('');
 }
@@ -1292,7 +1296,8 @@ function renderProducts() {
             const allergen = allergens.find(a => a.id === aid);
             return allergen ? `<span style="font-size:0.7rem; background:#fef3c7; padding:0.1rem 0.3rem; border-radius:3px; margin-left:0.2rem;">${allergen.icon}</span>` : '';
         }).join('');
-        return `<div class="product-card" data-id="${p.id}"><img class="product-img" src="${p.image || 'https://via.placeholder.com/120x60?text=Sin+Imagen'}" alt="${p.name}"><div class="product-name">${p.name}${allergenBadges}</div><div class="product-price">$${Number(p.price).toLocaleString()}</div></div>`;
+        const imgUrl = p.image_url || 'https://via.placeholder.com/120x60?text=Sin+Imagen';
+        return `<div class="product-card" data-id="${p.id}"><img class="product-img" src="${imgUrl}" alt="${p.name}"><div class="product-name">${p.name}${allergenBadges}</div><div class="product-price">$${Number(p.price).toLocaleString()}</div></div>`;
     }).join('');
 }
 
@@ -1379,7 +1384,7 @@ function renderTables() {
         const itemsHtml = hasOrders ? Object.values(itemsGrouped).map(item => `<div class="table-order-item"><span>${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span></div>`).join('') : '';
         const statusText = status === 'reservada' ? 'RESERVADA' : (hasOrders ? 'OCUPADA' : 'LIBRE');
         return `<div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')">
-            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')"> QR</button>
+            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')">📱 QR</button>
             <div class="table-name">${table.name}</div><div class="table-status">${statusText}</div>
             ${hasOrders ? `<div class="table-orders-list">${itemsHtml}</div><div class="table-order-total"><span>Total:</span><span>$${Math.round(table.pendingTotal).toLocaleString()}</span></div><button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>` : '<div style="flex:1;"></div>'}
         </div>`;
@@ -1563,7 +1568,7 @@ async function updateOrderStatus(orderId, newStatus) {
     } else if (newStatus === 'listo') { if (order && order.table_id) await supabaseClient.from('tables').update({ status: 'pendiente' }).eq('id', order.table_id); }
 }
 
-async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
+async function loadCashStatus() { const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); if (error || !session) { currentSession = null; document.getElementById('cash-status').innerHTML = '<span class="status-closed"> Caja Cerrada</span>'; document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; document.getElementById('cash-summary').style.display = 'none'; } else { currentSession = session; document.getElementById('cash-status').innerHTML = `<span class="status-open"> Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; await loadCashSummary(); } }
 
 async function loadCashSummary() { if (!currentSession) return; const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true); const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id); let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0; orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; }); let entradas = 0, salidas = 0; movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; }); const totalVentas = efectivo + tarjeta + bizum; const totalCaja = currentSession.fondo + efectivo + entradas - salidas; document.getElementById('cash-summary').style.display = 'block'; document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; }
 
@@ -1719,6 +1724,195 @@ function printTechnicalSheet() {
     setTimeout(() => printWindow.print(), 500);
 }
 
+// ============ GESTIÓN DE PRODUCTOS E IMÁGENES ============
+function setupProductManagementEvents() {
+    document.getElementById('product-search').addEventListener('input', renderProductManagement);
+    document.getElementById('product-category-filter').addEventListener('change', renderProductManagement);
+    document.getElementById('btn-close-image').addEventListener('click', () => closeModal('image-modal'));
+    document.getElementById('btn-cancel-image').addEventListener('click', () => closeModal('image-modal'));
+    document.getElementById('btn-save-image').addEventListener('click', saveProductImage);
+    document.getElementById('btn-delete-image').addEventListener('click', deleteProductImage);
+    document.getElementById('image-file-input').addEventListener('change', previewImage);
+}
+
+async function loadProductManagement() {
+    const { data } = await supabaseClient.from('products').select('*').eq('active', true).order('position');
+    products = data || [];
+    
+    const cats = [...new Set(products.map(p => p.category || 'Sin categoría'))];
+    const filter = document.getElementById('product-category-filter');
+    if (filter) {
+        filter.innerHTML = '<option value="all">Todas las categorías</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+    
+    renderProductManagement();
+}
+
+function renderProductManagement() {
+    const grid = document.getElementById('products-management-grid');
+    if (!grid) return;
+    
+    const search = (document.getElementById('product-search')?.value || '').toLowerCase();
+    const categoryFilter = document.getElementById('product-category-filter')?.value || 'all';
+    
+    let filtered = products;
+    if (search) filtered = filtered.filter(p => (p.name || '').toLowerCase().includes(search));
+    if (categoryFilter !== 'all') filtered = filtered.filter(p => (p.category || 'Sin categoría') === categoryFilter);
+    
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay productos</div>';
+        return;
+    }
+    
+    grid.innerHTML = filtered.map(p => {
+        const imageUrl = p.image_url || '';
+        const imageHtml = imageUrl 
+            ? `<img src="${imageUrl}" alt="${p.name}">`
+            : '<div class="no-image">📷 Sin imagen</div>';
+        
+        return `
+        <div class="product-management-card">
+            <div class="product-management-header">
+                <div class="product-management-name">${p.name}</div>
+                <span class="product-management-category">${p.category || 'Sin categoría'}</span>
+            </div>
+            <div class="product-management-image">${imageHtml}</div>
+            <div class="product-management-price">€${Number(p.price).toFixed(2)}</div>
+            <div class="product-management-actions">
+                <button class="product-management-btn image" onclick="openImageModal(${p.id})">📷 ${imageUrl ? 'Cambiar' : 'Añadir'} Imagen</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openImageModal(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    currentProductForImage = product;
+    document.getElementById('image-modal-title').textContent = `Imagen: ${product.name}`;
+    
+    const preview = document.getElementById('image-preview');
+    if (product.image_url) {
+        preview.src = product.image_url;
+        preview.style.display = 'block';
+    } else {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+    
+    document.getElementById('image-file-input').value = '';
+    document.getElementById('image-modal').classList.add('active');
+}
+
+function previewImage(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+        alert('La imagen es demasiado grande. Máximo 5MB.');
+        e.target.value = '';
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const preview = document.getElementById('image-preview');
+        preview.src = event.target.result;
+        preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+async function saveProductImage() {
+    if (!currentProductForImage) return;
+    
+    const fileInput = document.getElementById('image-file-input');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Selecciona una imagen primero.');
+        return;
+    }
+    
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${currentProductForImage.id}_${Date.now()}.${fileExt}`;
+        const filePath = `products/${fileName}`;
+        
+        const { error: uploadError } = await supabaseClient.storage
+            .from('product-images')
+            .upload(filePath, file, { upsert: true });
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabaseClient.storage
+            .from('product-images')
+            .getPublicUrl(filePath);
+        
+        const { error: updateError } = await supabaseClient
+            .from('products')
+            .update({ image_url: publicUrl })
+            .eq('id', currentProductForImage.id);
+        
+        if (updateError) throw updateError;
+        
+        if (currentProductForImage.image_url && currentProductForImage.image_url.includes('product-images')) {
+            const oldPath = currentProductForImage.image_url.split('/product-images/')[1];
+            if (oldPath && oldPath !== filePath) {
+                try {
+                    await supabaseClient.storage
+                        .from('product-images')
+                        .remove([oldPath]);
+                } catch (e) { console.log('No se pudo eliminar imagen anterior:', e); }
+            }
+        }
+        
+        closeModal('image-modal');
+        loadProductManagement();
+        loadProducts();
+        showToast('pago', '✓ Imagen guardada', currentProductForImage.name);
+    } catch (error) {
+        alert('Error al subir la imagen: ' + error.message);
+    }
+}
+
+async function deleteProductImage() {
+    if (!currentProductForImage) return;
+    if (!currentProductForImage.image_url) {
+        alert('Este producto no tiene imagen.');
+        return;
+    }
+    if (!confirm('¿Eliminar la imagen de este producto?')) return;
+    
+    try {
+        if (currentProductForImage.image_url && currentProductForImage.image_url.includes('product-images')) {
+            const path = currentProductForImage.image_url.split('/product-images/')[1];
+            if (path) {
+                try {
+                    await supabaseClient.storage
+                        .from('product-images')
+                        .remove([path]);
+                } catch (e) { console.log('No se pudo eliminar del storage:', e); }
+            }
+        }
+        
+        const { error } = await supabaseClient
+            .from('products')
+            .update({ image_url: null })
+            .eq('id', currentProductForImage.id);
+        
+        if (error) throw error;
+        
+        closeModal('image-modal');
+        loadProductManagement();
+        loadProducts();
+        showToast('pago', '️ Imagen eliminada', currentProductForImage.name);
+    } catch (error) {
+        alert('Error al eliminar la imagen: ' + error.message);
+    }
+}
+
 function setupRealtimeGlobal() {
     supabaseClient.channel('orders-global')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
@@ -1776,5 +1970,6 @@ window.voidInvoice = voidInvoice;
 window.printInvoiceById = printInvoiceById;
 window.editProductAllergens = editProductAllergens;
 window.viewTechnicalSheet = viewTechnicalSheet;
+window.openImageModal = openImageModal;
 
 init();
