@@ -13,7 +13,7 @@
 
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
-            <h2>🌿 TPV Punto Verde</h2>
+            <h2> TPV Punto Verde</h2>
             <p>Inicia sesión para continuar</p>
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="Correo electrónico" required>
@@ -31,12 +31,16 @@
             </div>
             <ul class="nav-menu">
                 <li class="nav-item active" data-view="tables" data-perm="tables">
-                    <span class="nav-icon"></span>
+                    <span class="nav-icon">🪑</span>
                     <span>Mesas</span>
                 </li>
                 <li class="nav-item" data-view="pos" data-perm="pos">
                     <span class="nav-icon">🛒</span>
                     <span>Caja</span>
+                </li>
+                <li class="nav-item" data-view="waiter" data-perm="waiter">
+                    <span class="nav-icon">🧑‍</span>
+                    <span>Mesero</span>
                 </li>
                 <li class="nav-item" data-view="kitchen" data-perm="kitchen">
                     <span class="nav-icon">👨‍</span>
@@ -71,7 +75,7 @@
                     <span>Reportes</span>
                 </li>
                 <li class="nav-item" data-view="cash" data-perm="cash">
-                    <span class="nav-icon">💰</span>
+                    <span class="nav-icon"></span>
                     <span>Arqueos</span>
                 </li>
                 <li class="nav-item" data-view="staff" data-perm="staff">
@@ -84,7 +88,7 @@
                     <span id="user-name">Usuario</span>
                     <span id="user-role" class="user-role-badge"></span>
                 </div>
-                <button id="btn-logout" class="logout-btn">🚪 Salir</button>
+                <button id="btn-logout" class="logout-btn"> Salir</button>
             </div>
         </nav>
 
@@ -152,6 +156,33 @@
                 </div>
             </section>
 
+            <section id="view-waiter" class="view">
+                <header class="view-header">
+                    <h1>🧑‍🍳 Tomar Pedido - Mesero</h1>
+                    <button class="btn-secondary" id="btn-waiter-back">← Volver a Mesas</button>
+                </header>
+                <div class="waiter-container">
+                    <div class="waiter-tables" id="waiter-tables">
+                        <h3>Selecciona una mesa</h3>
+                        <div class="waiter-table-grid" id="waiter-table-grid"></div>
+                    </div>
+                    <div class="waiter-order" id="waiter-order" style="display: none;">
+                        <h3 id="waiter-table-name">Mesa</h3>
+                        <div class="waiter-categories" id="waiter-categories"></div>
+                        <div class="waiter-products" id="waiter-products"></div>
+                        <div class="waiter-cart" id="waiter-cart">
+                            <h4>📋 Pedido actual</h4>
+                            <div id="waiter-cart-items"></div>
+                            <div class="waiter-total">
+                                <span>Total:</span>
+                                <span id="waiter-total-amount">$0</span>
+                            </div>
+                            <button class="btn-primary" id="btn-send-waiter-order" style="width: 100%; margin-top: 1rem;">📤 Enviar a cocina</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="view-kitchen" class="view">
                 <header class="view-header">
                     <h1>Cocina - Pedidos en Tiempo Real</h1>
@@ -162,7 +193,7 @@
                     <div class="stat"><span class="stat-number" id="count-listo">0</span><span class="stat-label">Listos</span></div>
                 </div>
                 <div class="kitchen-container">
-                    <div class="column"><h2 class="column-header status-nuevo"> Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
+                    <div class="column"><h2 class="column-header status-nuevo">🔴 Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
                     <div class="column"><h2 class="column-header status-cocina">🟠 En Cocina</h2><div class="orders-list" id="orders-cocina"></div></div>
                     <div class="column"><h2 class="column-header status-listo">🟢 Listos</h2><div class="orders-list" id="orders-listo"></div></div>
                 </div>
@@ -192,7 +223,7 @@
                 <header class="view-header">
                     <h1>👤 Clientes y Fidelidad</h1>
                     <div style="display:flex; gap:0.5rem;">
-                        <button class="btn-secondary" id="btn-loyalty-settings">⚙️ Configurar Puntos</button>
+                        <button class="btn-secondary" id="btn-loyalty-settings">️ Configurar Puntos</button>
                         <button class="btn-primary" id="btn-add-customer">+ Nuevo Cliente</button>
                     </div>
                 </header>
@@ -211,7 +242,7 @@
 
             <section id="view-inventory" class="view">
                 <header class="view-header">
-                    <h1> Inventario de Ingredientes</h1>
+                    <h1>📦 Inventario de Ingredientes</h1>
                     <button class="btn-primary" id="btn-add-ingredient">+ Nuevo Ingrediente</button>
                 </header>
                 <div class="inventory-container">
@@ -236,7 +267,7 @@
 
             <section id="view-products" class="view">
                 <header class="view-header">
-                    <h1>️ Gestión de Productos</h1>
+                    <h1>🍽️ Gestión de Productos</h1>
                     <button class="btn-primary" id="btn-add-product">+ Nuevo Producto</button>
                 </header>
                 <div class="products-management-container">
@@ -271,7 +302,7 @@
                 <header class="view-header">
                     <h1>📄 Facturación Electrónica</h1>
                     <div style="display:flex; gap:0.5rem;">
-                        <button class="btn-secondary" id="btn-fiscal-settings">⚙️ Config. Fiscal</button>
+                        <button class="btn-secondary" id="btn-fiscal-settings">️ Config. Fiscal</button>
                         <button class="btn-primary" id="btn-new-invoice">+ Nueva Factura</button>
                     </div>
                 </header>
@@ -303,7 +334,7 @@
 
             <section id="view-reports" class="view">
                 <header class="view-header">
-                    <h1>📊 Reportes y Analíticas</h1>
+                    <h1> Reportes y Analíticas</h1>
                     <div class="report-filters">
                         <button class="report-filter-btn active" data-period="today">Hoy</button>
                         <button class="report-filter-btn" data-period="week">Esta semana</button>
@@ -396,7 +427,7 @@
                     <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/webp" style="padding: 0.5rem; border: 2px solid var(--border); border-radius: 8px; width: 100%;">
                 </div>
                 <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; margin-top: 0.5rem;">
-                    <strong> Consejos:</strong>
+                    <strong>💡 Consejos:</strong>
                     <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
                         <li>Formato: JPG, PNG o WebP</li>
                         <li>Tamaño máximo: 5MB</li>
@@ -518,7 +549,7 @@
             </div>
             <div class="modal-body">
                 <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">
-                    <strong>🇸 Ley Antifraude (Verifactu):</strong> Los registros son inalterables con hash encadenado.
+                    <strong>🇪🇸 Ley Antifraude (Verifactu):</strong> Los registros son inalterables con hash encadenado.
                 </div>
                 <h3 style="margin-bottom: 0.75rem; font-size: 1rem;">Datos del Restaurante</h3>
                 <div class="input-group"><label>Razón Social:</label><input type="text" id="set-business-name" placeholder="Ej: Restaurante Punto Verde S.L."></div>
@@ -565,7 +596,7 @@
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2 id="invoice-modal-title">Nueva Factura</h2>
-                <button class="close-btn" id="btn-close-invoice"></button>
+                <button class="close-btn" id="btn-close-invoice">✕</button>
             </div>
             <div class="modal-body">
                 <div class="input-group">
@@ -676,7 +707,7 @@
                             <strong id="sel-cust-name"></strong>
                             <span id="sel-cust-points" class="sel-points"></span>
                         </div>
-                        <button class="remove-customer" id="btn-remove-customer">✕</button>
+                        <button class="remove-customer" id="btn-remove-customer"></button>
                     </div>
                     <div class="redeem-row" id="redeem-row" style="display:none;">
                         <label id="redeem-label">Canjear puntos:</label>
@@ -696,8 +727,8 @@
                     <h3>Método de Pago</h3>
                     <div class="method-buttons">
                         <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta"> Tarjeta</button>
-                        <button class="method-btn" data-method="bizum"> Bizum</button>
+                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
+                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
                 </div>
                 <div class="cash-input" id="cash-section">
@@ -745,7 +776,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="diner-pay-title">Cobrar Comensal</h2>
-                <button class="close-btn" id="btn-close-diner-pay"></button>
+                <button class="close-btn" id="btn-close-diner-pay">✕</button>
             </div>
             <div class="modal-body">
                 <div class="order-summary">
@@ -758,7 +789,7 @@
                 <div class="payment-method">
                     <h3>Método de Pago</h3>
                     <div class="method-buttons" id="diner-method-buttons">
-                        <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
+                        <button class="method-btn active" data-method="efectivo"> Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
@@ -828,7 +859,7 @@
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-loyalty">Cancelar</button>
-                <button class="confirm-btn" id="btn-save-loyalty"> Guardar Reglas</button>
+                <button class="confirm-btn" id="btn-save-loyalty">💾 Guardar Reglas</button>
             </div>
         </div>
     </div>
@@ -838,7 +869,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="ingredient-modal-title">Nuevo Ingrediente</h2>
-                <button class="close-btn" id="btn-close-ingredient">✕</button>
+                <button class="close-btn" id="btn-close-ingredient"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="ingredient-id">
@@ -903,7 +934,7 @@
                     <select id="staff-role">
                         <option value="cajero">🛒 Cajero</option>
                         <option value="mesero">🪑 Mesero</option>
-                        <option value="cocina">👨🍳 Cocina</option>
+                        <option value="cocina">👨‍ Cocina</option>
                         <option value="admin">👑 Administrador</option>
                     </select>
                 </div>
