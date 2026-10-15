@@ -146,7 +146,6 @@ async function showApp() {
     applyPermissions();
     loadLoyaltySettings();
     loadRestaurantSettings();
-    // ✅ Cargar productos PRIMERO (necesario para mesero)
     await loadProducts();
     await loadAllergens();
     loadTables();
@@ -453,7 +452,7 @@ function renderInvoiceItems() {
                 <option value="${restaurantSettings.iva_general}" ${item.iva_rate === restaurantSettings.iva_general ? 'selected' : ''}>${restaurantSettings.iva_general}% (General)</option>
                 <option value="${restaurantSettings.iva_superreducido}" ${item.iva_rate === restaurantSettings.iva_superreducido ? 'selected' : ''}>${restaurantSettings.iva_superreducido}% (Super)</option>
             </select></div>
-            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">️</button>
+            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">🗑️</button>
         </div>
     `).join('');
     calculateInvoiceTotals();
@@ -564,10 +563,10 @@ function renderInvoices() {
             <div class="invoice-details">
                 📅 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
                 💰 Total: <strong>€${inv.total.toFixed(2)}</strong> (IVA: €${inv.iva_amount.toFixed(2)})<br>
-                 Estado: <strong>${inv.status}</strong>
+                📊 Estado: <strong>${inv.status}</strong>
             </div>
             <div class="invoice-actions">
-                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">️ Ver</button>
+                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">👁️ Ver</button>
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
                 <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
@@ -694,12 +693,12 @@ function renderReservations() {
         const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
         return `<div class="reservation-card status-${r.status}">
             <div class="res-header"><div class="res-name">${r.customer_name}</div><span class="res-status-badge">${r.status}</span></div>
-            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br> ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
+            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br> ${r.notes}` : ''}</div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
                 ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
                 ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
-                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
+                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">️</button>
             </div>
         </div>`;
     }).join('');
@@ -747,7 +746,7 @@ async function deleteReservation(id) {
     if (!confirm('¿Eliminar esta reserva?')) return;
     await supabaseClient.from('reservations').delete().eq('id', id);
     loadReservations();
-    showToast('pago', '🗑️ Reserva eliminada', '');
+    showToast('pago', '️ Reserva eliminada', '');
 }
 
 // ============ FIDELIDAD ============
@@ -784,7 +783,7 @@ async function saveLoyaltySettings() {
         await supabaseClient.from('loyalty_settings').update({ points_per_unit, point_value, birthday_multiplier, updated_at: new Date().toISOString() }).eq('id', 1);
         loyaltySettings = { ...loyaltySettings, points_per_unit, point_value, birthday_multiplier };
         closeModal('loyalty-settings-modal');
-        showToast('pago', '️ Reglas actualizadas', '');
+        showToast('pago', '⚙️ Reglas actualizadas', '');
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -859,9 +858,9 @@ function renderCustomers() {
             <div class="customer-phone">${c.phone || 'Sin teléfono'} ${c.email ? '· ' + c.email : ''}</div>
             <div class="customer-meta"><div>Visitas: <strong>${c.visits || 0}</strong></div><div>Gastado: <strong>$${Math.round(c.total_spent || 0).toLocaleString()}</strong></div></div>
             <div class="customer-actions">
-                <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">✏️ Editar</button>
-                <button class="customer-action-btn history" onclick="viewHistory(${c.id})"> Historial</button>
-                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">🗑️ Eliminar</button>
+                <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">️ Editar</button>
+                <button class="customer-action-btn history" onclick="viewHistory(${c.id})">📜 Historial</button>
+                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">️ Eliminar</button>
             </div>
         </div>
     `).join('');
@@ -960,7 +959,7 @@ async function applyLoyalty(orderId, finalTotal) {
     await supabaseClient.from('customers').update({ points: newPoints, total_spent: (selectedCustomer.total_spent || 0) + finalTotal, visits: (selectedCustomer.visits || 0) + 1 }).eq('id', selectedCustomer.id);
     if (redeemPoints > 0) await supabaseClient.from('points_history').insert([{ customer_id: selectedCustomer.id, order_id: orderId, points: -redeemPoints, type: 'canjeados', note: 'Descuento en compra' }]);
     await supabaseClient.from('points_history').insert([{ customer_id: selectedCustomer.id, order_id: orderId, points: earned, type: 'ganados', note: bday ? `Puntos x${loyaltySettings.birthday_multiplier} cumpleaños` : 'Compra' }]);
-    if (bday) addNotification('pago', ` ¡Cumpleaños de ${selectedCustomer.name}!`, 'Puntos multiplicados');
+    if (bday) addNotification('pago', `🎂 ¡Cumpleaños de ${selectedCustomer.name}!`, 'Puntos multiplicados');
     const result = { name: selectedCustomer.name, earned, newBalance: newPoints };
     selectedCustomer = null; redeemPoints = 0;
     return result;
@@ -993,7 +992,7 @@ function setupQREvents() {
         if (!currentQRTable) return;
         const url = `${window.location.origin}/menu.html?mesa=${currentQRTable.id}`;
         const win = window.open('', '_blank');
-        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}</style></head><body><h2> TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
+        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}</style></head><body><h2>🌿 TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
         win.document.close();
     });
 }
@@ -1049,7 +1048,7 @@ function renderDivideModal() {
     }).join('');
     if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
     else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
-    document.getElementById('btn-pay-all').textContent = `💰 Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
+    document.getElementById('btn-pay-all').textContent = ` Cobrar Todo ($${Math.round(currentTableOrder.total).toLocaleString()})`;
 }
 
 async function openDinerPayModal(dinerId) {
@@ -1126,7 +1125,7 @@ function renderInventory() {
         const status = getIngredientStatus(ing);
         const statusClass = status === 'out' ? 'stock-out' : status === 'low' ? 'stock-low' : '';
         const unitLabel = ing.unit === 'gramo' ? 'g' : ing.unit === 'kilogramo' ? 'kg' : ing.unit === 'litro' ? 'L' : ing.unit === 'mililitro' ? 'ml' : 'und';
-        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
+        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
     }).join('');
 }
 
@@ -1417,7 +1416,7 @@ function renderTables() {
         const itemsHtml = hasOrders ? Object.values(itemsGrouped).map(item => `<div class="table-order-item"><span>${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span></div>`).join('') : '';
         const statusText = status === 'reservada' ? 'RESERVADA' : (hasOrders ? 'OCUPADA' : 'LIBRE');
         return `<div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')">
-            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')"> QR</button>
+            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')">📱 QR</button>
             <div class="table-name">${table.name}</div><div class="table-status">${statusText}</div>
             ${hasOrders ? `<div class="table-orders-list">${itemsHtml}</div><div class="table-order-total"><span>Total:</span><span>$${Math.round(table.pendingTotal).toLocaleString()}</span></div><button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>` : '<div style="flex:1;"></div>'}
         </div>`;
@@ -1600,7 +1599,7 @@ function printTicket(order, items, loyalty) {
     setTimeout(() => { const qrContainer = document.getElementById('qr-code'); qrContainer.innerHTML = ''; new QRCode(qrContainer, { text: qrUrl, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.L }); setTimeout(() => window.print(), 500); }, 100);
 }
 
-// ============ COCINA ============
+// ============ COCINA (CORREGIDA - Agrupa por mesa) ============
 async function loadKitchenOrders() { 
     const { data, error } = await supabaseClient.from('orders').select('*, order_items(*)').neq('status', 'entregado').order('created_at', { ascending: false }); 
     if (error) return; 
@@ -1610,27 +1609,80 @@ async function loadKitchenOrders() {
 }
 
 function renderKitchenOrders() { 
+    // ✅ AGRUPAR pedidos por mesa
+    const ordersByTable = {};
+    kitchenOrders.forEach(order => {
+        if (order.table_id) {
+            if (!ordersByTable[order.table_id]) {
+                ordersByTable[order.table_id] = {
+                    table_id: order.table_id,
+                    table_name: `Mesa ${order.table_id}`,
+                    status: order.status,
+                    created_at: order.created_at,
+                    items: [],
+                    order_ids: []
+                };
+            }
+            // Agregar items de este pedido
+            if (order.order_items) {
+                order.order_items.forEach(item => {
+                    ordersByTable[order.table_id].items.push(item);
+                });
+            }
+            ordersByTable[order.table_id].order_ids.push(order.id);
+        } else {
+            // Pedidos sin mesa (mostrador)
+            const key = `order_${order.id}`;
+            ordersByTable[key] = {
+                table_id: null,
+                table_name: `Pedido #${order.id}`,
+                status: order.status,
+                created_at: order.created_at,
+                items: order.order_items || [],
+                order_ids: [order.id]
+            };
+        }
+    });
+
     ['nuevo', 'cocina', 'listo'].forEach(status => { 
         const container = document.getElementById(`orders-${status}`); 
-        const orders = kitchenOrders.filter(o => o.status === status); 
-        if (orders.length === 0) { container.innerHTML = '<div class="empty-cart">No hay pedidos</div>'; return; } 
-        container.innerHTML = orders.map(order => { 
-            const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); 
-            const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; 
-            const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; 
-            const webBadge = order.source === 'web' ? ' 📱' : ''; 
-            // ✅ AGRUPAR items por nombre para evitar duplicados visuales
+        const tableOrders = Object.values(ordersByTable).filter(o => o.status === status);
+        
+        if (tableOrders.length === 0) { 
+            container.innerHTML = '<div class="empty-cart">No hay pedidos</div>'; 
+            return; 
+        } 
+        
+        container.innerHTML = tableOrders.map(tableOrder => { 
+            const time = new Date(tableOrder.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            
+            // ✅ AGRUPAR items por nombre
             const itemsGrouped = {};
-            (order.order_items || []).forEach(item => {
-                if (!itemsGrouped[item.name]) itemsGrouped[item.name] = { name: item.name, qty: 0 };
+            tableOrder.items.forEach(item => {
+                if (!itemsGrouped[item.name]) {
+                    itemsGrouped[item.name] = { name: item.name, qty: 0 };
+                }
                 itemsGrouped[item.name].qty += item.qty;
             });
-            const itemsHtml = Object.values(itemsGrouped).map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); 
+            
+            const itemsHtml = Object.values(itemsGrouped).map(item => 
+                `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`
+            ).join(''); 
+            
             let actionBtn = ''; 
-            if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; 
-            else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`; 
-            else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${order.id}, 'entregado')">✓ Entregado</button>`; 
-            return `<div class="order-card status-${status}"><div class="order-header"><div class="order-id">#${order.id}${tableText}${dinerText}${webBadge}</div><div class="order-type">${order.type.toUpperCase()}</div></div><div class="order-time">${time}</div><div class="order-items">${itemsHtml}</div><div class="order-actions">${actionBtn}</div></div>`; 
+            if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${tableOrder.order_ids[0]}, 'cocina')">→ Cocina</button>`; 
+            else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${tableOrder.order_ids[0]}, 'listo')">✓ Listo</button>`; 
+            else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${tableOrder.order_ids[0]}, 'entregado')">✓ Entregado</button>`; 
+            
+            return `<div class="order-card status-${status}">
+                <div class="order-header">
+                    <div class="order-id">${tableOrder.table_name}</div>
+                    <div class="order-type">${status.toUpperCase()}</div>
+                </div>
+                <div class="order-time">${time}</div>
+                <div class="order-items">${itemsHtml}</div>
+                <div class="order-actions">${actionBtn}</div>
+            </div>`; 
         }).join(''); 
     }); 
 }
@@ -1642,8 +1694,17 @@ function updateKitchenStats() {
 }
 
 async function updateOrderStatus(orderId, newStatus) {
+    // ✅ Actualizar TODOS los pedidos de la misma mesa
     const order = kitchenOrders.find(o => o.id === orderId);
-    await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId);
+    if (!order) return;
+    
+    // Buscar todos los pedidos de la misma mesa
+    const sameTableOrders = kitchenOrders.filter(o => o.table_id === order.table_id && o.status !== 'entregado');
+    
+    for (const o of sameTableOrders) {
+        await supabaseClient.from('orders').update({ status: newStatus }).eq('id', o.id);
+    }
+    
     loadKitchenOrders();
     if (newStatus === 'entregado') {
         if (order && order.table_id) {
@@ -1661,12 +1722,12 @@ async function loadCashStatus() {
     if (error || !session) { 
         currentSession = null; 
         document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; 
-        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; 
+        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')"> Abrir Caja</button>'; 
         document.getElementById('cash-summary').style.display = 'none'; 
     } else { 
         currentSession = session; 
         document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; 
-        document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; 
+        document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')"> Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()"> Cerrar Caja</button>`; 
         await loadCashSummary(); 
     } 
 }
@@ -1882,7 +1943,7 @@ function renderProductManagement() {
     }
     grid.innerHTML = filtered.map(p => {
         const imageUrl = p.image_url || '';
-        const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="${p.name}">` : '<div class="no-image"> Sin imagen</div>';
+        const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="${p.name}">` : '<div class="no-image">📷 Sin imagen</div>';
         return `
         <div class="product-management-card">
             <div class="product-management-header">
@@ -1892,7 +1953,7 @@ function renderProductManagement() {
             <div class="product-management-image">${imageHtml}</div>
             <div class="product-management-price">€${Number(p.price).toFixed(2)}</div>
             <div class="product-management-actions">
-                <button class="product-management-btn image" onclick="openImageModal(${p.id})">📷 ${imageUrl ? 'Cambiar' : 'Añadir'} Imagen</button>
+                <button class="product-management-btn image" onclick="openImageModal(${p.id})"> ${imageUrl ? 'Cambiar' : 'Añadir'} Imagen</button>
                 <button class="product-management-btn edit" onclick="openProductModalById(${p.id})">✏️ Editar</button>
             </div>
         </div>`;
@@ -2009,11 +2070,11 @@ async function deleteProductImage() {
         closeModal('image-modal');
         loadProductManagement();
         loadProducts();
-        showToast('pago', '🗑️ Imagen eliminada', currentProductForImage.name);
+        showToast('pago', '️ Imagen eliminada', currentProductForImage.name);
     } catch (error) { alert('Error al eliminar la imagen: ' + error.message); }
 }
 
-// ============ VISTA MESERO (CORREGIDA) ============
+// ============ VISTA MESERO ============
 function setupWaiterEvents() {
     document.getElementById('btn-waiter-back').addEventListener('click', () => {
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -2026,9 +2087,7 @@ function setupWaiterEvents() {
     document.getElementById('btn-send-waiter-order').addEventListener('click', sendWaiterOrder);
 }
 
-// ✅ NUEVA FUNCIÓN: Carga completa de la vista mesero
 async function loadWaiterView() {
-    // Asegurar que products esté cargado
     if (products.length === 0) {
         await loadProducts();
     }
@@ -2060,7 +2119,7 @@ async function loadWaiterTables() {
         <button class="waiter-table-btn ${t.hasOrders ? 'ocupada' : 'libre'} ${waiterSelectedTable?.id === t.id ? 'selected' : ''}" onclick="selectWaiterTable(${t.id}, '${t.name}')">
             ${t.name}
             <div style="font-size: 0.75rem; margin-top: 0.25rem; color: ${t.hasOrders ? 'var(--status-ocupada)' : 'var(--status-libre)'};">
-                ${t.hasOrders ? '🟠 OCUPADA' : '🟢 LIBRE'}
+                ${t.hasOrders ? ' OCUPADA' : '🟢 LIBRE'}
             </div>
         </button>
     `).join('');
@@ -2071,18 +2130,16 @@ async function loadWaiterTables() {
 }
 
 async function selectWaiterTable(tableId, tableName) {
-    // ✅ Asegurar que products esté cargado
     if (products.length === 0) {
         await loadProducts();
     }
     
     waiterSelectedTable = { id: tableId, name: tableName };
-    waiterCart = []; // ✅ Carrito SIEMPRE vacío al seleccionar
+    waiterCart = [];
     waiterCategory = 'all';
     document.getElementById('waiter-table-name').textContent = `🍽️ ${tableName}`;
     document.getElementById('waiter-order').style.display = 'flex';
     
-    // ✅ Mostrar productos existentes en sección amarilla (solo lectura)
     const existingItemsContainer = document.getElementById('existing-items-container');
     const existingTotalEl = document.getElementById('existing-total');
     const existingSection = document.getElementById('existing-section');
@@ -2189,32 +2246,29 @@ async function sendWaiterOrder() {
     if (waiterCart.length === 0) return alert('Añade productos al pedido');
     if (!waiterSelectedTable) return alert('Selecciona una mesa');
     
-    // ✅ Solo enviar los productos NUEVOS del carrito
     const newItemsTotal = waiterCart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     
     try {
-        // ✅ Buscar si ya existe un pedido pendiente para esta mesa
-        const { data: existingOrder } = await supabaseClient
+        // ✅ Buscar el pedido existente de esta mesa
+        const { data: existingOrders } = await supabaseClient
             .from('orders')
             .select('id, total')
             .eq('table_id', waiterSelectedTable.id)
             .eq('paid', false)
-            .neq('status', 'entregado')
-            .limit(1)
-            .single();
+            .neq('status', 'entregado');
         
         let orderId;
         
-        if (existingOrder) {
-            // ✅ Agregar SOLO los nuevos items al pedido existente
-            orderId = existingOrder.id;
-            const newTotal = (existingOrder.total || 0) + newItemsTotal;
+        if (existingOrders && existingOrders.length > 0) {
+            // ✅ Usar el primer pedido existente y agregar items
+            orderId = existingOrders[0].id;
+            const newTotal = (existingOrders[0].total || 0) + newItemsTotal;
             await supabaseClient
                 .from('orders')
                 .update({ total: newTotal })
                 .eq('id', orderId);
         } else {
-            // ✅ Crear nuevo pedido solo con los items nuevos
+            // ✅ Crear nuevo pedido
             const { data: order, error: orderError } = await supabaseClient
                 .from('orders')
                 .insert([{
@@ -2289,7 +2343,6 @@ function setupRealtimeGlobal() {
         if (kitchenView.classList.contains('active')) {
             loadKitchenOrders();
         }
-        // ✅ Solo recargar mesas del mesero si NO hay pedido abierto
         if (waiterView.classList.contains('active') && !waiterSelectedTable) {
             loadWaiterTables();
         }
@@ -2322,7 +2375,7 @@ function setupRealtimeGlobal() {
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); })
         .subscribe((status) => {
-            console.log(' Realtime status:', status);
+            console.log('📡 Realtime status:', status);
         });
 }
 
