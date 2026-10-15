@@ -518,7 +518,7 @@ async function saveInvoice() {
         currentInvoice = invoice;
         closeModal('invoice-modal');
         loadInvoices();
-        showToast('pago', `📄 Factura ${invoice_number} emitida`, `Total: €${total.toFixed(2)}`);
+        showToast('pago', ` Factura ${invoice_number} emitida`, `Total: €${total.toFixed(2)}`);
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -566,7 +566,7 @@ function renderInvoices() {
                 📊 Estado: <strong>${inv.status}</strong>
             </div>
             <div class="invoice-actions">
-                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">️ Ver</button>
+                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">👁️ Ver</button>
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
                 <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
@@ -693,12 +693,12 @@ function renderReservations() {
         const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
         return `<div class="reservation-card status-${r.status}">
             <div class="res-header"><div class="res-name">${r.customer_name}</div><span class="res-status-badge">${r.status}</span></div>
-            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas |  Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
+            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas |  Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br> ${r.notes}` : ''}</div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
-                ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')"> Cancelar</button>` : ''}
+                ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
                 ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
-                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
+                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">️</button>
             </div>
         </div>`;
     }).join('');
@@ -746,7 +746,7 @@ async function deleteReservation(id) {
     if (!confirm('¿Eliminar esta reserva?')) return;
     await supabaseClient.from('reservations').delete().eq('id', id);
     loadReservations();
-    showToast('pago', '🗑️ Reserva eliminada', '');
+    showToast('pago', '️ Reserva eliminada', '');
 }
 
 // ============ FIDELIDAD ============
@@ -844,7 +844,7 @@ function renderCustomers() {
     const top = [...customers].sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0))[0];
     document.getElementById('cust-top').textContent = top ? top.name : '—';
     if (!q) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 3rem 1rem;"><div style="font-size: 2.5rem; margin-bottom: 0.5rem;"></div>Escribe un nombre o teléfono para buscar un cliente<br><small>Hay ${customers.length} cliente(s) registrados</small></div>`;
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 3rem 1rem;"><div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>Escribe un nombre o teléfono para buscar un cliente<br><small>Hay ${customers.length} cliente(s) registrados</small></div>`;
         return;
     }
     const filtered = customers.filter(c => (c.name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q));
@@ -858,9 +858,9 @@ function renderCustomers() {
             <div class="customer-phone">${c.phone || 'Sin teléfono'} ${c.email ? '· ' + c.email : ''}</div>
             <div class="customer-meta"><div>Visitas: <strong>${c.visits || 0}</strong></div><div>Gastado: <strong>$${Math.round(c.total_spent || 0).toLocaleString()}</strong></div></div>
             <div class="customer-actions">
-                <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">️ Editar</button>
+                <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">✏️ Editar</button>
                 <button class="customer-action-btn history" onclick="viewHistory(${c.id})">📜 Historial</button>
-                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">️ Eliminar</button>
+                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">🗑️ Eliminar</button>
             </div>
         </div>
     `).join('');
@@ -1125,7 +1125,7 @@ function renderInventory() {
         const status = getIngredientStatus(ing);
         const statusClass = status === 'out' ? 'stock-out' : status === 'low' ? 'stock-low' : '';
         const unitLabel = ing.unit === 'gramo' ? 'g' : ing.unit === 'kilogramo' ? 'kg' : ing.unit === 'litro' ? 'L' : ing.unit === 'mililitro' ? 'ml' : 'und';
-        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
+        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
     }).join('');
 }
 
@@ -1241,7 +1241,7 @@ function renderStaff() {
             <div class="staff-email">${s.email}</div>
             <div class="staff-meta"><span>Ventas mes: <strong>$${Math.round(monthSales).toLocaleString()}</strong></span><span class="staff-commission">Comisión: $${Math.round(monthComm).toLocaleString()}</span></div>
             <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : '⛔ Inactivo'}</span></div>
-            <div class="staff-actions"><button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button><button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">🗑️ Eliminar</button></div>
+            <div class="staff-actions"><button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button><button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">️ Eliminar</button></div>
         </div>`;
     }).join('');
 }
@@ -1285,7 +1285,7 @@ async function deleteStaff(id) {
     if (!confirm('¿Eliminar este empleado?')) return;
     await supabaseClient.from('profiles').delete().eq('id', id);
     loadStaff();
-    showToast('pago', '️ Empleado eliminado', '');
+    showToast('pago', '🗑️ Empleado eliminado', '');
 }
 
 async function recordEmployeeSale(orderId, amount) {
@@ -1413,7 +1413,7 @@ function renderTables() {
         const itemsHtml = hasOrders ? Object.values(itemsGrouped).map(item => `<div class="table-order-item"><span>${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span></div>`).join('') : '';
         const statusText = status === 'reservada' ? 'RESERVADA' : (hasOrders ? 'OCUPADA' : 'LIBRE');
         return `<div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')">
-            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')">📱 QR</button>
+            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')"> QR</button>
             <div class="table-name">${table.name}</div><div class="table-status">${statusText}</div>
             ${hasOrders ? `<div class="table-orders-list">${itemsHtml}</div><div class="table-order-total"><span>Total:</span><span>$${Math.round(table.pendingTotal).toLocaleString()}</span></div><button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>` : '<div style="flex:1;"></div>'}
         </div>`;
@@ -1614,7 +1614,7 @@ function renderKitchenOrders() {
             const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); 
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; 
             const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; 
-            const webBadge = order.source === 'web' ? ' 📱' : ''; 
+            const webBadge = order.source === 'web' ? ' ' : ''; 
             const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); 
             let actionBtn = ''; 
             if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; 
@@ -1650,13 +1650,13 @@ async function loadCashStatus() {
     const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single(); 
     if (error || !session) { 
         currentSession = null; 
-        document.getElementById('cash-status').innerHTML = '<span class="status-closed"> Caja Cerrada</span>'; 
+        document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>'; 
         document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">🔓 Abrir Caja</button>'; 
         document.getElementById('cash-summary').style.display = 'none'; 
     } else { 
         currentSession = session; 
         document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: $${session.fondo.toLocaleString()}</small>`; 
-        document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')"> Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()"> Cerrar Caja</button>`; 
+        document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔢 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔒 Cerrar Caja</button>`; 
         await loadCashSummary(); 
     } 
 }
@@ -1705,7 +1705,7 @@ function renderAllergenCategories() {
     const bar = document.getElementById('allergen-category-bar');
     if (!bar) return;
     const cats = [...new Set(products.map(p => p.category || 'Sin categoría'))];
-    bar.innerHTML = '<button class="allergen-cat-btn active" data-cat="all">📋 Todos</button>' + cats.map(cat => `<button class="allergen-cat-btn" data-cat="${cat}">${cat}</button>`).join('');
+    bar.innerHTML = '<button class="allergen-cat-btn active" data-cat="all"> Todos</button>' + cats.map(cat => `<button class="allergen-cat-btn" data-cat="${cat}">${cat}</button>`).join('');
 }
 
 function openProductAllergensModal() {
@@ -1784,7 +1784,7 @@ function renderAllergens() {
                 ${allergenBadges || '<span style="color: var(--text-gray); font-size: 0.85rem;">Sin alérgenos declarados</span>'}
             </div>
             <div class="product-allergen-actions">
-                <button class="product-allergen-btn edit" onclick="editProductAllergens(${p.id})">️ Editar</button>
+                <button class="product-allergen-btn edit" onclick="editProductAllergens(${p.id})">✏️ Editar</button>
                 <button class="product-allergen-btn sheet" onclick="viewTechnicalSheet(${p.id})">📋 Ficha Técnica</button>
             </div>
         </div>`;
@@ -1811,7 +1811,7 @@ function viewTechnicalSheet(productId) {
             <h3 style="margin-bottom: 1rem; color: var(--primary);">${product.name}</h3>
             <div style="margin-bottom: 1rem;"><strong>Categoría:</strong> ${product.category || 'No especificada'}<br><strong>Precio:</strong> €${Number(product.price).toFixed(2)}</div>
             <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem;">
-                <strong>⚠️ Alérgenos presentes:</strong>
+                <strong>️ Alérgenos presentes:</strong>
                 <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">${allergenList || '<li>Sin alérgenos declarados</li>'}</ul>
             </div>
             <div style="font-size: 0.85rem; color: var(--text-gray); margin-top: 1rem;"><strong>Nota legal:</strong> Esta ficha cumple con el Reglamento (UE) nº 1169/2011.</div>
@@ -2034,23 +2034,25 @@ async function loadWaiterTables() {
     
     const grid = document.getElementById('waiter-table-grid');
     grid.innerHTML = tables.map(t => `
-        <button class="waiter-table-btn ${t.hasOrders ? 'ocupada' : 'libre'}" onclick="selectWaiterTable(${t.id}, '${t.name}')">
+        <button class="waiter-table-btn ${t.hasOrders ? 'ocupada' : 'libre'} ${waiterSelectedTable?.id === t.id ? 'selected' : ''}" onclick="selectWaiterTable(${t.id}, '${t.name}')">
             ${t.name}
             <div style="font-size: 0.75rem; margin-top: 0.25rem; color: ${t.hasOrders ? 'var(--status-ocupada)' : 'var(--status-libre)'};">
-                ${t.hasOrders ? 'OCUPADA' : 'LIBRE'}
+                ${t.hasOrders ? ' OCUPADA' : '🟢 LIBRE'}
             </div>
         </button>
     `).join('');
     
-    // Ocultar panel de pedido al cambiar de vista
-    document.getElementById('waiter-order').style.display = 'none';
+    // ✅ CORRECCIÓN: Solo ocultar el panel si NO hay mesa seleccionada
+    if (!waiterSelectedTable) {
+        document.getElementById('waiter-order').style.display = 'none';
+    }
 }
 
 function selectWaiterTable(tableId, tableName) {
     waiterSelectedTable = { id: tableId, name: tableName };
     waiterCart = [];
     waiterCategory = 'all';
-    document.getElementById('waiter-table-name').textContent = ` ${tableName}`;
+    document.getElementById('waiter-table-name').textContent = `🍽️ ${tableName}`;
     document.getElementById('waiter-order').style.display = 'flex';
     renderWaiterCategories();
     renderWaiterProducts();
@@ -2058,10 +2060,11 @@ function selectWaiterTable(tableId, tableName) {
 }
 
 function renderWaiterCategories() {
-    const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
+    const cats = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];
     const container = document.getElementById('waiter-categories');
-    container.innerHTML = '<button class="cat-btn ' + (waiterCategory === 'all' ? 'active' : '') + '" onclick="setWaiterCategory(\'all\')">Todos</button>' + 
-        cats.map(cat => `<button class="cat-btn ${waiterCategory === cat ? 'active' : ''}" onclick="setWaiterCategory('${cat}')">${cat}</button>`).join('');
+    container.innerHTML = cats.map(cat => 
+        `<button class="cat-btn ${cat === waiterCategory ? 'active' : ''}" onclick="setWaiterCategory('${cat}')">${cat === 'all' ? 'Todos' : cat}</button>`
+    ).join('');
 }
 
 function setWaiterCategory(cat) {
@@ -2091,8 +2094,10 @@ function addToWaiterCart(productId) {
 
 function renderWaiterCart() {
     const container = document.getElementById('waiter-cart-items');
+    const btnEnviar = document.getElementById('btn-send-waiter-order');
     if (waiterCart.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: var(--text-gray); padding: 1rem;">Añade productos</div>';
+        if (btnEnviar) btnEnviar.disabled = true;
     } else {
         container.innerHTML = waiterCart.map(item => `
             <div class="waiter-cart-item">
@@ -2100,6 +2105,7 @@ function renderWaiterCart() {
                 <span>$${(item.price * item.qty).toFixed(2)}</span>
             </div>
         `).join('');
+        if (btnEnviar) btnEnviar.disabled = false;
     }
     const total = waiterCart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     document.getElementById('waiter-total-amount').textContent = `$${total.toFixed(2)}`;
@@ -2137,12 +2143,18 @@ async function sendWaiterOrder() {
             qty: item.qty
         }));
         
-        const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItems);
+        const { error: itemsError } = await supabaseClient
+            .from('order_items')
+            .insert(orderItems);
+        
         if (itemsError) throw itemsError;
         
-        await supabaseClient.from('tables').update({ status: 'ocupada', current_order_id: order.id }).eq('id', waiterSelectedTable.id);
+        await supabaseClient
+            .from('tables')
+            .update({ status: 'ocupada', current_order_id: order.id })
+            .eq('id', waiterSelectedTable.id);
         
-        alert(`✅ Pedido enviado a cocina para ${waiterSelectedTable.name}\nTotal: $${total.toFixed(2)}`);
+        alert(`✅ Pedido enviado para ${waiterSelectedTable.name}\nTotal: $${total.toFixed(2)}`);
         
         waiterCart = [];
         waiterSelectedTable = null;
@@ -2177,7 +2189,8 @@ function setupRealtimeGlobal() {
         if (kitchenView.classList.contains('active')) {
             loadKitchenOrders();
         }
-        if (waiterView.classList.contains('active')) {
+        // ✅ CORRECCIÓN: Solo recargar mesas del mesero si NO hay pedido abierto
+        if (waiterView.classList.contains('active') && !waiterSelectedTable) {
             loadWaiterTables();
         }
     }, 3000);
@@ -2187,7 +2200,7 @@ function setupRealtimeGlobal() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            const webText = order.source === 'web' ? ' 📱 (QR)' : '';
+            const webText = order.source === 'web' ? '  (QR)' : '';
             
             addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`);
             loadTables();
