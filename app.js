@@ -139,15 +139,16 @@ function showLogin() {
     document.getElementById('main-app').style.display = 'none';
 }
 
-function showApp() {
+async function showApp() {
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('main-app').style.display = 'flex';
     document.getElementById('user-name').textContent = currentProfile?.full_name || currentUser.email;
     applyPermissions();
     loadLoyaltySettings();
     loadRestaurantSettings();
-    loadAllergens();
-    loadProducts();
+    // ✅ Cargar productos PRIMERO (necesario para mesero)
+    await loadProducts();
+    await loadAllergens();
     loadTables();
     loadReservations();
     loadInvoices();
@@ -197,13 +198,13 @@ function setupNavigation() {
             document.getElementById(`view-${view}`).classList.add('active');
             if (view === 'tables') { activeTableId = null; currentTableOrder = null; cart = []; renderCart(); renderTableOrder(); loadTables(); }
             else if (view === 'pos') { if (!activeTableId) { currentTableOrder = null; cart = []; renderCart(); renderTableOrder(); document.getElementById('pos-title').textContent = 'Caja - Mostrador'; } renderMiniTables(); }
-            else if (view === 'waiter') { loadWaiterTables(); }
+            else if (view === 'waiter') { loadWaiterView(); }
             else if (view === 'kitchen') loadKitchenOrders();
             else if (view === 'reservations') loadReservations();
             else if (view === 'customers') loadCustomers();
             else if (view === 'inventory') loadIngredients();
             else if (view === 'products') loadProductManagement();
-            else if (view === 'allergens') { loadAllergens(); renderAllergenCategories(); renderAllergens(); }
+            else if (view === 'allergens') { renderAllergenCategories(); renderAllergens(); }
             else if (view === 'invoices') loadInvoices();
             else if (view === 'reports') loadReports(currentReportPeriod);
             else if (view === 'cash') loadCashStatus();
@@ -405,7 +406,7 @@ async function saveFiscalSettings() {
         if (error) throw error;
         restaurantSettings = { ...restaurantSettings, ...settings };
         closeModal('fiscal-settings-modal');
-        showToast('pago', '️ Configuración fiscal guardada', '');
+        showToast('pago', '⚙️ Configuración fiscal guardada', '');
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -452,7 +453,7 @@ function renderInvoiceItems() {
                 <option value="${restaurantSettings.iva_general}" ${item.iva_rate === restaurantSettings.iva_general ? 'selected' : ''}>${restaurantSettings.iva_general}% (General)</option>
                 <option value="${restaurantSettings.iva_superreducido}" ${item.iva_rate === restaurantSettings.iva_superreducido ? 'selected' : ''}>${restaurantSettings.iva_superreducido}% (Super)</option>
             </select></div>
-            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">🗑️</button>
+            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">️</button>
         </div>
     `).join('');
     calculateInvoiceTotals();
@@ -518,7 +519,7 @@ async function saveInvoice() {
         currentInvoice = invoice;
         closeModal('invoice-modal');
         loadInvoices();
-        showToast('pago', ` Factura ${invoice_number} emitida`, `Total: €${total.toFixed(2)}`);
+        showToast('pago', `📄 Factura ${invoice_number} emitida`, `Total: €${total.toFixed(2)}`);
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -563,10 +564,10 @@ function renderInvoices() {
             <div class="invoice-details">
                 📅 ${new Date(inv.invoice_date).toLocaleString('es-ES')}<br>
                 💰 Total: <strong>€${inv.total.toFixed(2)}</strong> (IVA: €${inv.iva_amount.toFixed(2)})<br>
-                📊 Estado: <strong>${inv.status}</strong>
+                 Estado: <strong>${inv.status}</strong>
             </div>
             <div class="invoice-actions">
-                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">👁️ Ver</button>
+                <button class="invoice-action-btn view" onclick="viewInvoice(${inv.id})">️ Ver</button>
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn send" onclick="sendInvoice(${inv.id})">📧 Enviar</button>` : ''}
                 ${inv.status !== 'anulada' ? `<button class="invoice-action-btn void" onclick="voidInvoice(${inv.id})">✕ Anular</button>` : ''}
                 <button class="invoice-action-btn print" onclick="printInvoiceById(${inv.id})">🖨️ PDF</button>
@@ -693,10 +694,10 @@ function renderReservations() {
         const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
         return `<div class="reservation-card status-${r.status}">
             <div class="res-header"><div class="res-name">${r.customer_name}</div><span class="res-status-badge">${r.status}</span></div>
-            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
+            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br> ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
-                ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')"> Cancelar</button>` : ''}
+                ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
                 ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
                 <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
             </div>
@@ -783,7 +784,7 @@ async function saveLoyaltySettings() {
         await supabaseClient.from('loyalty_settings').update({ points_per_unit, point_value, birthday_multiplier, updated_at: new Date().toISOString() }).eq('id', 1);
         loyaltySettings = { ...loyaltySettings, points_per_unit, point_value, birthday_multiplier };
         closeModal('loyalty-settings-modal');
-        showToast('pago', '⚙️ Reglas actualizadas', '');
+        showToast('pago', '️ Reglas actualizadas', '');
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -959,7 +960,7 @@ async function applyLoyalty(orderId, finalTotal) {
     await supabaseClient.from('customers').update({ points: newPoints, total_spent: (selectedCustomer.total_spent || 0) + finalTotal, visits: (selectedCustomer.visits || 0) + 1 }).eq('id', selectedCustomer.id);
     if (redeemPoints > 0) await supabaseClient.from('points_history').insert([{ customer_id: selectedCustomer.id, order_id: orderId, points: -redeemPoints, type: 'canjeados', note: 'Descuento en compra' }]);
     await supabaseClient.from('points_history').insert([{ customer_id: selectedCustomer.id, order_id: orderId, points: earned, type: 'ganados', note: bday ? `Puntos x${loyaltySettings.birthday_multiplier} cumpleaños` : 'Compra' }]);
-    if (bday) addNotification('pago', `🎂 ¡Cumpleaños de ${selectedCustomer.name}!`, 'Puntos multiplicados');
+    if (bday) addNotification('pago', ` ¡Cumpleaños de ${selectedCustomer.name}!`, 'Puntos multiplicados');
     const result = { name: selectedCustomer.name, earned, newBalance: newPoints };
     selectedCustomer = null; redeemPoints = 0;
     return result;
@@ -1044,7 +1045,7 @@ function renderDivideModal() {
     dinersList.innerHTML = diners.map(diner => {
         const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
         const itemsHtml = diner.items.map(item => `<div class="diner-item"><span class="diner-item-name">${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span><div class="diner-item-controls"><button class="diner-item-btn remove" onclick="removeItemFromDiner(${item.uid}, ${diner.id})">✕</button></div></div>`).join('');
-        return `<div class="diner-card"><div class="diner-header"><div class="diner-name"><input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)"></div><div style="display:flex; align-items:center; gap:0.5rem;"><span class="diner-total">$${Math.round(total).toLocaleString()}</span>${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})"> Cobrar</button>` : ''}${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}</div></div><div class="diner-items">${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}</div></div>`;
+        return `<div class="diner-card"><div class="diner-header"><div class="diner-name"><input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)"></div><div style="display:flex; align-items:center; gap:0.5rem;"><span class="diner-total">$${Math.round(total).toLocaleString()}</span>${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})">💰 Cobrar</button>` : ''}${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}</div></div><div class="diner-items">${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}</div></div>`;
     }).join('');
     if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
     else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
@@ -1306,12 +1307,14 @@ async function loadProducts() {
 function renderCategories() {
     const cats = [...new Set(products.map(p => p.category))];
     const bar = document.getElementById('categories-bar');
+    if (!bar) return;
     bar.innerHTML = '<button class="cat-btn active" data-cat="all">Todos</button>';
     cats.forEach(cat => { if (cat) { const btn = document.createElement('button'); btn.className = 'cat-btn'; btn.dataset.cat = cat; btn.textContent = cat; bar.appendChild(btn); } });
 }
 
 function renderProducts() {
     const grid = document.getElementById('product-grid');
+    if (!grid) return;
     const filtered = currentCategory === 'all' ? products : products.filter(p => p.category === currentCategory);
     grid.innerHTML = filtered.map(p => {
         const allergenIds = productAllergens[p.id] || [];
@@ -1334,6 +1337,7 @@ function addToCart(productId) {
 
 function renderCart() {
     const container = document.getElementById('cart-items');
+    if (!container) return;
     if (cart.length === 0) { container.innerHTML = '<div class="empty-cart">Añade productos para empezar</div>'; updateTotals(0); return; }
     container.innerHTML = cart.map(item => `<div class="cart-item"><div><div class="cart-item-name">${item.name}</div><div class="qty-controls"><button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button><span>${item.qty}</span><button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button></div></div><div class="cart-item-price">$${(item.price * item.qty).toLocaleString()}</div></div>`).join('');
     updateTotals(cart.reduce((sum, i) => sum + (i.price * i.qty), 0));
@@ -1413,7 +1417,7 @@ function renderTables() {
         const itemsHtml = hasOrders ? Object.values(itemsGrouped).map(item => `<div class="table-order-item"><span>${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span></div>`).join('') : '';
         const statusText = status === 'reservada' ? 'RESERVADA' : (hasOrders ? 'OCUPADA' : 'LIBRE');
         return `<div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')">
-            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')">📱 QR</button>
+            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')"> QR</button>
             <div class="table-name">${table.name}</div><div class="table-status">${statusText}</div>
             ${hasOrders ? `<div class="table-orders-list">${itemsHtml}</div><div class="table-order-total"><span>Total:</span><span>$${Math.round(table.pendingTotal).toLocaleString()}</span></div><button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>` : '<div style="flex:1;"></div>'}
         </div>`;
@@ -1615,7 +1619,13 @@ function renderKitchenOrders() {
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; 
             const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; 
             const webBadge = order.source === 'web' ? ' 📱' : ''; 
-            const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); 
+            // ✅ AGRUPAR items por nombre para evitar duplicados visuales
+            const itemsGrouped = {};
+            (order.order_items || []).forEach(item => {
+                if (!itemsGrouped[item.name]) itemsGrouped[item.name] = { name: item.name, qty: 0 };
+                itemsGrouped[item.name].qty += item.qty;
+            });
+            const itemsHtml = Object.values(itemsGrouped).map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); 
             let actionBtn = ''; 
             if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; 
             else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${order.id}, 'listo')">✓ Listo</button>`; 
@@ -1672,7 +1682,7 @@ async function loadCashSummary() {
     const totalVentas = efectivo + tarjeta + bizum; 
     const totalCaja = currentSession.fondo + efectivo + entradas - salidas; 
     document.getElementById('cash-summary').style.display = 'block'; 
-    document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; 
+    document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; 
 }
 
 document.getElementById('btn-confirm-open').addEventListener('click', async () => { const fund = parseFloat(document.getElementById('opening-fund').value) || 0; const { error } = await supabaseClient.from('cash_sessions').insert([{ fondo: fund, user_email: currentUser.email }]); if (error) { alert('Error: ' + error.message); } else { closeModal('modal-open-cash'); loadCashStatus(); } });
@@ -1872,7 +1882,7 @@ function renderProductManagement() {
     }
     grid.innerHTML = filtered.map(p => {
         const imageUrl = p.image_url || '';
-        const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="${p.name}">` : '<div class="no-image">📷 Sin imagen</div>';
+        const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="${p.name}">` : '<div class="no-image"> Sin imagen</div>';
         return `
         <div class="product-management-card">
             <div class="product-management-header">
@@ -1999,20 +2009,33 @@ async function deleteProductImage() {
         closeModal('image-modal');
         loadProductManagement();
         loadProducts();
-        showToast('pago', '️ Imagen eliminada', currentProductForImage.name);
+        showToast('pago', '🗑️ Imagen eliminada', currentProductForImage.name);
     } catch (error) { alert('Error al eliminar la imagen: ' + error.message); }
 }
 
-// ============ VISTA MESERO ============
+// ============ VISTA MESERO (CORREGIDA) ============
 function setupWaiterEvents() {
     document.getElementById('btn-waiter-back').addEventListener('click', () => {
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         document.querySelector('[data-view="tables"]').classList.add('active');
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-tables').classList.add('active');
+        waiterSelectedTable = null;
         loadTables();
     });
     document.getElementById('btn-send-waiter-order').addEventListener('click', sendWaiterOrder);
+}
+
+// ✅ NUEVA FUNCIÓN: Carga completa de la vista mesero
+async function loadWaiterView() {
+    // Asegurar que products esté cargado
+    if (products.length === 0) {
+        await loadProducts();
+    }
+    waiterSelectedTable = null;
+    waiterCart = [];
+    document.getElementById('waiter-order').style.display = 'none';
+    await loadWaiterTables();
 }
 
 async function loadWaiterTables() {
@@ -2037,7 +2060,7 @@ async function loadWaiterTables() {
         <button class="waiter-table-btn ${t.hasOrders ? 'ocupada' : 'libre'} ${waiterSelectedTable?.id === t.id ? 'selected' : ''}" onclick="selectWaiterTable(${t.id}, '${t.name}')">
             ${t.name}
             <div style="font-size: 0.75rem; margin-top: 0.25rem; color: ${t.hasOrders ? 'var(--status-ocupada)' : 'var(--status-libre)'};">
-                ${t.hasOrders ? ' OCUPADA' : '🟢 LIBRE'}
+                ${t.hasOrders ? '🟠 OCUPADA' : '🟢 LIBRE'}
             </div>
         </button>
     `).join('');
@@ -2048,14 +2071,21 @@ async function loadWaiterTables() {
 }
 
 async function selectWaiterTable(tableId, tableName) {
+    // ✅ Asegurar que products esté cargado
+    if (products.length === 0) {
+        await loadProducts();
+    }
+    
     waiterSelectedTable = { id: tableId, name: tableName };
-    waiterCart = [];
+    waiterCart = []; // ✅ Carrito SIEMPRE vacío al seleccionar
     waiterCategory = 'all';
-    document.getElementById('waiter-table-name').textContent = `️ ${tableName}`;
+    document.getElementById('waiter-table-name').textContent = `🍽️ ${tableName}`;
     document.getElementById('waiter-order').style.display = 'flex';
     
+    // ✅ Mostrar productos existentes en sección amarilla (solo lectura)
     const existingItemsContainer = document.getElementById('existing-items-container');
     const existingTotalEl = document.getElementById('existing-total');
+    const existingSection = document.getElementById('existing-section');
     
     const { data: ordersData } = await supabaseClient
         .from('orders')
@@ -2064,7 +2094,7 @@ async function selectWaiterTable(tableId, tableName) {
         .eq('paid', false)
         .neq('status', 'entregado');
     
-    if (ordersData && ordersData.length > 0) {
+    if (ordersData && ordersData.length > 0 && existingItemsContainer) {
         const existingItems = ordersData.flatMap(o => o.order_items || []);
         if (existingItems.length > 0) {
             const itemsGrouped = {};
@@ -2083,14 +2113,14 @@ async function selectWaiterTable(tableId, tableName) {
             
             const existingTotal = Object.values(itemsGrouped).reduce((sum, item) => sum + (item.price * item.qty), 0);
             existingTotalEl.textContent = `$${existingTotal.toFixed(2)}`;
-            document.getElementById('existing-section').style.display = 'block';
+            existingSection.style.display = 'block';
         } else {
             existingItemsContainer.innerHTML = '';
-            document.getElementById('existing-section').style.display = 'none';
+            existingSection.style.display = 'none';
         }
-    } else {
+    } else if (existingItemsContainer) {
         existingItemsContainer.innerHTML = '';
-        document.getElementById('existing-section').style.display = 'none';
+        existingSection.style.display = 'none';
     }
     
     renderWaiterCategories();
@@ -2101,6 +2131,7 @@ async function selectWaiterTable(tableId, tableName) {
 function renderWaiterCategories() {
     const cats = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];
     const container = document.getElementById('waiter-categories');
+    if (!container) return;
     container.innerHTML = cats.map(cat => 
         `<button class="cat-btn ${cat === waiterCategory ? 'active' : ''}" onclick="setWaiterCategory('${cat}')">${cat === 'all' ? '📋 Todos' : cat}</button>`
     ).join('');
@@ -2114,6 +2145,7 @@ function setWaiterCategory(cat) {
 
 function renderWaiterProducts() {
     const container = document.getElementById('waiter-products');
+    if (!container) return;
     const filtered = waiterCategory === 'all' ? products : products.filter(p => p.category === waiterCategory);
     container.innerHTML = filtered.map(p => `
         <button class="waiter-prod-btn" onclick="addToWaiterCart(${p.id})">
@@ -2134,6 +2166,8 @@ function addToWaiterCart(productId) {
 function renderWaiterCart() {
     const container = document.getElementById('waiter-cart-items');
     const btnEnviar = document.getElementById('btn-send-waiter-order');
+    if (!container) return;
+    
     if (waiterCart.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: var(--text-gray); padding: 1rem;">Añade productos nuevos</div>';
         if (btnEnviar) btnEnviar.disabled = true;
@@ -2147,16 +2181,19 @@ function renderWaiterCart() {
         if (btnEnviar) btnEnviar.disabled = false;
     }
     const total = waiterCart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-    document.getElementById('waiter-total-amount').textContent = `$${total.toFixed(2)}`;
+    const totalEl = document.getElementById('waiter-total-amount');
+    if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
 }
 
 async function sendWaiterOrder() {
     if (waiterCart.length === 0) return alert('Añade productos al pedido');
     if (!waiterSelectedTable) return alert('Selecciona una mesa');
     
+    // ✅ Solo enviar los productos NUEVOS del carrito
     const newItemsTotal = waiterCart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     
     try {
+        // ✅ Buscar si ya existe un pedido pendiente para esta mesa
         const { data: existingOrder } = await supabaseClient
             .from('orders')
             .select('id, total')
@@ -2169,6 +2206,7 @@ async function sendWaiterOrder() {
         let orderId;
         
         if (existingOrder) {
+            // ✅ Agregar SOLO los nuevos items al pedido existente
             orderId = existingOrder.id;
             const newTotal = (existingOrder.total || 0) + newItemsTotal;
             await supabaseClient
@@ -2176,6 +2214,7 @@ async function sendWaiterOrder() {
                 .update({ total: newTotal })
                 .eq('id', orderId);
         } else {
+            // ✅ Crear nuevo pedido solo con los items nuevos
             const { data: order, error: orderError } = await supabaseClient
                 .from('orders')
                 .insert([{
@@ -2201,6 +2240,7 @@ async function sendWaiterOrder() {
                 .eq('id', waiterSelectedTable.id);
         }
         
+        // ✅ Insertar SOLO los nuevos items
         const orderItems = waiterCart.map(item => ({
             order_id: orderId,
             name: item.name,
@@ -2249,6 +2289,7 @@ function setupRealtimeGlobal() {
         if (kitchenView.classList.contains('active')) {
             loadKitchenOrders();
         }
+        // ✅ Solo recargar mesas del mesero si NO hay pedido abierto
         if (waiterView.classList.contains('active') && !waiterSelectedTable) {
             loadWaiterTables();
         }
@@ -2261,7 +2302,7 @@ function setupRealtimeGlobal() {
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
             const webText = order.source === 'web' ? ' 📱 (QR)' : '';
             
-            addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`);
+            addNotification('nuevo', ` Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`);
             loadTables();
             loadKitchenOrders();
         })
@@ -2281,7 +2322,7 @@ function setupRealtimeGlobal() {
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); })
         .subscribe((status) => {
-            console.log('📡 Realtime status:', status);
+            console.log(' Realtime status:', status);
         });
 }
 
