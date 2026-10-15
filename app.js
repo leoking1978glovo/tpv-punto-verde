@@ -405,7 +405,7 @@ async function saveFiscalSettings() {
         if (error) throw error;
         restaurantSettings = { ...restaurantSettings, ...settings };
         closeModal('fiscal-settings-modal');
-        showToast('pago', '⚙️ Configuración fiscal guardada', '');
+        showToast('pago', '️ Configuración fiscal guardada', '');
     } catch (error) { alert('Error: ' + error.message); }
 }
 
@@ -452,7 +452,7 @@ function renderInvoiceItems() {
                 <option value="${restaurantSettings.iva_general}" ${item.iva_rate === restaurantSettings.iva_general ? 'selected' : ''}>${restaurantSettings.iva_general}% (General)</option>
                 <option value="${restaurantSettings.iva_superreducido}" ${item.iva_rate === restaurantSettings.iva_superreducido ? 'selected' : ''}>${restaurantSettings.iva_superreducido}% (Super)</option>
             </select></div>
-            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">️</button>
+            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">🗑️</button>
         </div>
     `).join('');
     calculateInvoiceTotals();
@@ -693,10 +693,10 @@ function renderReservations() {
         const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
         return `<div class="reservation-card status-${r.status}">
             <div class="res-header"><div class="res-name">${r.customer_name}</div><span class="res-status-badge">${r.status}</span></div>
-            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br> ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
+            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
-                ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
+                ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')"> Cancelar</button>` : ''}
                 ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
                 <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
             </div>
@@ -746,7 +746,7 @@ async function deleteReservation(id) {
     if (!confirm('¿Eliminar esta reserva?')) return;
     await supabaseClient.from('reservations').delete().eq('id', id);
     loadReservations();
-    showToast('pago', '️ Reserva eliminada', '');
+    showToast('pago', '🗑️ Reserva eliminada', '');
 }
 
 // ============ FIDELIDAD ============
@@ -858,9 +858,9 @@ function renderCustomers() {
             <div class="customer-phone">${c.phone || 'Sin teléfono'} ${c.email ? '· ' + c.email : ''}</div>
             <div class="customer-meta"><div>Visitas: <strong>${c.visits || 0}</strong></div><div>Gastado: <strong>$${Math.round(c.total_spent || 0).toLocaleString()}</strong></div></div>
             <div class="customer-actions">
-                <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">️ Editar</button>
-                <button class="customer-action-btn history" onclick="viewHistory(${c.id})">📜 Historial</button>
-                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">️ Eliminar</button>
+                <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">✏️ Editar</button>
+                <button class="customer-action-btn history" onclick="viewHistory(${c.id})"> Historial</button>
+                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">🗑️ Eliminar</button>
             </div>
         </div>
     `).join('');
@@ -875,7 +875,7 @@ async function deleteCustomer(id) {
     await supabaseClient.from('points_history').delete().eq('customer_id', id);
     await supabaseClient.from('customers').delete().eq('id', id);
     loadCustomers();
-    showToast('pago', '️ Cliente eliminado', c.name);
+    showToast('pago', '🗑️ Cliente eliminado', c.name);
 }
 
 function openCustomerModal(customer = null) {
@@ -992,7 +992,7 @@ function setupQREvents() {
         if (!currentQRTable) return;
         const url = `${window.location.origin}/menu.html?mesa=${currentQRTable.id}`;
         const win = window.open('', '_blank');
-        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}</style></head><body><h2>🌿 TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
+        win.document.write(`<html><head><title>QR ${currentQRTable.name}</title><style>body{font-family:sans-serif;text-align:center;padding:2rem;}</style></head><body><h2> TPV Punto Verde</h2><p>${currentQRTable.name} - Escanea para pedir</p><div id="q"></div><p style="font-size:0.7rem;margin-top:1rem;">${url}</p><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><script>new QRCode(document.getElementById('q'),{text:'${url}',width:250,height:250});setTimeout(()=>window.print(),600);<\/script></body></html>`);
         win.document.close();
     });
 }
@@ -1044,7 +1044,7 @@ function renderDivideModal() {
     dinersList.innerHTML = diners.map(diner => {
         const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
         const itemsHtml = diner.items.map(item => `<div class="diner-item"><span class="diner-item-name">${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span><div class="diner-item-controls"><button class="diner-item-btn remove" onclick="removeItemFromDiner(${item.uid}, ${diner.id})">✕</button></div></div>`).join('');
-        return `<div class="diner-card"><div class="diner-header"><div class="diner-name"><input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)"></div><div style="display:flex; align-items:center; gap:0.5rem;"><span class="diner-total">$${Math.round(total).toLocaleString()}</span>${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})">💰 Cobrar</button>` : ''}${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}</div></div><div class="diner-items">${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}</div></div>`;
+        return `<div class="diner-card"><div class="diner-header"><div class="diner-name"><input type="text" value="${diner.name}" onchange="updateDinerName(${diner.id}, this.value)"></div><div style="display:flex; align-items:center; gap:0.5rem;"><span class="diner-total">$${Math.round(total).toLocaleString()}</span>${total > 0 ? `<button class="btn-cobrar-diner" onclick="openDinerPayModal(${diner.id})"> Cobrar</button>` : ''}${diners.length > 1 ? `<button class="btn-remove-diner" onclick="removeDiner(${diner.id})">🗑️</button>` : ''}</div></div><div class="diner-items">${itemsHtml || '<div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Sin productos</div>'}</div></div>`;
     }).join('');
     if (unassignedItems.length === 0) { unassignedList.innerHTML = '<div style="color: var(--text-gray); text-align: center; padding: 1rem;">Todos los productos asignados ✓</div>'; }
     else { unassignedList.innerHTML = unassignedItems.map(item => `<div class="unassigned-item"><div class="unassigned-item-info"><div class="unassigned-item-name">${item.qty}x ${item.name}</div><div class="unassigned-item-price">$${Math.round(item.price * item.qty).toLocaleString()}</div></div><select onchange="assignItemToDiner(${item.uid}, parseInt(this.value)); this.value='';" style="padding: 0.3rem; border-radius: 4px; border: 1px solid var(--border);"><option value="">Asignar a...</option>${diners.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`).join(''); }
@@ -1125,7 +1125,7 @@ function renderInventory() {
         const status = getIngredientStatus(ing);
         const statusClass = status === 'out' ? 'stock-out' : status === 'low' ? 'stock-low' : '';
         const unitLabel = ing.unit === 'gramo' ? 'g' : ing.unit === 'kilogramo' ? 'kg' : ing.unit === 'litro' ? 'L' : ing.unit === 'mililitro' ? 'ml' : 'und';
-        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
+        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
     }).join('');
 }
 
@@ -1240,8 +1240,8 @@ function renderStaff() {
             <div class="staff-header"><div class="staff-name">${s.full_name || s.email}</div><span class="staff-role-badge staff-role-${s.role}">${s.role}</span></div>
             <div class="staff-email">${s.email}</div>
             <div class="staff-meta"><span>Ventas mes: <strong>$${Math.round(monthSales).toLocaleString()}</strong></span><span class="staff-commission">Comisión: $${Math.round(monthComm).toLocaleString()}</span></div>
-            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : ' Inactivo'}</span></div>
-            <div class="staff-actions"><button class="staff-action-btn edit" onclick="editStaff('${s.id}')">️ Editar</button><button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">🗑️ Eliminar</button></div>
+            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : '⛔ Inactivo'}</span></div>
+            <div class="staff-actions"><button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button><button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">🗑️ Eliminar</button></div>
         </div>`;
     }).join('');
 }
@@ -1505,7 +1505,7 @@ async function addToTable() {
             if (orderError) throw orderError;
             await supabaseClient.from('order_items').insert(cart.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty })));
             currentTableOrder = order;
-            addNotification('nuevo', ' Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
+            addNotification('nuevo', '📝 Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
         }
         cart = []; renderCart(); renderTableOrder();
         showToast('pago', '✓ Añadido a la mesa', 'Los productos se guardaron en el pedido');
@@ -1672,7 +1672,7 @@ async function loadCashSummary() {
     const totalVentas = efectivo + tarjeta + bizum; 
     const totalCaja = currentSession.fondo + efectivo + entradas - salidas; 
     document.getElementById('cash-summary').style.display = 'block'; 
-    document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; 
+    document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">$${totalVentas.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">$${efectivo.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">$${tarjeta.toLocaleString()}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">$${bizum.toLocaleString()}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">$${totalCaja.toLocaleString()}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '' : '📤'} ${m.nota || m.metodo}</span><span>$${m.importe.toLocaleString()}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`; 
 }
 
 document.getElementById('btn-confirm-open').addEventListener('click', async () => { const fund = parseFloat(document.getElementById('opening-fund').value) || 0; const { error } = await supabaseClient.from('cash_sessions').insert([{ fondo: fund, user_email: currentUser.email }]); if (error) { alert('Error: ' + error.message); } else { closeModal('modal-open-cash'); loadCashStatus(); } });
@@ -1811,7 +1811,7 @@ function viewTechnicalSheet(productId) {
             <h3 style="margin-bottom: 1rem; color: var(--primary);">${product.name}</h3>
             <div style="margin-bottom: 1rem;"><strong>Categoría:</strong> ${product.category || 'No especificada'}<br><strong>Precio:</strong> €${Number(product.price).toFixed(2)}</div>
             <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem;">
-                <strong>️ Alérgenos presentes:</strong>
+                <strong>⚠️ Alérgenos presentes:</strong>
                 <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">${allergenList || '<li>Sin alérgenos declarados</li>'}</ul>
             </div>
             <div style="font-size: 0.85rem; color: var(--text-gray); margin-top: 1rem;"><strong>Nota legal:</strong> Esta ficha cumple con el Reglamento (UE) nº 1169/2011.</div>
@@ -2042,7 +2042,6 @@ async function loadWaiterTables() {
         </button>
     `).join('');
     
-    // Solo ocultar el panel si NO hay mesa seleccionada
     if (!waiterSelectedTable) {
         document.getElementById('waiter-order').style.display = 'none';
     }
@@ -2052,10 +2051,12 @@ async function selectWaiterTable(tableId, tableName) {
     waiterSelectedTable = { id: tableId, name: tableName };
     waiterCart = [];
     waiterCategory = 'all';
-    document.getElementById('waiter-table-name').textContent = `🍽️ ${tableName}`;
+    document.getElementById('waiter-table-name').textContent = `️ ${tableName}`;
     document.getElementById('waiter-order').style.display = 'flex';
     
-    // ✅ Cargar productos existentes de la mesa
+    const existingItemsContainer = document.getElementById('existing-items-container');
+    const existingTotalEl = document.getElementById('existing-total');
+    
     const { data: ordersData } = await supabaseClient
         .from('orders')
         .select('*, order_items(*)')
@@ -2069,11 +2070,27 @@ async function selectWaiterTable(tableId, tableName) {
             const itemsGrouped = {};
             existingItems.forEach(item => {
                 const key = item.name;
-                if (!itemsGrouped[key]) itemsGrouped[key] = { name: item.name, qty: 0, price: item.price, id: item.id };
+                if (!itemsGrouped[key]) itemsGrouped[key] = { name: item.name, qty: 0, price: item.price };
                 itemsGrouped[key].qty += item.qty;
             });
-            waiterCart = Object.values(itemsGrouped);
+            
+            existingItemsContainer.innerHTML = Object.values(itemsGrouped).map(item => `
+                <div class="existing-item">
+                    <span>${item.qty}x ${item.name}</span>
+                    <span>$${(item.price * item.qty).toFixed(2)}</span>
+                </div>
+            `).join('');
+            
+            const existingTotal = Object.values(itemsGrouped).reduce((sum, item) => sum + (item.price * item.qty), 0);
+            existingTotalEl.textContent = `$${existingTotal.toFixed(2)}`;
+            document.getElementById('existing-section').style.display = 'block';
+        } else {
+            existingItemsContainer.innerHTML = '';
+            document.getElementById('existing-section').style.display = 'none';
         }
+    } else {
+        existingItemsContainer.innerHTML = '';
+        document.getElementById('existing-section').style.display = 'none';
     }
     
     renderWaiterCategories();
@@ -2118,7 +2135,7 @@ function renderWaiterCart() {
     const container = document.getElementById('waiter-cart-items');
     const btnEnviar = document.getElementById('btn-send-waiter-order');
     if (waiterCart.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-gray); padding: 1rem;">Añade productos</div>';
+        container.innerHTML = '<div style="text-align: center; color: var(--text-gray); padding: 1rem;">Añade productos nuevos</div>';
         if (btnEnviar) btnEnviar.disabled = true;
     } else {
         container.innerHTML = waiterCart.map(item => `
@@ -2137,10 +2154,9 @@ async function sendWaiterOrder() {
     if (waiterCart.length === 0) return alert('Añade productos al pedido');
     if (!waiterSelectedTable) return alert('Selecciona una mesa');
     
-    const total = waiterCart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    const newItemsTotal = waiterCart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     
     try {
-        // ✅ Buscar si ya existe un pedido pendiente para esta mesa
         const { data: existingOrder } = await supabaseClient
             .from('orders')
             .select('id, total')
@@ -2153,21 +2169,19 @@ async function sendWaiterOrder() {
         let orderId;
         
         if (existingOrder) {
-            // ✅ Agregar items al pedido existente
             orderId = existingOrder.id;
-            const newTotal = (existingOrder.total || 0) + total;
+            const newTotal = (existingOrder.total || 0) + newItemsTotal;
             await supabaseClient
                 .from('orders')
                 .update({ total: newTotal })
                 .eq('id', orderId);
         } else {
-            // ✅ Crear nuevo pedido
             const { data: order, error: orderError } = await supabaseClient
                 .from('orders')
                 .insert([{
                     type: 'mesa',
                     status: 'nuevo',
-                    total: total,
+                    total: newItemsTotal,
                     paid: false,
                     pay_method: 'pendiente',
                     source: 'tpv',
@@ -2200,7 +2214,7 @@ async function sendWaiterOrder() {
         
         if (itemsError) throw itemsError;
         
-        alert(`✅ Pedido enviado para ${waiterSelectedTable.name}\nTotal: $${total.toFixed(2)}`);
+        alert(`✅ Pedido enviado para ${waiterSelectedTable.name}\nNuevos items: $${newItemsTotal.toFixed(2)}`);
         
         waiterCart = [];
         waiterSelectedTable = null;
@@ -2267,7 +2281,7 @@ function setupRealtimeGlobal() {
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); })
         .subscribe((status) => {
-            console.log(' Realtime status:', status);
+            console.log('📡 Realtime status:', status);
         });
 }
 
