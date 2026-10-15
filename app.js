@@ -452,7 +452,7 @@ function renderInvoiceItems() {
                 <option value="${restaurantSettings.iva_general}" ${item.iva_rate === restaurantSettings.iva_general ? 'selected' : ''}>${restaurantSettings.iva_general}% (General)</option>
                 <option value="${restaurantSettings.iva_superreducido}" ${item.iva_rate === restaurantSettings.iva_superreducido ? 'selected' : ''}>${restaurantSettings.iva_superreducido}% (Super)</option>
             </select></div>
-            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">🗑️</button>
+            <button onclick="removeInvoiceItem(${idx})" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444; padding:0.5rem; border-radius:6px; cursor:pointer;">️</button>
         </div>
     `).join('');
     calculateInvoiceTotals();
@@ -693,12 +693,12 @@ function renderReservations() {
         const dateStr = new Date(r.reservation_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
         return `<div class="reservation-card status-${r.status}">
             <div class="res-header"><div class="res-name">${r.customer_name}</div><span class="res-status-badge">${r.status}</span></div>
-            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas |  Mesa: ${table ? table.name : 'Sin asignar'}<br>📞 ${r.phone || 'Sin teléfono'}${r.notes ? `<br> ${r.notes}` : ''}</div>
+            <div class="res-details">📅 ${dateStr} a las ${r.reservation_time}<br>👥 ${r.party_size} personas | 🪑 Mesa: ${table ? table.name : 'Sin asignar'}<br> ${r.phone || 'Sin teléfono'}${r.notes ? `<br>📝 ${r.notes}` : ''}</div>
             <div class="res-actions">
                 ${r.status === 'pendiente' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'confirmada')">✓ Confirmar</button>` : ''}
                 ${r.status !== 'cancelada' && r.status !== 'completada' ? `<button class="res-action-btn cancel" onclick="updateReservationStatus(${r.id}, 'cancelada')">✕ Cancelar</button>` : ''}
                 ${r.status === 'confirmada' ? `<button class="res-action-btn confirm" onclick="updateReservationStatus(${r.id}, 'completada')">✓ Completada</button>` : ''}
-                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">️</button>
+                <button class="res-action-btn delete" onclick="deleteReservation(${r.id})">🗑️</button>
             </div>
         </div>`;
     }).join('');
@@ -858,9 +858,9 @@ function renderCustomers() {
             <div class="customer-phone">${c.phone || 'Sin teléfono'} ${c.email ? '· ' + c.email : ''}</div>
             <div class="customer-meta"><div>Visitas: <strong>${c.visits || 0}</strong></div><div>Gastado: <strong>$${Math.round(c.total_spent || 0).toLocaleString()}</strong></div></div>
             <div class="customer-actions">
-                <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">✏️ Editar</button>
+                <button class="customer-action-btn edit" onclick="editCustomer(${c.id})">️ Editar</button>
                 <button class="customer-action-btn history" onclick="viewHistory(${c.id})">📜 Historial</button>
-                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">🗑️ Eliminar</button>
+                <button class="customer-action-btn" style="background:#fef2f2; color:#ef4444; border:1px solid #ef4444;" onclick="deleteCustomer(${c.id})">️ Eliminar</button>
             </div>
         </div>
     `).join('');
@@ -875,7 +875,7 @@ async function deleteCustomer(id) {
     await supabaseClient.from('points_history').delete().eq('customer_id', id);
     await supabaseClient.from('customers').delete().eq('id', id);
     loadCustomers();
-    showToast('pago', '🗑️ Cliente eliminado', c.name);
+    showToast('pago', '️ Cliente eliminado', c.name);
 }
 
 function openCustomerModal(customer = null) {
@@ -1125,7 +1125,7 @@ function renderInventory() {
         const status = getIngredientStatus(ing);
         const statusClass = status === 'out' ? 'stock-out' : status === 'low' ? 'stock-low' : '';
         const unitLabel = ing.unit === 'gramo' ? 'g' : ing.unit === 'kilogramo' ? 'kg' : ing.unit === 'litro' ? 'L' : ing.unit === 'mililitro' ? 'ml' : 'und';
-        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
+        return `<div class="ingredient-card ${statusClass}"><div class="ingredient-header"><div class="ingredient-name">${ing.name}</div><div class="ingredient-actions"><button class="ingredient-action-btn" onclick="editIngredient(${ing.id})">✏️</button><button class="ingredient-action-btn" onclick="deleteIngredient(${ing.id})">🗑️</button></div></div><div class="ingredient-stock">${ing.stock} <span>${unitLabel}</span></div><div class="ingredient-meta"><span>Mínimo: ${ing.min_stock} ${unitLabel}</span><span class="ingredient-cost">$${ing.cost_per_unit}/${unitLabel}</span></div><button class="ingredient-recipe-btn" onclick="openRecipeModal(${ing.id})">📋 Ver Recetas</button></div>`;
     }).join('');
 }
 
@@ -1240,8 +1240,8 @@ function renderStaff() {
             <div class="staff-header"><div class="staff-name">${s.full_name || s.email}</div><span class="staff-role-badge staff-role-${s.role}">${s.role}</span></div>
             <div class="staff-email">${s.email}</div>
             <div class="staff-meta"><span>Ventas mes: <strong>$${Math.round(monthSales).toLocaleString()}</strong></span><span class="staff-commission">Comisión: $${Math.round(monthComm).toLocaleString()}</span></div>
-            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : '⛔ Inactivo'}</span></div>
-            <div class="staff-actions"><button class="staff-action-btn edit" onclick="editStaff('${s.id}')">✏️ Editar</button><button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">️ Eliminar</button></div>
+            <div class="staff-meta"><span>Rate: ${s.commission_rate || 0}%</span><span>${s.active ? '✅ Activo' : ' Inactivo'}</span></div>
+            <div class="staff-actions"><button class="staff-action-btn edit" onclick="editStaff('${s.id}')">️ Editar</button><button class="staff-action-btn delete" onclick="deleteStaff('${s.id}')">🗑️ Eliminar</button></div>
         </div>`;
     }).join('');
 }
@@ -1413,7 +1413,7 @@ function renderTables() {
         const itemsHtml = hasOrders ? Object.values(itemsGrouped).map(item => `<div class="table-order-item"><span>${item.qty}x ${item.name}</span><span>$${Math.round(item.price * item.qty).toLocaleString()}</span></div>`).join('') : '';
         const statusText = status === 'reservada' ? 'RESERVADA' : (hasOrders ? 'OCUPADA' : 'LIBRE');
         return `<div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')">
-            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')"> QR</button>
+            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')">📱 QR</button>
             <div class="table-name">${table.name}</div><div class="table-status">${statusText}</div>
             ${hasOrders ? `<div class="table-orders-list">${itemsHtml}</div><div class="table-order-total"><span>Total:</span><span>$${Math.round(table.pendingTotal).toLocaleString()}</span></div><button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>` : '<div style="flex:1;"></div>'}
         </div>`;
@@ -1505,7 +1505,7 @@ async function addToTable() {
             if (orderError) throw orderError;
             await supabaseClient.from('order_items').insert(cart.map(item => ({ order_id: order.id, name: item.name, price: item.price, qty: item.qty })));
             currentTableOrder = order;
-            addNotification('nuevo', '📝 Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
+            addNotification('nuevo', ' Pedido en Mesa', `${tables.find(t => t.id === activeTableId)?.name}: $${Math.round(total).toLocaleString()}`);
         }
         cart = []; renderCart(); renderTableOrder();
         showToast('pago', '✓ Añadido a la mesa', 'Los productos se guardaron en el pedido');
@@ -1614,7 +1614,7 @@ function renderKitchenOrders() {
             const time = new Date(order.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); 
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : ''; 
             const dinerText = order.diner_name ? ` - ${order.diner_name}` : ''; 
-            const webBadge = order.source === 'web' ? ' ' : ''; 
+            const webBadge = order.source === 'web' ? ' 📱' : ''; 
             const itemsHtml = order.order_items.map(item => `<div class="order-item"><span><span class="item-qty">${item.qty}x</span> ${item.name}</span></div>`).join(''); 
             let actionBtn = ''; 
             if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${order.id}, 'cocina')">→ Cocina</button>`; 
@@ -1705,7 +1705,7 @@ function renderAllergenCategories() {
     const bar = document.getElementById('allergen-category-bar');
     if (!bar) return;
     const cats = [...new Set(products.map(p => p.category || 'Sin categoría'))];
-    bar.innerHTML = '<button class="allergen-cat-btn active" data-cat="all"> Todos</button>' + cats.map(cat => `<button class="allergen-cat-btn" data-cat="${cat}">${cat}</button>`).join('');
+    bar.innerHTML = '<button class="allergen-cat-btn active" data-cat="all">📋 Todos</button>' + cats.map(cat => `<button class="allergen-cat-btn" data-cat="${cat}">${cat}</button>`).join('');
 }
 
 function openProductAllergensModal() {
@@ -1872,7 +1872,7 @@ function renderProductManagement() {
     }
     grid.innerHTML = filtered.map(p => {
         const imageUrl = p.image_url || '';
-        const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="${p.name}">` : '<div class="no-image"> Sin imagen</div>';
+        const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="${p.name}">` : '<div class="no-image">📷 Sin imagen</div>';
         return `
         <div class="product-management-card">
             <div class="product-management-header">
@@ -1999,7 +1999,7 @@ async function deleteProductImage() {
         closeModal('image-modal');
         loadProductManagement();
         loadProducts();
-        showToast('pago', '🗑️ Imagen eliminada', currentProductForImage.name);
+        showToast('pago', '️ Imagen eliminada', currentProductForImage.name);
     } catch (error) { alert('Error al eliminar la imagen: ' + error.message); }
 }
 
@@ -2042,18 +2042,40 @@ async function loadWaiterTables() {
         </button>
     `).join('');
     
-    // ✅ CORRECCIÓN: Solo ocultar el panel si NO hay mesa seleccionada
+    // Solo ocultar el panel si NO hay mesa seleccionada
     if (!waiterSelectedTable) {
         document.getElementById('waiter-order').style.display = 'none';
     }
 }
 
-function selectWaiterTable(tableId, tableName) {
+async function selectWaiterTable(tableId, tableName) {
     waiterSelectedTable = { id: tableId, name: tableName };
     waiterCart = [];
     waiterCategory = 'all';
     document.getElementById('waiter-table-name').textContent = `🍽️ ${tableName}`;
     document.getElementById('waiter-order').style.display = 'flex';
+    
+    // ✅ Cargar productos existentes de la mesa
+    const { data: ordersData } = await supabaseClient
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('table_id', tableId)
+        .eq('paid', false)
+        .neq('status', 'entregado');
+    
+    if (ordersData && ordersData.length > 0) {
+        const existingItems = ordersData.flatMap(o => o.order_items || []);
+        if (existingItems.length > 0) {
+            const itemsGrouped = {};
+            existingItems.forEach(item => {
+                const key = item.name;
+                if (!itemsGrouped[key]) itemsGrouped[key] = { name: item.name, qty: 0, price: item.price, id: item.id };
+                itemsGrouped[key].qty += item.qty;
+            });
+            waiterCart = Object.values(itemsGrouped);
+        }
+    }
+    
     renderWaiterCategories();
     renderWaiterProducts();
     renderWaiterCart();
@@ -2063,7 +2085,7 @@ function renderWaiterCategories() {
     const cats = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];
     const container = document.getElementById('waiter-categories');
     container.innerHTML = cats.map(cat => 
-        `<button class="cat-btn ${cat === waiterCategory ? 'active' : ''}" onclick="setWaiterCategory('${cat}')">${cat === 'all' ? 'Todos' : cat}</button>`
+        `<button class="cat-btn ${cat === waiterCategory ? 'active' : ''}" onclick="setWaiterCategory('${cat}')">${cat === 'all' ? '📋 Todos' : cat}</button>`
     ).join('');
 }
 
@@ -2118,26 +2140,55 @@ async function sendWaiterOrder() {
     const total = waiterCart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     
     try {
-        const { data: order, error: orderError } = await supabaseClient
+        // ✅ Buscar si ya existe un pedido pendiente para esta mesa
+        const { data: existingOrder } = await supabaseClient
             .from('orders')
-            .insert([{
-                type: 'mesa',
-                status: 'nuevo',
-                total: total,
-                paid: false,
-                pay_method: 'pendiente',
-                source: 'tpv',
-                user_email: currentUser?.email,
-                table_id: waiterSelectedTable.id,
-                waiter_name: currentProfile?.full_name || 'Mesero'
-            }])
-            .select()
+            .select('id, total')
+            .eq('table_id', waiterSelectedTable.id)
+            .eq('paid', false)
+            .neq('status', 'entregado')
+            .limit(1)
             .single();
         
-        if (orderError) throw orderError;
+        let orderId;
+        
+        if (existingOrder) {
+            // ✅ Agregar items al pedido existente
+            orderId = existingOrder.id;
+            const newTotal = (existingOrder.total || 0) + total;
+            await supabaseClient
+                .from('orders')
+                .update({ total: newTotal })
+                .eq('id', orderId);
+        } else {
+            // ✅ Crear nuevo pedido
+            const { data: order, error: orderError } = await supabaseClient
+                .from('orders')
+                .insert([{
+                    type: 'mesa',
+                    status: 'nuevo',
+                    total: total,
+                    paid: false,
+                    pay_method: 'pendiente',
+                    source: 'tpv',
+                    user_email: currentUser?.email,
+                    table_id: waiterSelectedTable.id,
+                    waiter_name: currentProfile?.full_name || 'Mesero'
+                }])
+                .select()
+                .single();
+            
+            if (orderError) throw orderError;
+            orderId = order.id;
+            
+            await supabaseClient
+                .from('tables')
+                .update({ status: 'ocupada', current_order_id: orderId })
+                .eq('id', waiterSelectedTable.id);
+        }
         
         const orderItems = waiterCart.map(item => ({
-            order_id: order.id,
+            order_id: orderId,
             name: item.name,
             price: item.price,
             qty: item.qty
@@ -2148,11 +2199,6 @@ async function sendWaiterOrder() {
             .insert(orderItems);
         
         if (itemsError) throw itemsError;
-        
-        await supabaseClient
-            .from('tables')
-            .update({ status: 'ocupada', current_order_id: order.id })
-            .eq('id', waiterSelectedTable.id);
         
         alert(`✅ Pedido enviado para ${waiterSelectedTable.name}\nTotal: $${total.toFixed(2)}`);
         
@@ -2189,7 +2235,6 @@ function setupRealtimeGlobal() {
         if (kitchenView.classList.contains('active')) {
             loadKitchenOrders();
         }
-        // ✅ CORRECCIÓN: Solo recargar mesas del mesero si NO hay pedido abierto
         if (waiterView.classList.contains('active') && !waiterSelectedTable) {
             loadWaiterTables();
         }
@@ -2200,7 +2245,7 @@ function setupRealtimeGlobal() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
             const tableText = order.table_id ? ` (Mesa ${order.table_id})` : '';
-            const webText = order.source === 'web' ? '  (QR)' : '';
+            const webText = order.source === 'web' ? ' 📱 (QR)' : '';
             
             addNotification('nuevo', `📝 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: $${Math.round(order.total).toLocaleString()}`);
             loadTables();
@@ -2222,7 +2267,7 @@ function setupRealtimeGlobal() {
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); })
         .subscribe((status) => {
-            console.log('📡 Realtime status:', status);
+            console.log(' Realtime status:', status);
         });
 }
 
