@@ -717,3 +717,24 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
     #qr-code { display: flex; justify-content: center; margin-top: 10px; }
     @page { margin: 0; size: 80mm auto; }
 }
+
+/* FIX FASE 1: fila de recetas con 4 elementos (producto+ingrediente+cantidad+boton) */
+.recipe-add-row {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+.recipe-add-row select.recipe-select,
+.recipe-add-row select {
+    flex: 1 1 200px;
+    min-width: 170px;
+}
+.recipe-add-row input.recipe-input {
+    flex: 0 0 110px;
+    width: 110px;
+}
+.recipe-add-row .btn-add-recipe-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}

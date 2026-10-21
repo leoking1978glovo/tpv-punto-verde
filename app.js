@@ -1191,7 +1191,9 @@ async function openRecipeModal(ingredientId) {
     const allProducts = prods || [];
     document.getElementById('recipe-modal-title').textContent = `Recetas que usan: ${ing.name}`;
     const select = document.getElementById('recipe-ingredient-select');
-    select.innerHTML = '<option value="">Seleccionar ingrediente...</option>' + ingredients.filter(i => i.id !== ingredientId).map(i => `<option value="${i.id}">${i.name} (${i.stock} ${i.unit})</option>`).join('');
+    // FIX: incluir TODOS los ingredientes y preseleccionar el del modal
+    select.innerHTML = '<option value="">Seleccionar ingrediente...</option>' + ingredients.map(i => `<option value="${i.id}">${i.name} (${i.stock} ${i.unit})</option>`).join('');
+    select.value = String(ingredientId);
     // FIX: selector de producto concreto (añadir el <select id="recipe-product-select"> en index.html)
     const prodSelect = document.getElementById('recipe-product-select');
     if (prodSelect) prodSelect.innerHTML = '<option value="">Seleccionar producto...</option>' + allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
@@ -1201,7 +1203,6 @@ async function openRecipeModal(ingredientId) {
     if (relatedProducts.length === 0) { infoDiv.innerHTML = `<div style="color: var(--text-gray);">Este ingrediente no está asociado a ningún producto aún.</div>`; }
     else { infoDiv.innerHTML = `<div>Productos que usan ${ing.name}:</div>` + relatedProducts.map(p => `<div style="font-size: 0.9rem; padding: 0.25rem 0;">• ${p.name}</div>`).join(''); }
     document.getElementById('recipe-quantity').value = '';
-    document.getElementById('recipe-ingredient-select').value = '';
     if (prodSelect) prodSelect.value = '';
     document.getElementById('recipe-modal').classList.add('active');
 }
