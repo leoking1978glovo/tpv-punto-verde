@@ -7,13 +7,16 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="theme-color" content="#10b981">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<base target="_blank">
 </head>
 <body>
 
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
-            <h2> TPV Punto Verde</h2>
+            <h2>🌿 TPV Punto Verde</h2>
             <p>Inicia sesión para continuar</p>
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="Correo electrónico" required>
@@ -39,11 +42,11 @@
                     <span>Caja</span>
                 </li>
                 <li class="nav-item" data-view="waiter" data-perm="waiter">
-                    <span class="nav-icon">🧑‍</span>
+                    <span class="nav-icon">🧑‍🍳</span>
                     <span>Mesero</span>
                 </li>
                 <li class="nav-item" data-view="kitchen" data-perm="kitchen">
-                    <span class="nav-icon">👨‍</span>
+                    <span class="nav-icon">👨‍🍳</span>
                     <span>Cocina</span>
                 </li>
                 <li class="nav-item" data-view="reservations" data-perm="reservations">
@@ -75,7 +78,7 @@
                     <span>Reportes</span>
                 </li>
                 <li class="nav-item" data-view="cash" data-perm="cash">
-                    <span class="nav-icon"></span>
+                    <span class="nav-icon">💰</span>
                     <span>Arqueos</span>
                 </li>
                 <li class="nav-item" data-view="staff" data-perm="staff">
@@ -88,7 +91,7 @@
                     <span id="user-name">Usuario</span>
                     <span id="user-role" class="user-role-badge"></span>
                 </div>
-                <button id="btn-logout" class="logout-btn"> Salir</button>
+                <button id="btn-logout" class="logout-btn">🚪 Salir</button>
             </div>
         </nav>
 
@@ -130,7 +133,7 @@
                     <div class="cart-section">
                         <div class="cart-header">
                             <span>Pedido Actual (Carrito)</span>
-                            <span class="clear-btn" id="btn-clear">️ Limpiar</span>
+                            <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
                         </div>
                         <div class="cart-items" id="cart-items">
                             <div class="empty-cart">Añade productos para empezar</div>
@@ -143,14 +146,14 @@
                             <div class="table-order-items" id="table-order-items"></div>
                             <div class="table-order-total">
                                 <span>Total Mesa:</span>
-                                <span id="table-order-total">$0</span>
+                                <span id="table-order-total">€0</span>
                             </div>
                         </div>
                         <div class="cart-footer">
-                            <div class="summary-row"><span>Subtotal</span><span id="subtotal">$0</span></div>
-                            <div class="summary-row"><span>IVA</span><span id="tax">$0</span></div>
-                            <div class="summary-row total"><span>TOTAL CARRITO</span><span id="total">$0</span></div>
-                            <button class="pay-btn" id="btn-pay">COBRAR ($0)</button>
+                            <div class="summary-row"><span>Subtotal</span><span id="subtotal">€0</span></div>
+                            <div class="summary-row"><span>IVA</span><span id="tax">€0</span></div>
+                            <div class="summary-row total"><span>TOTAL CARRITO</span><span id="total">€0</span></div>
+                            <button class="pay-btn" id="btn-pay">COBRAR (€0)</button>
                         </div>
                     </div>
                 </div>
@@ -175,7 +178,7 @@
                             <div id="waiter-cart-items"></div>
                             <div class="waiter-total">
                                 <span>Total:</span>
-                                <span id="waiter-total-amount">$0</span>
+                                <span id="waiter-total-amount">€0</span>
                             </div>
                             <button class="btn-primary" id="btn-send-waiter-order" style="width: 100%; margin-top: 1rem;">📤 Enviar a cocina</button>
                         </div>
@@ -185,7 +188,7 @@
 
             <section id="view-kitchen" class="view">
                 <header class="view-header">
-                    <h1>Cocina - Pedidos en Tiempo Real</h1>
+                    <h1>👨‍🍳 Cocina - Pedidos en Tiempo Real</h1>
                 </header>
                 <div class="kitchen-stats">
                     <div class="stat"><span class="stat-number" id="count-nuevo">0</span><span class="stat-label">Nuevos</span></div>
@@ -223,7 +226,7 @@
                 <header class="view-header">
                     <h1>👤 Clientes y Fidelidad</h1>
                     <div style="display:flex; gap:0.5rem;">
-                        <button class="btn-secondary" id="btn-loyalty-settings">️ Configurar Puntos</button>
+                        <button class="btn-secondary" id="btn-loyalty-settings">⚙️ Configurar Puntos</button>
                         <button class="btn-primary" id="btn-add-customer">+ Nuevo Cliente</button>
                     </div>
                 </header>
@@ -302,7 +305,7 @@
                 <header class="view-header">
                     <h1>📄 Facturación Electrónica</h1>
                     <div style="display:flex; gap:0.5rem;">
-                        <button class="btn-secondary" id="btn-fiscal-settings">️ Config. Fiscal</button>
+                        <button class="btn-secondary" id="btn-fiscal-settings">⚙️ Config. Fiscal</button>
                         <button class="btn-primary" id="btn-new-invoice">+ Nueva Factura</button>
                     </div>
                 </header>
@@ -334,7 +337,7 @@
 
             <section id="view-reports" class="view">
                 <header class="view-header">
-                    <h1> Reportes y Analíticas</h1>
+                    <h1>📊 Reportes y Analíticas</h1>
                     <div class="report-filters">
                         <button class="report-filter-btn active" data-period="today">Hoy</button>
                         <button class="report-filter-btn" data-period="week">Esta semana</button>
@@ -343,9 +346,9 @@
                 </header>
                 <div class="reports-container">
                     <div class="kpi-grid">
-                        <div class="kpi-card"><div class="kpi-label">Ventas Totales</div><div class="kpi-value" id="kpi-ventas">$0</div><div class="kpi-trend" id="kpi-ventas-trend">—</div></div>
+                        <div class="kpi-card"><div class="kpi-label">Ventas Totales</div><div class="kpi-value" id="kpi-ventas">€0</div><div class="kpi-trend" id="kpi-ventas-trend">—</div></div>
                         <div class="kpi-card"><div class="kpi-label">N° Pedidos</div><div class="kpi-value" id="kpi-pedidos">0</div><div class="kpi-trend" id="kpi-pedidos-trend">—</div></div>
-                        <div class="kpi-card"><div class="kpi-label">Ticket Promedio</div><div class="kpi-value" id="kpi-ticket">$0</div><div class="kpi-trend" id="kpi-ticket-trend">—</div></div>
+                        <div class="kpi-card"><div class="kpi-label">Ticket Promedio</div><div class="kpi-value" id="kpi-ticket">€0</div><div class="kpi-trend" id="kpi-ticket-trend">—</div></div>
                         <div class="kpi-card"><div class="kpi-label">Método Top</div><div class="kpi-value" id="kpi-metodo">—</div><div class="kpi-trend" id="kpi-metodo-detail">—</div></div>
                     </div>
                     <div class="charts-grid">
@@ -373,7 +376,7 @@
                     <div class="staff-stats">
                         <div class="staff-stat-card"><div class="staff-stat-label">Total Empleados</div><div class="staff-stat-value" id="staff-total">0</div></div>
                         <div class="staff-stat-card"><div class="staff-stat-label">Activos</div><div class="staff-stat-value" id="staff-active">0</div></div>
-                        <div class="staff-stat-card"><div class="staff-stat-label">Comisiones del Mes</div><div class="staff-stat-value" id="staff-commissions">$0</div></div>
+                        <div class="staff-stat-card"><div class="staff-stat-label">Comisiones del Mes</div><div class="staff-stat-value" id="staff-commissions">€0</div></div>
                     </div>
                     <div class="staff-grid" id="staff-grid"></div>
                 </div>
@@ -381,7 +384,7 @@
 
             <section id="view-cash" class="view">
                 <header class="view-header">
-                    <h1>Gestión de Caja</h1>
+                    <h1>💰 Gestión de Caja</h1>
                 </header>
                 <div class="cash-container">
                     <div class="status-card" id="status-card">
@@ -475,7 +478,7 @@
                     <div class="input-group">
                         <label>IVA (%):</label>
                         <select id="product-iva">
-                            <option value="10">10% (Reducido - hostelería)</option>
+                            <option value="10" selected>10% (Reducido - hostelería)</option>
                             <option value="21">21% (General)</option>
                             <option value="4">4% (Superreducido)</option>
                         </select>
@@ -491,7 +494,7 @@
                 <div class="input-group">
                     <label>URL de imagen (opcional):</label>
                     <input type="text" id="product-image-url" placeholder="https://...">
-                    <small style="color: var(--text-gray); font-size: 0.75rem;">O usa el botón "📷 Imagen" en la lista de productos</small>
+                    <small style="color: var(--text-gray); font-size: 0.75rem;">O usa el botón "🖼️ Imagen" en la lista de productos</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -573,8 +576,8 @@
                 <div class="input-group">
                     <label>IVA por defecto para hostelería:</label>
                     <select id="set-iva-default">
+                        <option value="10" selected>Reducido 10% (hostelería)</option>
                         <option value="21">General 21%</option>
-                        <option value="10">Reducido 10% (hostelería)</option>
                         <option value="4">Superreducido 4%</option>
                     </select>
                 </div>
@@ -660,7 +663,7 @@
             <div class="modal-body">
                 <input type="hidden" id="reservation-id">
                 <div class="input-group"><label>Nombre del cliente:</label><input type="text" id="res-customer-name" placeholder="Ej: María González"></div>
-                <div class="input-group"><label>Teléfono:</label><input type="text" id="res-phone" placeholder="Ej: 3001234567"></div>
+                <div class="input-group"><label>Teléfono:</label><input type="text" id="res-phone" placeholder="Ej: 600123456"></div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
                     <div class="input-group"><label>Fecha:</label><input type="date" id="res-date"></div>
                     <div class="input-group"><label>Hora:</label><input type="time" id="res-time"></div>
@@ -690,10 +693,10 @@
                     <h3>Resumen</h3>
                     <div id="modal-cart-items"></div>
                     <div class="modal-totals">
-                        <div class="summary-row"><span>Subtotal</span><span id="modal-subtotal">$0</span></div>
-                        <div class="summary-row"><span>IVA</span><span id="modal-tax">$0</span></div>
-                        <div class="summary-row" id="modal-discount-row" style="display:none; color: var(--primary);"><span>Descuento puntos</span><span id="modal-discount">-$0</span></div>
-                        <div class="summary-row total"><span>TOTAL</span><span id="modal-total">$0</span></div>
+                        <div class="summary-row"><span>Subtotal</span><span id="modal-subtotal">€0</span></div>
+                        <div class="summary-row"><span>IVA</span><span id="modal-tax">€0</span></div>
+                        <div class="summary-row" id="modal-discount-row" style="display:none; color: var(--primary);"><span>Descuento puntos</span><span id="modal-discount">-€0</span></div>
+                        <div class="summary-row total"><span>TOTAL</span><span id="modal-total">€0</span></div>
                     </div>
                 </div>
                 <div class="loyalty-section">
@@ -707,12 +710,12 @@
                             <strong id="sel-cust-name"></strong>
                             <span id="sel-cust-points" class="sel-points"></span>
                         </div>
-                        <button class="remove-customer" id="btn-remove-customer"></button>
+                        <button class="remove-customer" id="btn-remove-customer">✕</button>
                     </div>
                     <div class="redeem-row" id="redeem-row" style="display:none;">
                         <label id="redeem-label">Canjear puntos:</label>
                         <input type="number" id="redeem-points" placeholder="0" min="0">
-                        <div class="redeem-discount">Descuento: <span id="redeem-discount">$0</span></div>
+                        <div class="redeem-discount">Descuento: <span id="redeem-discount">€0</span></div>
                     </div>
                 </div>
                 <div class="order-type">
@@ -734,7 +737,7 @@
                 <div class="cash-input" id="cash-section">
                     <label>Efectivo recibido:</label>
                     <input type="number" id="cash-received" placeholder="0" step="0.01">
-                    <div class="change-display"><span>Cambio:</span><span id="change-amount" class="change-amount">$0</span></div>
+                    <div class="change-display"><span>Cambio:</span><span id="change-amount" class="change-amount">€0</span></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -766,7 +769,7 @@
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-divide">Cancelar</button>
-                <button class="btn-pay-all" id="btn-pay-all">💰 Cobrar Todo ($0)</button>
+                <button class="btn-pay-all" id="btn-pay-all">💰 Cobrar Todo (€0)</button>
             </div>
         </div>
     </div>
@@ -783,13 +786,13 @@
                     <h3>Productos</h3>
                     <div id="diner-cart-items"></div>
                     <div class="modal-totals">
-                        <div class="summary-row total"><span>TOTAL</span><span id="diner-total">$0</span></div>
+                        <div class="summary-row total"><span>TOTAL</span><span id="diner-total">€0</span></div>
                     </div>
                 </div>
                 <div class="payment-method">
                     <h3>Método de Pago</h3>
                     <div class="method-buttons" id="diner-method-buttons">
-                        <button class="method-btn active" data-method="efectivo"> Efectivo</button>
+                        <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
                         <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
                         <button class="method-btn" data-method="bizum">📱 Bizum</button>
                     </div>
@@ -797,7 +800,7 @@
                 <div class="cash-input" id="diner-cash-section">
                     <label>Efectivo recibido:</label>
                     <input type="number" id="diner-cash-received" placeholder="0" step="0.01">
-                    <div class="change-display"><span>Cambio:</span><span id="diner-change-amount" class="change-amount">$0</span></div>
+                    <div class="change-display"><span>Cambio:</span><span id="diner-change-amount" class="change-amount">€0</span></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -817,7 +820,7 @@
             <div class="modal-body">
                 <input type="hidden" id="customer-id">
                 <div class="input-group"><label>Nombre completo:</label><input type="text" id="customer-name" placeholder="Ej: María González"></div>
-                <div class="input-group"><label>Teléfono:</label><input type="text" id="customer-phone" placeholder="Ej: 3001234567"></div>
+                <div class="input-group"><label>Teléfono:</label><input type="text" id="customer-phone" placeholder="Ej: 600123456"></div>
                 <div class="input-group"><label>Email:</label><input type="email" id="customer-email" placeholder="cliente@email.com"></div>
                 <div class="input-group"><label>Fecha de nacimiento (opcional):</label><input type="date" id="customer-birthday"></div>
             </div>
@@ -852,8 +855,8 @@
                 <button class="close-btn" id="btn-close-loyalty">✕</button>
             </div>
             <div class="modal-body">
-                <div class="input-group"><label>Puntos por cada $1 de compra:</label><input type="number" id="set-points-per-unit" step="0.1" min="0" placeholder="1"></div>
-                <div class="input-group"><label>Valor de cada punto al canjear ($):</label><input type="number" id="set-point-value" step="0.01" min="0" placeholder="0.05"></div>
+                <div class="input-group"><label>Puntos por cada €1 de compra:</label><input type="number" id="set-points-per-unit" step="0.1" min="0" placeholder="1"></div>
+                <div class="input-group"><label>Valor de cada punto al canjear (€):</label><input type="number" id="set-point-value" step="0.01" min="0" placeholder="0.05"></div>
                 <div class="input-group"><label>Multiplicador de cumpleaños (x):</label><input type="number" id="set-birthday-mult" step="0.5" min="1" placeholder="2"></div>
                 <div style="background: var(--bg-main); padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; color: var(--text-gray);" id="loyalty-preview"></div>
             </div>
@@ -869,7 +872,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="ingredient-modal-title">Nuevo Ingrediente</h2>
-                <button class="close-btn" id="btn-close-ingredient"></button>
+                <button class="close-btn" id="btn-close-ingredient">✕</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="ingredient-id">
@@ -886,7 +889,7 @@
                     </select>
                 </div>
                 <div class="input-group"><label>Stock mínimo (alerta):</label><input type="number" id="ingredient-min-stock" placeholder="0" step="0.01"></div>
-                <div class="input-group"><label>Costo por unidad ($):</label><input type="number" id="ingredient-cost" placeholder="0" step="0.01"></div>
+                <div class="input-group"><label>Coste por unidad (€):</label><input type="number" id="ingredient-cost" placeholder="0" step="0.01"></div>
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" id="btn-cancel-ingredient">Cancelar</button>
@@ -904,7 +907,9 @@
             </div>
             <div class="modal-body">
                 <div class="recipe-product-info" id="recipe-product-info"></div>
+                <!-- FIX FASE 1: selector de producto concreto (la receta se asocia a UN plato) -->
                 <div class="recipe-add-row">
+                    <select id="recipe-product-select" class="recipe-select"><option value="">Seleccionar producto...</option></select>
                     <select id="recipe-ingredient-select" class="recipe-select"><option value="">Seleccionar ingrediente...</option></select>
                     <input type="number" id="recipe-quantity" placeholder="Cantidad" step="0.01" class="recipe-input">
                     <button class="btn-add-recipe-item" id="btn-add-recipe-item">+ Agregar</button>
@@ -934,7 +939,7 @@
                     <select id="staff-role">
                         <option value="cajero">🛒 Cajero</option>
                         <option value="mesero">🪑 Mesero</option>
-                        <option value="cocina">👨‍ Cocina</option>
+                        <option value="cocina">👨‍🍳 Cocina</option>
                         <option value="admin">👑 Administrador</option>
                     </select>
                 </div>
@@ -963,7 +968,7 @@
             </div>
             <div class="modal-body" style="display:flex; flex-direction:column; align-items:center; gap:1rem; padding:1rem;">
                 <div id="qr-table-code" style="padding:1rem; background:white; border:2px solid var(--border); border-radius:12px;"></div>
-                <p style="font-size:0.85rem; color:var(--text-gray);">El cliente escanea este código para pedir desde su celular sin mesero.</p>
+                <p style="font-size:0.85rem; color:var(--text-gray);">El cliente escanea este código para pedir desde su móvil sin esperar al mesero.</p>
                 <button class="btn-primary" id="btn-print-qr" style="margin:0;">🖨️ Imprimir QR</button>
             </div>
         </div>
@@ -971,8 +976,8 @@
 
     <div id="modal-open-cash" class="modal-overlay">
         <div class="modal-content">
-            <h3>Abrir Caja</h3>
-            <div class="input-group"><label>Fondo inicial ($):</label><input type="number" id="opening-fund" placeholder="0" step="0.01"></div>
+            <h3>💵 Abrir Caja</h3>
+            <div class="input-group"><label>Fondo inicial (€):</label><input type="number" id="opening-fund" placeholder="0" step="0.01"></div>
             <button class="btn-primary" id="btn-confirm-open">Confirmar Apertura</button>
             <button class="btn-secondary" onclick="closeModal('modal-open-cash')">Cancelar</button>
         </div>
@@ -980,30 +985,31 @@
 
     <div id="modal-movement" class="modal-overlay">
         <div class="modal-content">
-            <h3>Registrar Movimiento</h3>
+            <h3>📝 Registrar Movimiento</h3>
             <div class="input-group"><label>Tipo:</label><select id="movement-type"><option value="entrada">Entrada</option><option value="salida">Salida</option></select></div>
             <div class="input-group"><label>Método:</label><select id="movement-method"><option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option><option value="bizum">Bizum</option></select></div>
-            <div class="input-group"><label>Importe ($):</label><input type="number" id="movement-amount" placeholder="0" step="0.01"></div>
+            <div class="input-group"><label>Importe (€):</label><input type="number" id="movement-amount" placeholder="0" step="0.01"></div>
             <div class="input-group"><label>Nota:</label><input type="text" id="movement-note" placeholder="Concepto"></div>
             <button class="btn-primary" id="btn-confirm-movement">Registrar</button>
             <button class="btn-secondary" onclick="closeModal('modal-movement')">Cancelar</button>
         </div>
     </div>
 
+    <!-- Arqueo en billetes/monedas de EURO -->
     <div id="modal-count" class="modal-overlay">
         <div class="modal-content">
-            <h3>Arqueo Ciego - Contar Efectivo</h3>
+            <h3>🔒 Arqueo Ciego - Contar Efectivo</h3>
             <div class="count-grid">
-                <div class="count-item"><label>Billetes $100.000:</label><input type="number" class="bill-count" data-value="100000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $50.000:</label><input type="number" class="bill-count" data-value="50000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $20.000:</label><input type="number" class="bill-count" data-value="20000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $10.000:</label><input type="number" class="bill-count" data-value="10000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $5.000:</label><input type="number" class="bill-count" data-value="5000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $2.000:</label><input type="number" class="bill-count" data-value="2000" placeholder="0"></div>
-                <div class="count-item"><label>Billetes $1.000:</label><input type="number" class="bill-count" data-value="1000" placeholder="0"></div>
-                <div class="count-item"><label>Monedas:</label><input type="number" class="bill-count" data-value="1" placeholder="0"></div>
+                <div class="count-item"><label>Billetes de 500€:</label><input type="number" class="bill-count" data-value="500" placeholder="0"></div>
+                <div class="count-item"><label>Billetes de 200€:</label><input type="number" class="bill-count" data-value="200" placeholder="0"></div>
+                <div class="count-item"><label>Billetes de 100€:</label><input type="number" class="bill-count" data-value="100" placeholder="0"></div>
+                <div class="count-item"><label>Billetes de 50€:</label><input type="number" class="bill-count" data-value="50" placeholder="0"></div>
+                <div class="count-item"><label>Billetes de 20€:</label><input type="number" class="bill-count" data-value="20" placeholder="0"></div>
+                <div class="count-item"><label>Billetes de 10€:</label><input type="number" class="bill-count" data-value="10" placeholder="0"></div>
+                <div class="count-item"><label>Billetes de 5€:</label><input type="number" class="bill-count" data-value="5" placeholder="0"></div>
+                <div class="count-item"><label>Monedas (total en €):</label><input type="number" class="bill-count" data-value="1" placeholder="0" step="0.01"></div>
             </div>
-            <div class="count-total"><span>Total contado:</span><span id="counted-total">$0</span></div>
+            <div class="count-total"><span>Total contado:</span><span id="counted-total">€0</span></div>
             <button class="btn-primary" id="btn-confirm-count">Confirmar Arqueo</button>
             <button class="btn-secondary" onclick="closeModal('modal-count')">Cancelar</button>
         </div>
@@ -1015,5 +1021,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="app.js"></script>
+    <script>
+        // FIX FASE 1: registrar el service worker para que la PWA sea instalable y funcione offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW no registrado:', err));
+            });
+        }
+    </script>
 </body>
 </html>
