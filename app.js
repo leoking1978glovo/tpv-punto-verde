@@ -1142,10 +1142,10 @@ function renderInventory() {
     const search = (document.getElementById('inv-search')?.value || '').toLowerCase();
     const filter = document.getElementById('inv-filter-status')?.value || 'all';
     const filtered = ingredients.filter(ing => { const matchSearch = ing.name.toLowerCase().includes(search); const status = getIngredientStatus(ing); const matchFilter = filter === 'all' || status === filter; return matchSearch && matchFilter; });
-    document.getElementById('inv-total').textContent = ingredients.length;
-    document.getElementById('inv-ok').textContent = ingredients.filter(i => getIngredientStatus(i) === 'ok').length;
-    document.getElementById('inv-low').textContent = ingredients.filter(i => getIngredientStatus(i) === 'low').length;
-    document.getElementById('inv-out').textContent = ingredients.filter(i => getIngredientStatus(i) === 'out').length;
+    document.getElementById('ing-total').textContent = ingredients.length;
+    document.getElementById('ing-ok').textContent = ingredients.filter(i => getIngredientStatus(i) === 'ok').length;
+    document.getElementById('ing-low').textContent = ingredients.filter(i => getIngredientStatus(i) === 'low').length;
+    document.getElementById('ing-out').textContent = ingredients.filter(i => getIngredientStatus(i) === 'out').length;
     if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-gray); padding: 2rem;">No hay ingredientes</div>'; return; }
     grid.innerHTML = filtered.map(ing => {
         const status = getIngredientStatus(ing);
