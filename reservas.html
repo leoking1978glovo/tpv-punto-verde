@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservar mesa | Restaurante Punto Verde</title>
+    <meta name="theme-color" content="#10b981">
+    <link rel="icon" href="icon-192.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8fafc; color: #1f2937; min-height: 100vh; }
+        .hero { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2.2rem 1rem; text-align: center; }
+        .hero h1 { font-size: 1.4rem; }
+        .hero p { font-size: 0.85rem; opacity: 0.92; margin-top: 4px; }
+        .box { max-width: 420px; margin: -1.4rem auto 2rem; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 1.6rem 1.4rem; position: relative; z-index: 2; }
+        label { display: block; font-size: 0.8rem; font-weight: 700; margin: 14px 0 5px; color: #374151; }
+        input, select { width: 100%; padding: 12px; border: 1.5px solid #d1d5db; border-radius: 11px; font-size: 1rem; font-family: inherit; background: white; }
+        .slots { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+        .slot { border: 1.5px solid #d1d5db; background: white; border-radius: 9px; padding: 9px 13px; font-size: 0.88rem; font-weight: 700; color: #4b5563; cursor: pointer; }
+        .slot.active { background: #10b981; border-color: #10b981; color: white; }
+        .slot-label { width: 100%; font-size: 0.72rem; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+        .send { width: 100%; margin-top: 20px; padding: 15px; border: none; border-radius: 12px; background: #10b981; color: white; font-size: 1.05rem; font-weight: 800; cursor: pointer; }
+        .send:disabled { opacity: 0.6; }
+        .success { text-align: center; padding: 1.5rem 0.5rem; }
+        .success .big { font-size: 3rem; }
+        .success h2 { margin: 10px 0 6px; color: #065f46; }
+        .success p { font-size: 0.88rem; color: #4b5563; line-height: 1.5; }
+        .err { color: #dc2626; font-size: 0.82rem; text-align: center; margin-top: 10px; min-height: 1.2em; }
+        .closed { text-align: center; padding: 3rem 1.5rem; color: #6b7280; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let sel = { date: null, time: null };
+        let closed = false;
+
+        function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+        function slotsFor() {
+            // Huecos de restaurante: comidas 13:00-16:00 y cenas 19:30-23:00 cada 30 min
+            const out = [];
+            const push = (label, from, to) => {
+                out.push(`<div class="slot-label">${label}</div>`);
+                for (let m = from; m <= to; m += 30) {
+                    const h = String(Math.floor(m / 60)).padStart(2, '0');
+                    const mm = String(m % 60).padStart(2, '0');
+                    out.push(`<button class="slot" data-time="${h}:${mm}">${h}:${mm}</button>`);
+                }
+            };
+            push('Comidas', 13 * 60, 16 * 60);
+            push('Cenas', 19 * 60 + 30, 23 * 60);
+            return out.join('');
+        }
+
+        async function init() {
+            const { data: s } = await sb.from('settings').select('value').eq('key', 'reservasOpen').maybeSingle();
+            if (s && s.value !== '1') closed = true;
+            render();
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            if (closed) {
+                app.innerHTML = `<div class="hero"><h1>🌿 Restaurante Punto Verde</h1><p>Reserva tu mesa</p></div>
+                    <div class="closed"><div style="font-size:2.5rem">⏰</div><h2 style="margin:10px 0">Reservas cerradas</h2><p>En este momento no aceptamos reservas online.<br>Llámanos o escríbenos por redes sociales.</p></div>`;
+                return;
+            }
+            const today = new Date().toISOString().split('T')[0];
+            app.innerHTML = `
+                <div class="hero"><h1>🌿 Restaurante Punto Verde</h1><p>Reserva tu mesa en segundos</p></div>
+                <div class="box" id="form-box">
+                    <label>📅 Fecha</label>
+                    <input type="date" id="f-date" min="${today}" value="${today}">
+                    <label>🕐 Hora</label>
+                    <div class="slots" id="slots">${slotsFor()}</div>
+                    <label>👥 Personas</label>
+                    <select id="f-party">${Array.from({length: 12}, (_, i) => `<option value="${i + 1}" ${i === 1 ? 'selected' : ''}>${i + 1} ${i === 0 ? 'persona' : 'personas'}</option>`).join('')}</select>
+                    <label>🙍 Tu nombre</label>
+                    <input id="f-name" placeholder="Ej: María González">
+                    <label>📞 Teléfono</label>
+                    <input id="f-phone" type="tel" placeholder="600 123 456">
+                    <label>📝 Notas (opcional)</label>
+                    <input id="f-notes" placeholder="Cumpleaños, silla de bebé, terraza…">
+                    <button class="send" id="f-send">Reservar mesa</button>
+                    <div class="err" id="f-err"></div>
+                </div>`;
+            document.getElementById('slots').onclick = e => {
+                const b = e.target.closest('.slot');
+                if (!b) return;
+                document.querySelectorAll('.slot').forEach(x => x.classList.remove('active'));
+                b.classList.add('active');
+                sel.time = b.dataset.time;
+            };
+            document.getElementById('f-send').onclick = send;
+        }
+
+        async function send() {
+            const err = document.getElementById('f-err');
+            err.textContent = '';
+            const btn = document.getElementById('f-send');
+            const payload = {
+                reservation_date: document.getElementById('f-date').value,
+                reservation_time: sel.time,
+                party_size: parseInt(document.getElementById('f-party').value),
+                customer_name: document.getElementById('f-name').value,
+                phone: document.getElementById('f-phone').value,
+                notes: document.getElementById('f-notes').value
+            };
+            if (!payload.reservation_date) { err.textContent = 'Elige una fecha'; return; }
+            if (!sel.time) { err.textContent = 'Elige una hora'; return; }
+            btn.disabled = true; btn.textContent = 'Enviando…';
+            const { data, error } = await sb.rpc('create_reservation', { payload });
+            if (error || !data || !data.ok) {
+                const e = data && data.error;
+                err.textContent = e === 'completo' ? '😔 No quedan mesas libres a esa hora. Prueba otro horario.'
+                    : e === 'fecha_pasada' ? 'La fecha no puede ser pasada'
+                    : e === 'closed' ? 'Las reservas online están cerradas'
+                    : 'Revisa los campos e inténtalo de nuevo (' + (e || 'error') + ')';
+                btn.disabled = false; btn.textContent = 'Reservar mesa';
+                return;
+            }
+            const d = new Date(payload.reservation_date + 'T00:00:00');
+            document.getElementById('form-box').innerHTML = `
+                <div class="success">
+                    <div class="big">✅</div>
+                    <h2>¡Reserva recibida!</h2>
+                    <p><strong>${esc(payload.customer_name)}</strong> — ${d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}<br>
+                    a las <strong>${sel.time}</strong> · ${payload.party_size} ${payload.party_size === 1 ? 'persona' : 'personas'}</p>
+                    <p style="margin-top:10px; color:#6b7280;">Tu reserva está <strong>pendiente de confirmación</strong>.<br>Te llamaremos al ${esc(payload.phone)} para confirmarla.</p>
+                </div>`;
+        }
+
+        init();
+    </script>
+</body>
+</html>
