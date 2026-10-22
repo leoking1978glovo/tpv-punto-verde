@@ -1100,7 +1100,8 @@ async function confirmDinerPayment() {
         if (orderError) throw orderError;
         // FIX FASE 1: guardar product_id para descontar inventario
         await supabaseClient.from('order_items').insert(diner.items.map(item => ({ order_id: order.id, product_id: item.product_id, name: item.name, price: item.price, qty: item.qty })));
-        printTicket(order, diner.items, null);
+        const vf = await generateVerifactuRecord(order, diner.items);
+        printTicket(order, diner.items, null, vf);
         await deductInventory(diner.items);
         await recordEmployeeSale(order.id, total);
         const remainingItems = currentTableOrder.order_items.filter(origItem => !diner.items.some(dinerItem => dinerItem.orderItemId === origItem.id));
@@ -1611,7 +1612,8 @@ async function confirmPayment() {
         // FIX FASE 1: guardar product_id para descontar inventario
         await supabaseClient.from('order_items').insert(cart.map(item => ({ order_id: order.id, product_id: item.id, name: item.name, price: item.price, qty: item.qty })));
         const loyalty = await applyLoyalty(order.id, total);
-        printTicket(order, cart, loyalty);
+        const vf = await generateVerifactuRecord(order, cart);
+        printTicket(order, cart, loyalty, vf);
         await deductInventory(cart);
         await recordEmployeeSale(order.id, total);
         addNotification('pago', `✓ Pedido #${order.id} cobrado`, `Total: ${fmt(total)} | ${payMethod.toUpperCase()}`);
@@ -1635,7 +1637,8 @@ async function confirmPaymentForTable() {
         }
         await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', activeTableId);
         const loyalty = await applyLoyalty(currentTableOrder.id, total);
-        printTicket(currentTableOrder, currentTableOrder.order_items, loyalty);
+        const vf = await generateVerifactuRecord(currentTableOrder, currentTableOrder.order_items);
+        printTicket(currentTableOrder, currentTableOrder.order_items, loyalty, vf);
         await deductInventory(currentTableOrder.order_items);
         await recordEmployeeSale(currentTableOrder.id, total);
         addNotification('pago', `✓ Mesa cobrada`, `${tables.find(t => t.id === activeTableId)?.name}: ${fmt(total)}`);
@@ -1644,7 +1647,7 @@ async function confirmPaymentForTable() {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
-function printTicket(order, items, loyalty) {
+function printTicket(order, items, loyalty, vf = null) {
     const printArea = document.getElementById('ticket-print-area');
     const date = new Date().toLocaleString('es-ES');
     const qrUrl = `${window.location.origin}/valorar.html?p=${order.id}`;
@@ -1653,8 +1656,74 @@ function printTicket(order, items, loyalty) {
     // FIX FASE 1: IVA real por producto en el ticket
     const iva = calcIVA(items);
     const loyaltyHtml = loyalty ? `<div class="ticket-divider"></div><div class="ticket-item"><span>Cliente: ${loyalty.name}</span><span></span></div><div class="ticket-item"><span>Puntos ganados</span><span>+${loyalty.earned}</span></div><div class="ticket-item"><span>Saldo de puntos</span><span>${Math.round(loyalty.newBalance)}</span></div>` : '';
-    printArea.innerHTML = `<div class="ticket-header"><h3>TPV PUNTO VERDE</h3><p>${date}</p><p>Pedido #${order.id}${tableText}${dinerText}</p><p>Cajero: ${currentProfile?.full_name || currentUser?.email || 'N/A'}</p></div><div class="ticket-divider"></div>${items.map(i => `<div class="ticket-item"><span>${i.qty}x ${i.name.substring(0, 20)}</span><span>${fmt(i.price * i.qty)}</span></div>`).join('')}<div class="ticket-divider"></div><div class="ticket-item"><span>Base imponible</span><span>${fmt(iva.subtotal)}</span></div><div class="ticket-item"><span>IVA</span><span>${fmt(iva.tax)}</span></div><div class="ticket-total">TOTAL: ${fmt(order.total)}</div>${loyaltyHtml}<div class="ticket-footer"><p>¡Gracias!</p><div id="qr-code"></div></div>`;
-    setTimeout(() => { const qrContainer = document.getElementById('qr-code'); qrContainer.innerHTML = ''; new QRCode(qrContainer, { text: qrUrl, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.L }); setTimeout(() => window.print(), 500); }, 100);
+    // FASE 2: cabecera fiscal + numero de ticket correlativo
+    const fiscalHeader = `<div class="ticket-header"><h3>${(restaurantSettings.business_name || 'TPV PUNTO VERDE').toUpperCase()}</h3>${restaurantSettings.nif ? `<p>NIF: ${restaurantSettings.nif}</p>` : ''}${restaurantSettings.address ? `<p>${restaurantSettings.address}${restaurantSettings.postal_code ? ', ' + restaurantSettings.postal_code : ''} ${restaurantSettings.city || ''}</p>` : ''}<p>${date}</p><p>Pedido #${order.id}${tableText}${dinerText}</p><p>Cajero: ${currentProfile?.full_name || currentUser?.email || 'N/A'}</p>${vf ? `<p style="font-weight:bold;">TICKET: ${vf.invoice_number}</p>` : ''}</div>`;
+    // FASE 2: bloque Verifactu (firma + QR de verificacion AEAT)
+    const verifactuHtml = vf ? `<div class="ticket-divider"></div><div class="ticket-item"><span>Firma electrónica</span><span>${vf.current_hash.substring(0, 12)}…</span></div><div class="ticket-footer"><p style="font-size:10px; font-weight:bold;">VERIFICACIÓN VERIFACTU</p><div id="qr-verifactu"></div><p style="font-size:8px; word-break:break-all;">${vf.verification_url}</p></div>` : '';
+    printArea.innerHTML = `${fiscalHeader}<div class="ticket-divider"></div>${items.map(i => `<div class="ticket-item"><span>${i.qty}x ${i.name.substring(0, 20)}</span><span>${fmt(i.price * i.qty)}</span></div>`).join('')}<div class="ticket-divider"></div><div class="ticket-item"><span>Base imponible</span><span>${fmt(iva.subtotal)}</span></div><div class="ticket-item"><span>IVA</span><span>${fmt(iva.tax)}</span></div><div class="ticket-total">TOTAL: ${fmt(order.total)}</div>${loyaltyHtml}<div class="ticket-footer"><p>¡Gracias!</p><div id="qr-code"></div></div>${verifactuHtml}`;
+    setTimeout(() => {
+        const qrContainer = document.getElementById('qr-code');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, { text: qrUrl, width: 80, height: 80, correctLevel: QRCode.CorrectLevel.L });
+        if (vf) {
+            const qrVf = document.getElementById('qr-verifactu');
+            qrVf.innerHTML = '';
+            new QRCode(qrVf, { text: vf.verification_url, width: 80, height: 80, correctLevel: QRCode.CorrectLevel.L });
+        }
+        setTimeout(() => window.print(), 500);
+    }, 100);
+}
+
+// ============ VERIFACTU (FASE 2): registro inalterable de tickets ============
+// Cada cobro genera un registro con numeracion correlativa y hash encadenado.
+// Si alguien borra o edita un ticket, la cadena de hashes se rompe (auditable por Hacienda).
+async function generateVerifactuRecord(order, items) {
+    try {
+        const { subtotal, tax } = calcIVA(items);
+        let attempt = 0;
+        while (attempt < 3) {
+            attempt++;
+            // Contador fresco de BD (evita numeros duplicados entre cajas/dispositivos)
+            const { data: rs } = await supabaseClient.from('restaurant_settings').select('*').eq('id', 1).single();
+            const settings = rs || restaurantSettings;
+            const next = (settings.invoice_counter || 0) + 1;
+            const invoice_number = `T-${settings.invoice_series || 'A'}${settings.invoice_year || new Date().getFullYear()}-${String(next).padStart(6, '0')}`;
+            const { data: last } = await supabaseClient.from('invoices').select('current_hash').order('id', { ascending: false }).limit(1).maybeSingle();
+            const previous_hash = last ? last.current_hash : 'GENESIS';
+            const current_hash = await generateHash(`${invoice_number}|${order.id}|${subtotal.toFixed(2)}|${tax.toFixed(2)}|${order.total}|${previous_hash}`);
+            const { data: inv, error } = await supabaseClient.from('invoices').insert([{
+                invoice_number,
+                invoice_date: new Date().toISOString(),
+                customer_name: 'Consumidor final',
+                subtotal: Number(subtotal.toFixed(2)),
+                iva_amount: Number(tax.toFixed(2)),
+                total: order.total,
+                iva_rate: restaurantSettings.iva_default,
+                invoice_type: 'simplificada',
+                previous_hash,
+                current_hash,
+                signature: current_hash.substring(0, 16),
+                status: 'emitida',
+                order_id: order.id,
+                notes: `Ticket TPV - Pedido #${order.id}`
+            }]).select().single();
+            if (error) {
+                if (error.code === '23505') continue; // numero duplicado: reintentar con el siguiente
+                throw error;
+            }
+            await supabaseClient.from('restaurant_settings').update({ invoice_counter: next, updated_at: new Date().toISOString() }).eq('id', 1);
+            restaurantSettings.invoice_counter = next;
+            return {
+                invoice_number,
+                verification_url: `${window.location.origin}/verifactu.html?n=${encodeURIComponent(invoice_number)}`,
+                current_hash
+            };
+        }
+        return null;
+    } catch (e) {
+        console.error('Error Verifactu (el cobro NO se ve afectado):', e);
+        return null;
+    }
 }
 
 // ============ COCINA ============
