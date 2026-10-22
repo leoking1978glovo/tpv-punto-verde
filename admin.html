@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Punto Verde</title>
+    <meta name="theme-color" content="#065f46">
+    <link rel="icon" href="icon-192.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f1f5f9; color: #1f2937; }
+        header { background: linear-gradient(135deg, #065f46, #047857); color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+        header h1 { font-size: 1.05rem; }
+        header small { opacity: 0.85; font-size: 0.7rem; display: block; }
+        #btn-logout { background: rgba(255,255,255,0.15); border: none; color: white; padding: 7px 12px; border-radius: 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+        .wrap { max-width: 520px; margin: 0 auto; padding: 14px; }
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .kpi { background: white; border-radius: 14px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .kpi .lbl { font-size: 0.68rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.4px; }
+        .kpi .val { font-size: 1.45rem; font-weight: 800; margin-top: 3px; color: #065f46; }
+        .kpi .sub { font-size: 0.7rem; color: #9ca3af; margin-top: 2px; }
+        .kpi.warn .val { color: #d97706; }
+        .kpi.bad .val { color: #dc2626; }
+        .card { background: white; border-radius: 14px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 12px; }
+        .card h3 { font-size: 0.85rem; margin-bottom: 10px; color: #374151; }
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 0.83rem; }
+        .row:last-child { border-bottom: none; }
+        .row .right { font-weight: 700; }
+        .pill { font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+        .pill.ok { background: #d1fae5; color: #065f46; }
+        .pill.warn { background: #fef3c7; color: #92400e; }
+        .pill.bad { background: #fee2e2; color: #991b1b; }
+        .pill.nuevo { background: #dbeafe; color: #1e40af; }
+        .pill.cocina { background: #fef3c7; color: #92400e; }
+        .pill.listo { background: #d1fae5; color: #065f46; }
+        .pill.entreg { background: #e5e7eb; color: #4b5563; }
+        .bars { display: flex; align-items: flex-end; gap: 3px; height: 90px; margin-top: 6px; }
+        .bar { flex: 1; background: #10b981; border-radius: 3px 3px 0 0; min-height: 2px; position: relative; }
+        .bar .hh { position: absolute; bottom: -15px; left: 0; right: 0; text-align: center; font-size: 0.55rem; color: #9ca3af; }
+        .bars-wrap { padding-bottom: 18px; }
+        .alert-item { display: flex; gap: 8px; align-items: center; font-size: 0.83rem; padding: 7px 0; border-bottom: 1px solid #f3f4f6; }
+        .alert-item:last-child { border-bottom: none; }
+        .live { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; color: #059669; font-weight: 700; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse 1.6s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .login-box { max-width: 360px; margin: 12vh auto; background: white; border-radius: 18px; padding: 26px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+        .login-box h2 { text-align: center; margin-bottom: 6px; color: #065f46; }
+        .login-box p { text-align: center; font-size: 0.8rem; color: #6b7280; margin-bottom: 18px; }
+        .login-box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1.5px solid #d1d5db; border-radius: 10px; font-size: 0.95rem; }
+        .login-box button { width: 100%; padding: 13px; border: none; border-radius: 10px; background: #059669; color: white; font-weight: 800; font-size: 1rem; cursor: pointer; }
+        .err { color: #dc2626; font-size: 0.8rem; text-align: center; margin-top: 8px; min-height: 1em; }
+        .empty { color: #9ca3af; font-size: 0.8rem; text-align: center; padding: 10px 0; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+
+    <div id="login-view">
+        <div class="login-box">
+            <h2>🌿 Punto Verde</h2>
+            <p>Panel del administrador</p>
+            <input type="email" id="l-email" placeholder="Correo electrónico">
+            <input type="password" id="l-pass" placeholder="Contraseña">
+            <button id="l-btn">Entrar</button>
+            <div class="err" id="l-err"></div>
+        </div>
+    </div>
+
+    <div id="dash" style="display:none;">
+        <header>
+            <div>
+                <h1>🌿 Panel del Dueño</h1>
+                <small id="h-date"></small>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span class="live"><span class="dot"></span>EN VIVO</span>
+                <button id="btn-logout">Salir</button>
+            </div>
+        </header>
+        <div class="wrap">
+            <div class="grid2">
+                <div class="kpi"><div class="lbl">Ventas hoy</div><div class="val" id="k-ventas">—</div><div class="sub" id="k-ventas-sub"></div></div>
+                <div class="kpi"><div class="lbl">Pedidos</div><div class="val" id="k-pedidos">—</div><div class="sub" id="k-ticket"></div></div>
+                <div class="kpi" id="k-caja-card"><div class="lbl">Caja</div><div class="val" id="k-caja">—</div><div class="sub" id="k-caja-sub"></div></div>
+                <div class="kpi" id="k-alerts-card"><div class="lbl">Alertas stock</div><div class="val" id="k-alerts">—</div><div class="sub">ingredientes</div></div>
+            </div>
+
+            <div class="card">
+                <h3>📈 Ventas por hora (hoy)</h3>
+                <div class="bars-wrap"><div class="bars" id="bars"></div></div>
+            </div>
+
+            <div class="card">
+                <h3>🕒 Últimos pedidos</h3>
+                <div id="recent"></div>
+            </div>
+
+            <div class="card">
+                <h3>⚠️ Stock a revisar</h3>
+                <div id="stock"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let profile = null, realtime = null;
+
+        const fmt = n => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n || 0);
+        const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+        const todayStart = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.toISOString(); };
+
+        async function init() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) { const ok = await loadProfile(session.user); if (ok) startDash(); }
+        }
+
+        async function loadProfile(user) {
+            const { data } = await sb.from('profiles').select('*').eq('id', user.id).single();
+            if (!data || data.role !== 'admin') {
+                document.getElementById('l-err').textContent = 'Este panel es solo para administradores.';
+                await sb.auth.signOut();
+                return false;
+            }
+            profile = data;
+            return true;
+        }
+
+        document.getElementById('l-btn').onclick = async () => {
+            document.getElementById('l-err').textContent = '';
+            const email = document.getElementById('l-email').value.trim();
+            const pass = document.getElementById('l-pass').value;
+            const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+            if (error) { document.getElementById('l-err').textContent = 'Credenciales incorrectas'; return; }
+            if (await loadProfile(data.user)) startDash();
+        };
+
+        document.getElementById('btn-logout').onclick = async () => {
+            await sb.auth.signOut();
+            location.reload();
+        };
+
+        function startDash() {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('dash').style.display = 'block';
+            document.getElementById('h-date').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+            loadAll();
+            realtime = sb.channel('admin-dash')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => loadAll(true))
+                .subscribe();
+            setInterval(() => loadAll(true), 15000);
+        }
+
+        async function loadAll(silent) {
+            const since = todayStart();
+            const [{ data: todayOrders }, { data: session }, { data: ings }] = await Promise.all([
+                sb.from('orders').select('id, type, status, total, paid, pay_method, table_id, created_at').gte('created_at', since).order('created_at', { ascending: false }),
+                sb.from('cash_sessions').select('*').is('closed_at', null).maybeSingle(),
+                sb.from('ingredients').select('*')
+            ]);
+            const orders = todayOrders || [];
+            const paid = orders.filter(o => o.paid);
+            const totalVentas = paid.reduce((s, o) => s + (o.total || 0), 0);
+            document.getElementById('k-ventas').textContent = fmt(totalVentas);
+            document.getElementById('k-ventas-sub').textContent = paid.length ? 'en ' + paid.length + ' cobros' : '';
+            document.getElementById('k-pedidos').textContent = orders.length;
+            document.getElementById('k-ticket').textContent = 'ticket medio ' + fmt(paid.length ? totalVentas / paid.length : 0);
+
+            const caja = document.getElementById('k-caja-card');
+            if (session) {
+                caja.className = 'kpi';
+                document.getElementById('k-caja').textContent = 'ABIERTA';
+                document.getElementById('k-caja-sub').textContent = 'fondo ' + fmt(session.fondo);
+            } else {
+                caja.className = 'kpi warn';
+                document.getElementById('k-caja').textContent = 'CERRADA';
+                document.getElementById('k-caja-sub').textContent = 'abre antes de vender';
+            }
+
+            const low = (ings || []).filter(i => (i.stock || 0) <= (i.min_stock || 0));
+            const out = low.filter(i => (i.stock || 0) <= 0);
+            const ac = document.getElementById('k-alerts-card');
+            ac.className = 'kpi' + (out.length ? ' bad' : low.length ? ' warn' : '');
+            document.getElementById('k-alerts').textContent = low.length;
+
+            const statusPill = s => s === 'nuevo' ? '<span class="pill nuevo">NUEVO</span>' : s === 'cocina' ? '<span class="pill cocina">COCINA</span>' : s === 'listo' ? '<span class="pill listo">LISTO</span>' : '<span class="pill entreg">ENTREGADO</span>';
+            document.getElementById('recent').innerHTML = orders.slice(0, 8).map(o => `
+                <div class="row">
+                    <span>#${o.id} ${o.table_id ? '· Mesa ' + o.table_id : ''} · ${new Date(o.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span class="right">${fmt(o.total)} ${statusPill(o.status)}</span>
+                </div>`).join('') || '<div class="empty">Sin pedidos hoy todavía</div>';
+
+            document.getElementById('stock').innerHTML = low.length ? low.map(i => `
+                <div class="alert-item">
+                    <span>${(i.stock || 0) <= 0 ? '🚨' : '⚠️'}</span>
+                    <span style="flex:1">${esc(i.name)}</span>
+                    <span class="pill ${(i.stock || 0) <= 0 ? 'bad' : 'warn'}">${i.stock} ${esc(i.unit)}</span>
+                </div>`).join('') : '<div class="empty">✅ Todo el stock en orden</div>';
+
+            const hours = {};
+            paid.forEach(o => { const h = new Date(o.created_at).getHours(); hours[h] = (hours[h] || 0) + o.total; });
+            const from = 9, to = 23;
+            const vals = []; for (let h = from; h <= to; h++) vals.push(hours[h] || 0);
+            const max = Math.max(...vals, 1);
+            document.getElementById('bars').innerHTML = vals.map((v, i) =>
+                `<div class="bar" style="height:${Math.max(3, (v / max) * 100)}%" title="${fmt(v)}"><div class="hh">${from + i}h</div></div>`).join('');
+        }
+
+        init();
+    </script>
+</body>
+</html>
