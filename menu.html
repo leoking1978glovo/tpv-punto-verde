@@ -3,276 +3,277 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menú - TPV Punto Verde</title>
+    <title>Carta | Restaurante Punto Verde</title>
+    <meta name="theme-color" content="#10b981">
+    <link rel="icon" href="icon-192.png">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-        body { background: #f3f4f6; color: #1f2937; padding-bottom: 80px; }
-        .header { background: #10b981; color: white; padding: 1rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header h1 { font-size: 1.3rem; margin-bottom: 0.25rem; }
-        .header p { font-size: 0.85rem; opacity: 0.9; }
-        .mesa-badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; margin-top: 0.5rem; font-weight: 600; }
-        .categories { display: flex; overflow-x: auto; gap: 0.5rem; padding: 0.75rem; background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 70px; z-index: 99; }
-        .categories::-webkit-scrollbar { display: none; }
-        .cat-btn { background: white; border: 1px solid #e5e7eb; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 500; white-space: nowrap; font-size: 0.85rem; transition: 0.2s; }
-        .cat-btn.active { background: #10b981; color: white; border-color: #10b981; }
-        .products { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-        .prod-card { background: white; border-radius: 12px; padding: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; gap: 0.75rem; align-items: center; }
-        .prod-img { width: 70px; height: 70px; border-radius: 8px; object-fit: cover; background: #e5e7eb; flex-shrink: 0; }
-        .prod-info { flex: 1; min-width: 0; }
-        .prod-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem; }
-        .prod-desc { font-size: 0.8rem; color: #6b7280; margin-bottom: 0.25rem; }
-        .prod-price { color: #10b981; font-weight: 800; font-size: 1rem; }
-        .prod-add { width: 36px; height: 36px; border-radius: 50%; background: #10b981; color: white; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .prod-add:active { transform: scale(0.9); }
-        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 1rem; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; z-index: 100; }
-        .cart-info { display: flex; align-items: center; gap: 0.75rem; }
-        .cart-count { background: #10b981; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; }
-        .cart-total { font-weight: 800; font-size: 1.1rem; }
-        .cart-btn { background: #10b981; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; }
-        .empty { text-align: center; padding: 3rem 1rem; color: #6b7280; }
-        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: flex-end; }
-        .modal.active { display: flex; }
-        .modal-content { background: white; border-radius: 16px 16px 0 0; padding: 1.5rem; width: 100%; max-height: 80vh; overflow-y: auto; }
-        .modal-content h2 { margin-bottom: 1rem; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #e5e7eb; }
-        .cart-item-name { font-weight: 600; flex: 1; }
-        .cart-item-qty { display: flex; align-items: center; gap: 0.5rem; }
-        .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #e5e7eb; background: white; cursor: pointer; font-size: 1rem; }
-        .cart-item-price { font-weight: 700; min-width: 60px; text-align: right; }
-        .cart-total-row { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin: 1rem 0; padding-top: 1rem; border-top: 2px solid #e5e7eb; }
-        .send-btn { width: 100%; background: #10b981; color: white; border: none; padding: 1rem; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; margin-top: 1rem; }
-        .close-modal { background: #f3f4f6; color: #1f2937; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; width: 100%; }
-        .added-feedback { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; z-index: 300; animation: fadeOut 1.5s forwards; }
-        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8fafc; color: #1f2937; padding-bottom: 90px; }
+        header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 1rem; text-align: center; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+        header h1 { font-size: 1.25rem; }
+        header p { font-size: 0.8rem; opacity: 0.9; margin-top: 2px; }
+        .lang-switch { position: absolute; top: 1rem; right: 1rem; display: flex; gap: 4px; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px; }
+        .lang-switch button { border: none; background: transparent; color: white; font-weight: 700; font-size: 0.75rem; padding: 4px 10px; border-radius: 14px; cursor: pointer; }
+        .lang-switch button.active { background: white; color: #059669; }
+        .cats { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px; background: white; position: sticky; top: 74px; z-index: 40; box-shadow: 0 2px 6px rgba(0,0,0,0.06); scrollbar-width: none; }
+        .cats::-webkit-scrollbar { display: none; }
+        .cat-btn { flex: 0 0 auto; border: 1px solid #d1d5db; background: white; padding: 7px 14px; border-radius: 18px; font-size: 0.82rem; font-weight: 600; color: #4b5563; cursor: pointer; }
+        .cat-btn.active { background: #10b981; border-color: #10b981; color: white; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 16px; }
+        .card { background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); display: flex; flex-direction: column; }
+        .card img { width: 100%; height: 110px; object-fit: cover; background: #e5e7eb; }
+        .card .noimg { width: 100%; height: 110px; display: flex; align-items: center; justify-content: center; background: #e5e7eb; color: #9ca3af; font-size: 0.75rem; }
+        .card .body { padding: 10px; flex: 1; display: flex; flex-direction: column; }
+        .card h3 { font-size: 0.88rem; line-height: 1.25; }
+        .card .desc { font-size: 0.72rem; color: #6b7280; margin-top: 3px; flex: 1; }
+        .card .allergens { margin-top: 5px; font-size: 0.85rem; }
+        .card .row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        .price { font-weight: 800; color: #059669; font-size: 0.95rem; }
+        .qty { display: flex; align-items: center; gap: 8px; }
+        .qty button { width: 28px; height: 28px; border-radius: 50%; border: none; font-size: 1rem; font-weight: 700; cursor: pointer; }
+        .minus { background: #fee2e2; color: #dc2626; }
+        .plus { background: #d1fae5; color: #059669; }
+        .qty span { min-width: 18px; text-align: center; font-weight: 700; }
+        #cart-fab { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; border: none; padding: 14px 28px; border-radius: 30px; font-size: 1rem; font-weight: 800; box-shadow: 0 6px 20px rgba(16,185,129,0.45); cursor: pointer; z-index: 60; display: none; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 70; display: none; align-items: flex-end; }
+        .overlay.open { display: flex; }
+        .sheet { background: white; width: 100%; max-height: 88vh; border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto; }
+        .sheet h2 { font-size: 1.1rem; margin-bottom: 12px; }
+        .sheet .item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; }
+        .sheet label { display: block; font-size: 0.8rem; font-weight: 600; margin: 10px 0 4px; color: #374151; }
+        .sheet input, .sheet select, .sheet textarea { width: 100%; padding: 11px; border: 1.5px solid #d1d5db; border-radius: 10px; font-size: 0.95rem; font-family: inherit; }
+        .type-btns { display: flex; gap: 8px; margin-top: 4px; }
+        .type-btns button { flex: 1; padding: 11px; border: 1.5px solid #d1d5db; background: white; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        .type-btns button.active { background: #10b981; border-color: #10b981; color: white; }
+        .sheet .total { display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 800; margin: 14px 0; }
+        .sheet .send { width: 100%; padding: 15px; border: none; border-radius: 12px; background: #10b981; color: white; font-size: 1.05rem; font-weight: 800; cursor: pointer; }
+        .sheet .close { width: 100%; margin-top: 8px; padding: 10px; border: none; background: transparent; color: #6b7280; font-weight: 600; cursor: pointer; }
+        .success { text-align: center; padding: 30px 10px; }
+        .success .big { font-size: 3rem; }
+        .success h2 { margin: 10px 0; }
+        .closed-msg { text-align: center; padding: 60px 20px; color: #6b7280; }
+        #toast { position: fixed; top: 90px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 10px 20px; border-radius: 10px; font-size: 0.85rem; z-index: 100; display: none; }
     </style>
+<base target="_blank">
 </head>
 <body>
-    <div class="header">
-        <h1> TPV Punto Verde</h1>
-        <p>Escanea, pide y disfruta</p>
-        <div class="mesa-badge" id="mesa-badge">Mesa</div>
-    </div>
-
-    <div class="categories" id="categories"></div>
-    <div class="products" id="products"></div>
-
-    <div class="cart-bar" id="cart-bar" style="display: none;">
-        <div class="cart-info">
-            <div class="cart-count" id="cart-count">0</div>
-            <div class="cart-total" id="cart-total">€0</div>
+    <header>
+        <h1 id="t-title">🌿 Restaurante Punto Verde</h1>
+        <p id="t-sub">Pide desde tu mesa</p>
+        <div class="lang-switch">
+            <button id="btn-es" class="active">ES</button>
+            <button id="btn-en">EN</button>
         </div>
-        <button class="cart-btn" onclick="openCart()">Ver pedido</button>
+    </header>
+    <div id="closed" class="closed-msg" style="display:none;"></div>
+    <div id="content" style="display:none;">
+        <div class="cats" id="cats"></div>
+        <div class="grid" id="grid"></div>
     </div>
+    <button id="cart-fab">🧺 <span id="fab-count">0</span> · <span id="fab-total">0,00 €</span></button>
 
-    <div class="modal" id="cart-modal">
-        <div class="modal-content">
-            <h2>🛒 Tu Pedido</h2>
-            <div id="cart-items"></div>
-            <div class="cart-total-row">
-                <span>Total:</span>
-                <span id="modal-total">€0</span>
-            </div>
-            <button class="send-btn" onclick="sendOrder()">📤 Enviar a cocina</button>
-            <button class="close-modal" onclick="closeCart()">Seguir pidiendo</button>
-        </div>
+    <div class="overlay" id="overlay">
+        <div class="sheet" id="sheet"></div>
     </div>
+    <div id="toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = 'https://tjohhybyvfqqjummuedk.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_B6wSHIVowVjWL_086rafEA_g7-STvzI';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const mesa = new URLSearchParams(location.search).get('mesa');
 
-        let products = [];
-        let cart = {};
-        let currentCategory = 'all';
-        let mesaId = null;
+        // ---------- Traducciones ----------
+        const I18N = {
+            es: {
+                sub: mesa ? 'Pide desde tu mesa ' + mesa : 'Pide para recoger',
+                all: 'Todos', closed: '⏰ El pedido online está cerrado en este momento. Pide en barra, por favor.',
+                noimg: 'Sin imagen', cart: 'Tu pedido', empty: 'Añade productos de la carta',
+                name: 'Tu nombre', phone: 'Teléfono', type: 'Tipo de pedido', pickup: '📦 Recogida en local', delivery: '🛵 A domicilio',
+                addr: 'Dirección de entrega', notes: 'Notas (alergias, preferencias…)', send: 'Enviar pedido',
+                total: 'Total', sending: 'Enviando…', ok: '¡Pedido enviado!',
+                okSub: 'Te llamaremos cuando esté listo. Nº de pedido: #',
+                err: 'No se pudo enviar. Revisa los campos e inténtalo de nuevo.', another: 'Hacer otro pedido',
+                namePh: 'Ej: María', phonePh: '600 123 456', addrPh: 'Calle, número, piso'
+            },
+            en: {
+                sub: mesa ? 'Order from table ' + mesa : 'Order for pickup',
+                all: 'All', closed: '⏰ Online ordering is currently closed. Please order at the counter.',
+                noimg: 'No image', cart: 'Your order', empty: 'Add items from the menu',
+                name: 'Your name', phone: 'Phone', type: 'Order type', pickup: '📦 Pickup at restaurant', delivery: '🛵 Delivery',
+                addr: 'Delivery address', notes: 'Notes (allergies, preferences…)', send: 'Place order',
+                total: 'Total', sending: 'Sending…', ok: 'Order sent!',
+                okSub: 'We will call you when it is ready. Order #: ',
+                err: 'Could not send. Check the fields and try again.', another: 'Place another order',
+                namePh: 'E.g. Maria', phonePh: '600 123 456', addrPh: 'Street, number, floor'
+            }
+        };
+        let lang = localStorage.getItem('menu-lang') || 'es';
+        const t = k => (I18N[lang] && I18N[lang][k]) || I18N.es[k] || k;
+
+        let products = [], allergenMap = {}, cart = {}, cats = [], currentCat = 'all';
+        let webOpen = '1', webDomicilio = '0';
+
+        const fmtEUR = n => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n || 0);
+        const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+        const pName = p => (lang === 'en' && p.name_en) ? p.name_en : p.name;
+        const pDesc = p => (lang === 'en' && p.description_en) ? p.description_en : (p.description || '');
+
+        function toast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 3500); }
 
         async function init() {
-            const params = new URLSearchParams(window.location.search);
-            mesaId = params.get('mesa');
-            if (mesaId) {
-                document.getElementById('mesa-badge').textContent = `Mesa ${mesaId}`;
-            }
+            document.getElementById('btn-es').classList.toggle('active', lang === 'es');
+            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+            document.getElementById('t-sub').textContent = t('sub');
 
-            await loadProducts();
-            renderCategories();
-            renderProducts();
-        }
-
-        async function loadProducts() {
-            const { data, error } = await supabaseClient.from('products').select('*').eq('active', true).order('position');
-            if (error) { console.error(error); return; }
-            products = data || [];
-        }
-
-        function renderCategories() {
-            const cats = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];
-            const container = document.getElementById('categories');
-            container.innerHTML = cats.map(cat => 
-                `<button class="cat-btn ${cat === currentCategory ? 'active' : ''}" onclick="setCategory('${cat}')">${cat === 'all' ? 'Todos' : cat}</button>`
-            ).join('');
-        }
-
-        function setCategory(cat) {
-            currentCategory = cat;
-            renderCategories();
-            renderProducts();
-        }
-
-        function renderProducts() {
-            const filtered = currentCategory === 'all' ? products : products.filter(p => p.category === currentCategory);
-            const container = document.getElementById('products');
-            
-            if (filtered.length === 0) {
-                container.innerHTML = '<div class="empty">No hay productos en esta categoría</div>';
+            const { data: sett } = await sb.from('settings').select('key, value').in('key', ['webOpen', 'webDomicilio']);
+            (sett || []).forEach(s => { if (s.key === 'webOpen') webOpen = s.value; if (s.key === 'webDomicilio') webDomicilio = s.value; });
+            if (webOpen !== '1') {
+                document.getElementById('closed').textContent = t('closed');
+                document.getElementById('closed').style.display = 'block';
                 return;
             }
-
-            container.innerHTML = filtered.map(p => {
-                const imgUrl = p.image_url || 'https://via.placeholder.com/70?text=Sin+Imagen';
-                return `
-                <div class="prod-card">
-                    <img class="prod-img" src="${imgUrl}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/70?text=Sin+Imagen'">
-                    <div class="prod-info">
-                        <div class="prod-name">${p.name}</div>
-                        <div class="prod-desc">${p.description || p.category || ''}</div>
-                        <div class="prod-price">€${Number(p.price).toFixed(2)}</div>
-                    </div>
-                    <button class="prod-add" onclick="addToCart(${p.id})">+</button>
-                </div>`;
-            }).join('');
+            const [{ data: prods }, { data: als }, { data: pas }] = await Promise.all([
+                sb.from('products').select('*').eq('active', true).order('position'),
+                sb.from('allergens').select('*'),
+                sb.from('product_allergens').select('*')
+            ]);
+            products = prods || [];
+            allergenMap = {};
+            (als || []).forEach(a => allergenMap[a.id] = a);
+            const pa = {};
+            (pas || []).forEach(x => { (pa[x.product_id] = pa[x.product_id] || []).push(x.allergen_id); });
+            products.forEach(p => p._als = pa[p.id] || []);
+            cats = [...new Set(products.map(p => p.category).filter(Boolean))];
+            render();
         }
 
-        function addToCart(productId) {
-            const product = products.find(p => p.id === productId);
-            if (!product) return;
-            
-            if (cart[productId]) {
-                cart[productId].qty++;
-            } else {
-                cart[productId] = { ...product, qty: 1 };
-            }
-            
-            updateCartBar();
-            showFeedback(`✓ ${product.name} añadido`);
-        }
+        function allergenName(a) { return (lang === 'en' && a.name_en) ? a.name_en : a.name; }
 
-        function showFeedback(message) {
-            const feedback = document.createElement('div');
-            feedback.className = 'added-feedback';
-            feedback.textContent = message;
-            document.body.appendChild(feedback);
-            setTimeout(() => feedback.remove(), 1500);
-        }
-
-        function updateCartBar() {
-            const items = Object.values(cart);
-            const totalQty = items.reduce((sum, i) => sum + i.qty, 0);
-            const totalPrice = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
-            
-            const cartBar = document.getElementById('cart-bar');
-            if (totalQty > 0) {
-                cartBar.style.display = 'flex';
-                document.getElementById('cart-count').textContent = totalQty;
-                document.getElementById('cart-total').textContent = `€${totalPrice.toFixed(2)}`;
-            } else {
-                cartBar.style.display = 'none';
-            }
-        }
-
-        function openCart() {
-            const items = Object.values(cart);
-            const container = document.getElementById('cart-items');
-            
-            if (items.length === 0) {
-                container.innerHTML = '<div class="empty">Tu carrito está vacío</div>';
-            } else {
-                container.innerHTML = items.map(item => `
-                    <div class="cart-item">
-                        <div class="cart-item-name">${item.name}</div>
-                        <div class="cart-item-qty">
-                            <button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button>
-                            <span>${item.qty}</span>
-                            <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+        function render() {
+            document.getElementById('content').style.display = 'block';
+            document.getElementById('t-sub').textContent = t('sub');
+            const catBar = document.getElementById('cats');
+            catBar.innerHTML = `<button class="cat-btn ${currentCat === 'all' ? 'active' : ''}" data-cat="all">${esc(t('all'))}</button>` +
+                cats.map(c => `<button class="cat-btn ${currentCat === c ? 'active' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
+            const list = currentCat === 'all' ? products : products.filter(p => p.category === currentCat);
+            document.getElementById('grid').innerHTML = list.map(p => `
+                <div class="card">
+                    ${p.image_url ? `<img src="${esc(p.image_url)}" alt="" loading="lazy">` : `<div class="noimg">📷 ${esc(t('noimg'))}</div>`}
+                    <div class="body">
+                        <h3>${esc(pName(p))}</h3>
+                        <div class="desc">${esc(pDesc(p))}</div>
+                        ${p._als.length ? `<div class="allergens" title="${p._als.map(id => esc(allergenName(allergenMap[id]) || '')).join(', ')}">${p._als.map(id => (allergenMap[id] || {}).icon || '').join(' ')}</div>` : ''}
+                        <div class="row">
+                            <span class="price">${fmtEUR(p.price)}</span>
+                            <div class="qty">
+                                <button class="minus" onclick="chQty(${p.id}, -1)">−</button>
+                                <span id="q-${p.id}">${cart[p.id] ? cart[p.id].qty : 0}</span>
+                                <button class="plus" onclick="chQty(${p.id}, 1)">+</button>
+                            </div>
                         </div>
-                        <div class="cart-item-price">€${(item.price * item.qty).toFixed(2)}</div>
                     </div>
-                `).join('');
-            }
-            
-            const total = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
-            document.getElementById('modal-total').textContent = `€${total.toFixed(2)}`;
-            document.getElementById('cart-modal').classList.add('active');
+                </div>`).join('');
+            updateFab();
         }
 
-        function closeCart() {
-            document.getElementById('cart-modal').classList.remove('active');
+        window.chQty = (id, d) => {
+            const p = products.find(x => x.id === id);
+            if (!p) return;
+            const cur = cart[id] ? cart[id].qty : 0;
+            const nq = Math.max(0, Math.min(cur + d, 20));
+            if (nq === 0) delete cart[id]; else cart[id] = { product_id: p.id, name: p.name, price: p.price, qty: nq };
+            const el = document.getElementById('q-' + id);
+            if (el) el.textContent = nq;
+            updateFab();
+        };
+
+        function cartItems() { return Object.values(cart); }
+        function cartTotal() { return cartItems().reduce((s, i) => s + i.price * i.qty, 0); }
+        function updateFab() {
+            const n = cartItems().reduce((s, i) => s + i.qty, 0);
+            const fab = document.getElementById('cart-fab');
+            fab.style.display = n > 0 ? 'block' : 'none';
+            document.getElementById('fab-count').textContent = n;
+            document.getElementById('fab-total').textContent = fmtEUR(cartTotal());
         }
 
-        function changeQty(productId, delta) {
-            if (!cart[productId]) return;
-            cart[productId].qty += delta;
-            if (cart[productId].qty <= 0) {
-                delete cart[productId];
+        function openSheet() {
+            const items = cartItems();
+            if (!items.length) return;
+            let orderType = 'recogida';
+            const sheet = document.getElementById('sheet');
+            const draw = () => {
+                sheet.innerHTML = `
+                    <h2>${esc(t('cart'))}</h2>
+                    ${items.map(i => `<div class="item"><span>${i.qty}x ${esc(lang === 'en' ? (products.find(p => p.id === i.product_id) || {}).name_en || i.name : i.name)}</span><span>${fmtEUR(i.price * i.qty)}</span></div>`).join('')}
+                    <label>${esc(t('name'))}</label><input id="f-name" placeholder="${esc(t('namePh'))}">
+                    <label>${esc(t('phone'))}</label><input id="f-phone" type="tel" placeholder="${esc(t('phonePh'))}">
+                    <label>${esc(t('type'))}</label>
+                    <div class="type-btns">
+                        <button id="bt-pickup" class="${orderType === 'recogida' ? 'active' : ''}">${esc(t('pickup'))}</button>
+                        ${webDomicilio === '1' ? `<button id="bt-del" class="${orderType === 'domicilio' ? 'active' : ''}">${esc(t('delivery'))}</button>` : ''}
+                    </div>
+                    <div id="f-addr-wrap" style="display:${orderType === 'domicilio' ? 'block' : 'none'}">
+                        <label>${esc(t('addr'))}</label><input id="f-addr" placeholder="${esc(t('addrPh'))}">
+                    </div>
+                    <label>${esc(t('notes'))}</label><textarea id="f-notes" rows="2"></textarea>
+                    <div class="total"><span>${esc(t('total'))}</span><span>${fmtEUR(cartTotal())}</span></div>
+                    <button class="send" id="f-send">${esc(t('send'))}</button>
+                    <button class="close" id="f-close">✕</button>`;
+                document.getElementById('f-close').onclick = closeSheet;
+                const pu = document.getElementById('bt-pickup');
+                pu.onclick = () => { orderType = 'recogida'; draw(); };
+                const de = document.getElementById('bt-del');
+                if (de) de.onclick = () => { orderType = 'domicilio'; draw(); };
+                document.getElementById('f-send').onclick = () => send(orderType);
+            };
+            draw();
+            document.getElementById('overlay').classList.add('open');
+        }
+        function closeSheet() { document.getElementById('overlay').classList.remove('open'); }
+
+        async function send(orderType) {
+            const btn = document.getElementById('f-send');
+            btn.textContent = t('sending'); btn.disabled = true;
+            const notesRaw = document.getElementById('f-notes').value.trim();
+            const notes = mesa ? `Mesa ${mesa}${notesRaw ? ' - ' + notesRaw : ''}` : notesRaw;
+            const payload = {
+                name: document.getElementById('f-name').value,
+                phone: document.getElementById('f-phone').value,
+                type: orderType,
+                addr: orderType === 'domicilio' ? document.getElementById('f-addr').value : '',
+                pickup: '', notes,
+                items: cartItems().map(i => ({ product_id: i.product_id, qty: i.qty }))
+            };
+            const { data, error } = await sb.rpc('place_order', { payload });
+            if (error || !data || !data.ok) {
+                toast(t('err') + (data && data.error ? ' (' + data.error + ')' : ''));
+                btn.textContent = t('send'); btn.disabled = false;
+                return;
             }
-            updateCartBar();
-            openCart();
+            const orderId = data.id;
+            cart = {}; render();
+            document.getElementById('sheet').innerHTML = `
+                <div class="success">
+                    <div class="big">✅</div>
+                    <h2>${esc(t('ok'))}</h2>
+                    <p>${esc(t('okSub'))}<strong>#${orderId}</strong></p>
+                    <br><button class="send" id="f-again">${esc(t('another'))}</button>
+                </div>`;
+            document.getElementById('f-again').onclick = () => { closeSheet(); };
         }
 
-        async function sendOrder() {
-            const items = Object.values(cart);
-            if (items.length === 0) return alert('Tu carrito está vacío');
-            
-            const total = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
-            
-            try {
-                // ✅ CAMBIO CLAVE: status 'nuevo' para que vaya directo a cocina
-                const { data: order, error: orderError } = await supabaseClient
-                    .from('orders')
-                    .insert([{
-                        type: 'mesa',
-                        status: 'nuevo',  // ← CAMBIADO de 'pendiente_pago' a 'nuevo'
-                        total: total,
-                        paid: false,      // ← paid: false para saber que falta cobrar
-                        pay_method: 'pendiente',
-                        source: 'web',
-                        table_id: mesaId ? parseInt(mesaId) : null
-                    }])
-                    .select()
-                    .single();
-                
-                if (orderError) throw orderError;
-                
-                const orderItems = items.map(item => ({
-                    order_id: order.id,
-                    name: item.name,
-                    price: item.price,
-                    qty: item.qty
-                }));
-                
-                const { error: itemsError } = await supabaseClient
-                    .from('order_items')
-                    .insert(orderItems);
-                
-                if (itemsError) throw itemsError;
-                
-                // Marcar mesa como ocupada
-                if (mesaId) {
-                    await supabaseClient
-                        .from('tables')
-                        .update({ status: 'ocupada', current_order_id: order.id })
-                        .eq('id', parseInt(mesaId));
-                }
-                
-                alert('✅ ¡Pedido enviado a cocina! El mesero te atenderá pronto.');
-                cart = {};
-                updateCartBar();
-                closeCart();
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        }
+        document.getElementById('cart-fab').onclick = openSheet;
+        document.getElementById('overlay').onclick = e => { if (e.target.id === 'overlay') closeSheet(); };
+        document.getElementById('cats').onclick = e => {
+            const b = e.target.closest('.cat-btn');
+            if (!b) return;
+            currentCat = b.dataset.cat; render();
+        };
+        document.getElementById('btn-es').onclick = () => { lang = 'es'; localStorage.setItem('menu-lang', 'es'); render(); document.getElementById('btn-es').classList.add('active'); document.getElementById('btn-en').classList.remove('active'); };
+        document.getElementById('btn-en').onclick = () => { lang = 'en'; localStorage.setItem('menu-lang', 'en'); render(); document.getElementById('btn-en').classList.add('active'); document.getElementById('btn-es').classList.remove('active'); };
 
         init();
     </script>

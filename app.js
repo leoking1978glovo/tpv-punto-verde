@@ -2295,8 +2295,10 @@ function openProductModal(product = null) {
     document.getElementById('product-modal-title').textContent = product ? 'Editar Producto' : 'Nuevo Producto';
     document.getElementById('product-id').value = product ? product.id : '';
     document.getElementById('product-name').value = product ? product.name : '';
+    document.getElementById('product-name-en').value = product ? (product.name_en || '') : '';
     document.getElementById('product-category').value = product ? (product.category || '') : '';
     document.getElementById('product-description').value = product ? (product.description || '') : '';
+    document.getElementById('product-description-en').value = product ? (product.description_en || '') : '';
     document.getElementById('product-price').value = product ? product.price : '';
     document.getElementById('product-iva').value = product ? (product.iva_rate || 10) : '10';
     document.getElementById('product-active').value = product ? String(product.active) : 'true';
@@ -2314,8 +2316,10 @@ function openProductModalById(productId) {
 async function saveProduct() {
     const id = document.getElementById('product-id').value;
     const name = document.getElementById('product-name').value.trim();
+    const name_en = document.getElementById('product-name-en').value.trim();
     const category = document.getElementById('product-category').value.trim();
     const description = document.getElementById('product-description').value.trim();
+    const description_en = document.getElementById('product-description-en').value.trim();
     const price = parseFloat(document.getElementById('product-price').value) || 0;
     const iva_rate = parseFloat(document.getElementById('product-iva').value) || 10;
     const active = document.getElementById('product-active').value === 'true';
@@ -2324,11 +2328,11 @@ async function saveProduct() {
     if (price <= 0) return alert('El precio debe ser mayor a 0');
     try {
         if (id) {
-            const { error } = await supabaseClient.from('products').update({ name, category, description, price, iva_rate, active, image_url, updated_at: new Date().toISOString() }).eq('id', id);
+            const { error } = await supabaseClient.from('products').update({ name, name_en, category, description, description_en, price, iva_rate, active, image_url, updated_at: new Date().toISOString() }).eq('id', id);
             if (error) throw error;
             showToast('pago', '✓ Producto actualizado', name);
         } else {
-            const { error } = await supabaseClient.from('products').insert([{ name, category, description, price, iva_rate, active, image_url }]);
+            const { error } = await supabaseClient.from('products').insert([{ name, name_en, category, description, description_en, price, iva_rate, active, image_url }]);
             if (error) throw error;
             showToast('pago', '✓ Producto creado', name);
         }
