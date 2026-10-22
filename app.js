@@ -2709,6 +2709,13 @@ function setupRealtimeGlobal() {
             loadKitchenOrders();
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables' }, () => { loadTables(); })
+        // FASE 6: reservas online en tiempo real (sin refrescar)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reservations' }, (payload) => {
+            const r = payload.new;
+            addNotification('nuevo', '📅 Nueva reserva online', `${r.customer_name} · ${r.reservation_date} a las ${String(r.reservation_time).substring(0,5)} · ${r.party_size} pers.`);
+            const rv = document.getElementById('view-reservations');
+            if (rv && rv.classList.contains('active')) loadReservations();
+        })
         .subscribe((status) => {
             console.log('📡 Realtime status:', status);
         });
