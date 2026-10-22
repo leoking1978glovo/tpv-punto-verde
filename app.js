@@ -107,6 +107,11 @@ async function init() {
     setupWaiterEvents();
     setupPOSEvents();
     setupRealtimeGlobal();
+    // FASE 3: modo offline
+    updateConnIndicator();
+    window.addEventListener('online', () => { updateConnIndicator(); syncOfflineQueue(); });
+    window.addEventListener('offline', () => { updateConnIndicator(); updatePendingBadge(); });
+    syncOfflineQueue();
 }
 
 async function loadProfile() {
@@ -1095,6 +1100,15 @@ async function confirmDinerPayment() {
     if (!diner) return;
     const total = diner.items.reduce((s, i) => s + (i.price * i.qty), 0);
     if (currentDinerPayMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('diner-cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
+    // FASE 3: sin conexion, el cobro del comensal se guarda en cola
+    if (!navigator.onLine) {
+        const qid = await offlineEnqueue({ kind: 'diner', table_id: activeTableId, diner_name: diner.name, total, items: diner.items, method: currentDinerPayMethod });
+        printTicket({ id: 0, table_id: activeTableId, diner_name: diner.name, total, created_at: new Date().toISOString() }, diner.items, null, { invoice_number: 'LOCAL-' + qid, current_hash: 'PENDIENTE DE ENVIO', verification_url: '', local: true });
+        addNotification('alerta', '📴 Cobro guardado OFFLINE', `${diner.name}: ${fmt(total)}`);
+        closeModal('diner-pay-modal'); closeModal('divide-modal');
+        updatePendingBadge();
+        return;
+    }
     try {
         const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ type: 'mesa', status: 'nuevo', total, paid: true, pay_method: currentDinerPayMethod, source: 'tpv', user_email: currentUser?.email, table_id: activeTableId, diner_name: diner.name }]).select().single();
         if (orderError) throw orderError;
@@ -1346,8 +1360,20 @@ async function recordEmployeeSale(orderId, amount) {
 // ============ PRODUCTOS Y CARRITO (CAJA) ============
 async function loadProducts() {
     const { data, error } = await supabaseClient.from('products').select('*').eq('active', true).order('position');
-    if (error) return;
+    if (error) {
+        // FASE 3: sin conexion, usar carta cacheada
+        try {
+            const cached = JSON.parse(localStorage.getItem('tpv-products') || '[]');
+            if (cached.length) {
+                products = cached;
+                renderCategories(); renderProducts();
+                addNotification('alerta', '📴 Carta cargada desde caché', 'Precios de la última conexión');
+            }
+        } catch (e) {}
+        return;
+    }
     products = data || [];
+    try { localStorage.setItem('tpv-products', JSON.stringify(products)); } catch (e) {}
     renderCategories();
     renderProducts();
 }
@@ -1606,21 +1632,14 @@ async function confirmPayment() {
     const discount = redeemPoints * loyaltySettings.point_value;
     const total = Math.max(0, base - discount);
     if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
-    try {
-        const { data: order, error: orderError } = await supabaseClient.from('orders').insert([{ type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, source: 'tpv', user_email: currentUser?.email, table_id: null }]).select().single();
-        if (orderError) throw orderError;
-        // FIX FASE 1: guardar product_id para descontar inventario
-        await supabaseClient.from('order_items').insert(cart.map(item => ({ order_id: order.id, product_id: item.id, name: item.name, price: item.price, qty: item.qty })));
-        const loyalty = await applyLoyalty(order.id, total);
-        const vf = await generateVerifactuRecord(order, cart);
-        printTicket(order, cart, loyalty, vf);
-        await deductInventory(cart);
-        await recordEmployeeSale(order.id, total);
-        addNotification('pago', `✓ Pedido #${order.id} cobrado`, `Total: ${fmt(total)} | ${payMethod.toUpperCase()}`);
-        cart = []; renderCart(); renderTableOrder(); closeModal('pay-modal');
-        const cashView = document.getElementById('view-cash');
-        if (cashView.classList.contains('active')) loadCashStatus();
-    } catch (error) { alert('Error: ' + error.message); }
+    const items = cart.map(item => ({ product_id: item.id, name: item.name, price: item.price, qty: item.qty }));
+    const loyal = selectedCustomer ? { customer_id: selectedCustomer.id, redeem: redeemPoints, finalTotal: total } : null;
+    const result = await processSale({ type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, source: 'tpv', user_email: currentUser?.email, table_id: null }, items, loyal);
+    if (!result) return;
+    printTicket(result.order, items, result.loyalty, result.vf);
+    cart = []; renderCart(); renderTableOrder(); closeModal('pay-modal');
+    const cashView = document.getElementById('view-cash');
+    if (cashView.classList.contains('active')) loadCashStatus();
 }
 
 async function confirmPaymentForTable() {
@@ -1628,6 +1647,18 @@ async function confirmPaymentForTable() {
     const discount = redeemPoints * loyaltySettings.point_value;
     const total = Math.max(0, base - discount);
     if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
+    // FASE 3: sin conexion, el cobro se guarda y la mesa se libera al sincronizar
+    if (!navigator.onLine) {
+        const items = currentTableOrder.order_items.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, qty: i.qty }));
+        const loyal0 = selectedCustomer ? { customer_id: selectedCustomer.id, redeem: redeemPoints, finalTotal: total } : null;
+        const qid = await offlineEnqueue({ kind: 'table', table_id: activeTableId, total, items, method: payMethod, loyal: loyal0 });
+        printTicket({ ...currentTableOrder, total }, items, null, { invoice_number: 'LOCAL-' + qid, current_hash: 'PENDIENTE DE ENVIO', verification_url: '', local: true });
+        addNotification('alerta', '📴 Cobro de mesa guardado OFFLINE', 'La mesa se liberará al sincronizar');
+        selectedCustomer = null; redeemPoints = 0;
+        currentTableOrder = null; cart = []; renderCart(); renderTableOrder(); closeModal('pay-modal');
+        updatePendingBadge();
+        return;
+    }
     try {
         const orderIds = currentTableOrder._allOrderIds || [currentTableOrder.id];
         for (let i = 0; i < orderIds.length; i++) {
@@ -1659,19 +1690,197 @@ function printTicket(order, items, loyalty, vf = null) {
     // FASE 2: cabecera fiscal + numero de ticket correlativo
     const fiscalHeader = `<div class="ticket-header"><h3>${(restaurantSettings.business_name || 'TPV PUNTO VERDE').toUpperCase()}</h3>${restaurantSettings.nif ? `<p>NIF: ${restaurantSettings.nif}</p>` : ''}${restaurantSettings.address ? `<p>${restaurantSettings.address}${restaurantSettings.postal_code ? ', ' + restaurantSettings.postal_code : ''} ${restaurantSettings.city || ''}</p>` : ''}<p>${date}</p><p>Pedido #${order.id}${tableText}${dinerText}</p><p>Cajero: ${currentProfile?.full_name || currentUser?.email || 'N/A'}</p>${vf ? `<p style="font-weight:bold;">TICKET: ${vf.invoice_number}</p>` : ''}</div>`;
     // FASE 2: bloque Verifactu (firma + QR de verificacion AEAT)
-    const verifactuHtml = vf ? `<div class="ticket-divider"></div><div class="ticket-item"><span>Firma electrónica</span><span>${vf.current_hash.substring(0, 12)}…</span></div><div class="ticket-footer"><p style="font-size:10px; font-weight:bold;">VERIFICACIÓN VERIFACTU</p><div id="qr-verifactu"></div><p style="font-size:8px; word-break:break-all;">${vf.verification_url}</p></div>` : '';
+    const verifactuHtml = vf ? `<div class="ticket-divider"></div><div class="ticket-item"><span>Firma electrónica</span><span>${vf.current_hash.substring(0, 12)}…</span></div><div class="ticket-footer"><p style="font-size:10px; font-weight:bold;">${vf.local ? '⚠️ SIN CONEXIÓN — pendiente de envío al registro' : 'VERIFICACIÓN VERIFACTU'}</p>${vf.local ? '' : `<div id="qr-verifactu"></div><p style="font-size:8px; word-break:break-all;">${vf.verification_url}</p>`}</div>` : '';
     printArea.innerHTML = `${fiscalHeader}<div class="ticket-divider"></div>${items.map(i => `<div class="ticket-item"><span>${i.qty}x ${i.name.substring(0, 20)}</span><span>${fmt(i.price * i.qty)}</span></div>`).join('')}<div class="ticket-divider"></div><div class="ticket-item"><span>Base imponible</span><span>${fmt(iva.subtotal)}</span></div><div class="ticket-item"><span>IVA</span><span>${fmt(iva.tax)}</span></div><div class="ticket-total">TOTAL: ${fmt(order.total)}</div>${loyaltyHtml}<div class="ticket-footer"><p>¡Gracias!</p><div id="qr-code"></div></div>${verifactuHtml}`;
     setTimeout(() => {
         const qrContainer = document.getElementById('qr-code');
         qrContainer.innerHTML = '';
         new QRCode(qrContainer, { text: qrUrl, width: 80, height: 80, correctLevel: QRCode.CorrectLevel.L });
-        if (vf) {
+        if (vf && !vf.local) {
             const qrVf = document.getElementById('qr-verifactu');
-            qrVf.innerHTML = '';
-            new QRCode(qrVf, { text: vf.verification_url, width: 80, height: 80, correctLevel: QRCode.CorrectLevel.L });
+            if (qrVf) { qrVf.innerHTML = ''; new QRCode(qrVf, { text: vf.verification_url, width: 80, height: 80, correctLevel: QRCode.CorrectLevel.L }); }
         }
         setTimeout(() => window.print(), 500);
     }, 100);
+}
+
+// ============ FASE 3: MODO OFFLINE (cola IndexedDB + sincronizacion) ============
+function offlineDB() {
+    return new Promise((res, rej) => {
+        const r = indexedDB.open('tpv-offline', 1);
+        r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('ops')) r.result.createObjectStore('ops', { keyPath: 'id', autoIncrement: true }); };
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+    });
+}
+async function offlineEnqueue(payload) {
+    const db = await offlineDB();
+    return new Promise((res, rej) => {
+        const rq = db.transaction('ops', 'readwrite').objectStore('ops').add({ payload, created: Date.now() });
+        rq.onsuccess = () => res(rq.result);
+        rq.onerror = () => rej(rq.error);
+    });
+}
+async function offlineAll() {
+    const db = await offlineDB();
+    return new Promise((res, rej) => {
+        const rq = db.transaction('ops').objectStore('ops').getAll();
+        rq.onsuccess = () => res(rq.result || []);
+        rq.onerror = () => rej(rq.error);
+    });
+}
+async function offlineDelete(id) {
+    const db = await offlineDB();
+    return new Promise((res) => {
+        const tx = db.transaction('ops', 'readwrite');
+        tx.objectStore('ops').delete(id);
+        tx.oncomplete = res;
+    });
+}
+function updateConnIndicator() {
+    const el = document.getElementById('conn-indicator');
+    if (!el) return;
+    el.style.display = 'block';
+    if (navigator.onLine) { el.textContent = '🟢 En línea'; el.style.background = '#d1fae5'; el.style.color = '#065f46'; }
+    else { el.textContent = '📴 SIN CONEXIÓN — cobros guardados en el equipo'; el.style.background = '#fee2e2'; el.style.color = '#991b1b'; }
+}
+async function offlinePendingCount() {
+    try { return (await offlineAll()).length; } catch (e) { return 0; }
+}
+async function updatePendingBadge() {
+    const el = document.getElementById('conn-indicator');
+    if (!el) return;
+    const n = await offlinePendingCount();
+    if (!navigator.onLine || n > 0) {
+        el.textContent = (navigator.onLine ? '🟢 En línea' : '📴 SIN CONEXIÓN') + (n > 0 ? ` · ${n} pendiente(s) de envío` : '');
+    }
+}
+// Aplicar fidelidad a partir de datos (usable tambien en sincronizacion offline)
+async function applyLoyaltyFromData(loyal, orderId) {
+    const cust = customers.find(c => c.id === loyal.customer_id);
+    if (!cust) return null;
+    const bday = isBirthday(cust);
+    let earned = Math.round(loyal.finalTotal * loyaltySettings.points_per_unit);
+    if (bday) earned = Math.round(earned * loyaltySettings.birthday_multiplier);
+    const newPoints = (cust.points || 0) - loyal.redeem + earned;
+    await supabaseClient.from('customers').update({ points: newPoints, total_spent: (cust.total_spent || 0) + loyal.finalTotal, visits: (cust.visits || 0) + 1 }).eq('id', cust.id);
+    if (loyal.redeem > 0) await supabaseClient.from('points_history').insert([{ customer_id: cust.id, order_id: orderId, points: -loyal.redeem, type: 'canjeados', note: 'Descuento en compra' }]);
+    await supabaseClient.from('points_history').insert([{ customer_id: cust.id, order_id: orderId, points: earned, type: 'ganados', note: bday ? 'Cumpleaños x' + loyaltySettings.birthday_multiplier : 'Compra' }]);
+    return { name: cust.name, earned, newBalance: newPoints };
+}
+// Venta directa (mostrador/recogida/domicilio): online o a la cola offline
+async function processSale(orderData, items, loyal) {
+    if (!navigator.onLine) {
+        const id = await offlineEnqueue({ order: orderData, items, loyal });
+        addNotification('alerta', '📴 Venta guardada OFFLINE', 'Se sincronizará y registrará en Verifactu al volver la conexión');
+        updatePendingBadge();
+        return { order: { ...orderData, id: 0, created_at: new Date().toISOString() }, vf: { invoice_number: 'LOCAL-' + id, current_hash: 'PENDIENTE DE ENVIO', verification_url: '', local: true }, loyalty: null };
+    }
+    try {
+        const { data: order, error: orderError } = await supabaseClient.from('orders').insert([orderData]).select().single();
+        if (orderError) throw orderError;
+        await supabaseClient.from('order_items').insert(items.map(item => ({ order_id: order.id, ...item })));
+        const loyalty = loyal ? await applyLoyaltyFromData(loyal, order.id) : null;
+        selectedCustomer = null; redeemPoints = 0;
+        const vf = await generateVerifactuRecord(order, items);
+        await deductInventory(items);
+        await recordEmployeeSale(order.id, orderData.total);
+        addNotification('pago', `✓ Pedido #${order.id} cobrado`, `Total: ${fmt(orderData.total)} | ${orderData.pay_method.toUpperCase()}`);
+        return { order, vf, loyalty };
+    } catch (error) {
+        if (!navigator.onLine || /fetch|network|failed/i.test(String(error && error.message))) {
+            const id = await offlineEnqueue({ order: orderData, items, loyal });
+            addNotification('alerta', '📴 Venta guardada OFFLINE', 'Se sincronizará automáticamente');
+            updatePendingBadge();
+            return { order: { ...orderData, id: 0, created_at: new Date().toISOString() }, vf: { invoice_number: 'LOCAL-' + id, current_hash: 'PENDIENTE DE ENVIO', verification_url: '', local: true }, loyalty: null };
+        }
+        alert('Error: ' + error.message);
+        return null;
+    }
+}
+// Procesar UNA operacion pendiente (llamado por syncOfflineQueue)
+async function syncOneOp(op) {
+    const p = op.payload;
+    if (p.kind === 'table') {
+        const { data: openOrders } = await supabaseClient.from('orders').select('*, order_items(*)').eq('table_id', p.table_id).eq('paid', false).neq('status', 'entregado');
+        if (openOrders && openOrders.length) {
+            const items = openOrders.flatMap(o => o.order_items || []);
+            const first = openOrders[0];
+            await supabaseClient.from('orders').update({ paid: true, pay_method: p.method, total: p.total }).eq('id', first.id);
+            for (let i = 1; i < openOrders.length; i++) await supabaseClient.from('orders').update({ paid: true, pay_method: p.method }).eq('id', openOrders[i].id);
+            await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', p.table_id);
+            if (p.loyal) await applyLoyaltyFromData(p.loyal, first.id);
+            await generateVerifactuRecord({ id: first.id, total: p.total }, items);
+            await deductInventory(items);
+            await recordEmployeeSale(first.id, p.total);
+        }
+        await offlineDelete(op.id);
+        return;
+    }
+    if (p.kind === 'diner') {
+        const { data: order, error } = await supabaseClient.from('orders').insert([{ type: 'mesa', status: 'entregado', total: p.total, paid: true, pay_method: p.method, source: 'tpv', user_email: currentUser?.email, table_id: p.table_id, diner_name: p.diner_name }]).select().single();
+        if (error) throw error;
+        await supabaseClient.from('order_items').insert(p.items.map(item => ({ order_id: order.id, product_id: item.product_id, name: item.name, price: item.price, qty: item.qty })));
+        await generateVerifactuRecord(order, p.items);
+        await deductInventory(p.items);
+        await recordEmployeeSale(order.id, p.total);
+        // Reconciliar el pedido abierto de la mesa: quitar los items ya cobrados
+        const { data: openOrders } = await supabaseClient.from('orders').select('*, order_items(*)').eq('table_id', p.table_id).eq('paid', false).neq('status', 'entregado');
+        if (openOrders && openOrders.length) {
+            for (const item of p.items) {
+                let remaining = item.qty;
+                for (const o of openOrders) {
+                    for (const oi of (o.order_items || [])) {
+                        if (remaining <= 0) break;
+                        if (oi.name === item.name) {
+                            if (oi.qty <= remaining) { await supabaseClient.from('order_items').delete().eq('id', oi.id); remaining -= oi.qty; }
+                            else { await supabaseClient.from('order_items').update({ qty: oi.qty - remaining }).eq('id', oi.id); remaining = 0; }
+                        }
+                    }
+                }
+            }
+            for (const o of openOrders) {
+                const { data: rest } = await supabaseClient.from('order_items').select('*').eq('order_id', o.id);
+                if (!rest || rest.length === 0) await supabaseClient.from('orders').update({ status: 'entregado', paid: true }).eq('id', o.id);
+                else await supabaseClient.from('orders').update({ total: rest.reduce((s, i) => s + i.price * i.qty, 0) }).eq('id', o.id);
+            }
+            const { data: still } = await supabaseClient.from('orders').select('id').eq('table_id', p.table_id).eq('paid', false).neq('status', 'entregado');
+            if (!still || still.length === 0) await supabaseClient.from('tables').update({ status: 'libre', current_order_id: null }).eq('id', p.table_id);
+        }
+        await offlineDelete(op.id);
+        return;
+    }
+    // Venta directa
+    const { data: newOrder, error } = await supabaseClient.from('orders').insert([p.order]).select().single();
+    if (error) throw error;
+    await supabaseClient.from('order_items').insert(p.items.map(item => ({ order_id: newOrder.id, ...item })));
+    if (p.loyal) await applyLoyaltyFromData(p.loyal, newOrder.id);
+    await generateVerifactuRecord(newOrder, p.items);
+    await deductInventory(p.items);
+    await recordEmployeeSale(newOrder.id, p.order.total);
+    await offlineDelete(op.id);
+}
+let syncingOffline = false;
+async function syncOfflineQueue() {
+    if (syncingOffline || !navigator.onLine || !currentUser) return;
+    syncingOffline = true;
+    try {
+        const ops = await offlineAll();
+        let synced = 0;
+        for (const op of ops) {
+            try { await syncOneOp(op); synced++; }
+            catch (e) {
+                if (!navigator.onLine || /fetch|network|failed/i.test(String(e && e.message))) break;
+                console.error('Error sincronizando operacion offline:', e);
+                break; // no borrar si falla por otro motivo: se reintenta en el proximo ciclo
+            }
+        }
+        await updatePendingBadge();
+        if (synced > 0) {
+            addNotification('pago', `✅ ${synced} venta(s) offline sincronizada(s)`, 'Registros Verifactu generados');
+            loadTables(); loadKitchenOrders();
+        }
+    } finally { syncingOffline = false; }
 }
 
 // ============ VERIFACTU (FASE 2): registro inalterable de tickets ============
@@ -2467,6 +2676,7 @@ function setupRealtimeGlobal() {
         if (waiterView.classList.contains('active') && !waiterSelectedTable) {
             loadWaiterTables();
         }
+        if (navigator.onLine) syncOfflineQueue();
     }, 3000);
 
     realtimeChannel = supabaseClient
