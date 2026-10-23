@@ -1734,7 +1734,7 @@ function renderDriverManager() {
     const active = drivers.filter(d => d.active);
     box.innerHTML = active.length === 0
         ? '<span style="color: var(--text-gray); font-size: 0.85rem;">Sin repartidores activos — da de alta al menos uno</span>'
-        : active.map(d => `<span style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">🛵 ${escHtml(d.name)} <button onclick="toggleDriver(${d.id}, false)" title="Quitar del turno" style="background: none; border: none; cursor: pointer; color: #065f46; font-weight: 800;">✕</button></span>`).join(' ');
+        : active.map(d => `<span style="background: #FFF0E6; border: 1px solid #FFC9A8; color: #C2410C; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">🛵 ${escHtml(d.name)} <button onclick="toggleDriver(${d.id}, false)" title="Quitar del turno" style="background: none; border: none; cursor: pointer; color: #C2410C; font-weight: 800;">✕</button></span>`).join(' ');
 }
 async function toggleDriver(id, active) {
     await supabaseClient.from('drivers').update({ active }).eq('id', id);
@@ -1873,8 +1873,8 @@ function updateConnIndicator() {
     const el = document.getElementById('conn-indicator');
     if (!el) return;
     el.style.display = 'block';
-    if (navigator.onLine) { el.textContent = '🟢 En línea'; el.style.background = '#d1fae5'; el.style.color = '#065f46'; }
-    else { el.textContent = '📴 SIN CONEXIÓN — cobros guardados en el equipo'; el.style.background = '#fee2e2'; el.style.color = '#991b1b'; }
+    if (navigator.onLine) { el.textContent = '⚡ En línea'; el.style.background = '#0A0A0A'; el.style.color = '#F7C137'; }
+    else { el.textContent = '📴 SIN CONEXIÓN — cobros guardados en el equipo'; el.style.background = '#7F1D1D'; el.style.color = '#FEE2E2'; }
 }
 async function offlinePendingCount() {
     try { return (await offlineAll()).length; } catch (e) { return 0; }

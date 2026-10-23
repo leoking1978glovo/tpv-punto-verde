@@ -811,3 +811,41 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 /* ---- Tarjetas: acento calido en hover ---- */
 .table-card:hover { box-shadow: 0 10px 15px -3px rgba(255, 107, 53, 0.15); }
 .product-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px -2px rgba(255, 107, 53, 0.18); }
+
+/* ============================================================
+   TEMA FUEGO v2 — extender negro+naranja a TODA la estructura
+   Los estados dejan el verde: libre = gris piedra, listo = amarillo
+   ============================================================ */
+:root {
+    --status-libre: #A8A29E; /* gris piedra: disponible, sin verde */
+}
+
+/* Cocina / KDS: "Listo" pasa a amarillo de marca con texto tinta */
+.status-listo { background: #F7C137; color: #0A0A0A; }
+.btn-listo { background: #F7C137; color: #0A0A0A; }
+.order-card.status-listo { border-left-color: #F7C137; }
+.toast.tipo-listo { border-left-color: #F7C137; }
+.notif-item.tipo-listo { border-left-color: #F7C137; }
+
+/* Mesas libres: tarjeta neutra, sin borde verde */
+.table-card.status-libre { border-color: #C9C4BB; }
+.table-card.status-libre .table-status { color: #8A8478; }
+
+/* Mini-barra de mesas (caja): gris piedra en vez de verde */
+.mini-table { background: #B9B3A8; }
+.mini-table.active { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+
+/* Mesero: mesas libres neutras */
+.waiter-table-btn.libre { background: #F5F2EC; border-color: #C9C4BB; }
+
+/* Inventario: "stock OK" neutro */
+.ingredient-card { border-left-color: #A8A29E; }
+
+/* Leyenda del mapa de mesas */
+.dot.status-libre { background: #A8A29E; }
+
+/* Reportes: tendencia positiva = amarillo marca (mas legible que naranja sobre blanco) */
+.kpi-trend.up { color: #D97706; }
+
+/* QR de mesa: azul funcional pasa a tinta (marca) */
+.btn-qr-mesa, .table-card button[style*="3b82f6"] { background: var(--ink) !important; }
