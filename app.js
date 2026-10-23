@@ -80,8 +80,8 @@ function calcIVA(items) {
 }
 
 const ROLE_PERMISSIONS = {
-    admin: ['tables', 'pos', 'waiter', 'kitchen', 'reservations', 'customers', 'inventory', 'products', 'allergens', 'invoices', 'reports', 'cash', 'staff'],
-    cajero: ['tables', 'pos', 'waiter', 'kitchen', 'reservations', 'customers', 'inventory', 'products', 'invoices', 'reports', 'cash'],
+    admin: ['tables', 'pos', 'waiter', 'kitchen', 'reparto', 'reservations', 'customers', 'inventory', 'products', 'allergens', 'invoices', 'reports', 'cash', 'staff', 'config'],
+    cajero: ['tables', 'pos', 'waiter', 'kitchen', 'reparto', 'reservations', 'customers', 'inventory', 'products', 'invoices', 'reports', 'cash'],
     mesero: ['tables', 'pos', 'waiter', 'kitchen', 'reservations'],
     cocina: ['kitchen']
 };
@@ -107,6 +107,8 @@ async function init() {
     setupWaiterEvents();
     setupPOSEvents();
     setupRealtimeGlobal();
+    // FASE 7: configuracion
+    setupConfigEvents();
     // FASE 3: modo offline
     updateConnIndicator();
     window.addEventListener('online', () => { updateConnIndicator(); syncOfflineQueue(); });
@@ -228,6 +230,8 @@ function setupNavigation() {
             else if (view === 'pos') { if (!activeTableId) { currentTableOrder = null; cart = []; renderCart(); renderTableOrder(); document.getElementById('pos-title').textContent = 'Caja - Mostrador'; } renderMiniTables(); }
             else if (view === 'waiter') { loadWaiterView(); }
             else if (view === 'kitchen') loadKitchenOrders();
+            else if (view === 'reparto') loadDelivery();
+            else if (view === 'config') loadConfigView();
             else if (view === 'reservations') loadReservations();
             else if (view === 'customers') loadCustomers();
             else if (view === 'inventory') loadIngredients();
@@ -1684,11 +1688,12 @@ function printTicket(order, items, loyalty, vf = null) {
     const qrUrl = `${window.location.origin}/valorar.html?p=${order.id}`;
     const tableText = order.table_id ? ` | Mesa: ${order.table_id}` : '';
     const dinerText = order.diner_name ? ` | ${order.diner_name}` : '';
+    const addrText = order.addr ? ` | ${order.addr}` : '';
     // FIX FASE 1: IVA real por producto en el ticket
     const iva = calcIVA(items);
     const loyaltyHtml = loyalty ? `<div class="ticket-divider"></div><div class="ticket-item"><span>Cliente: ${loyalty.name}</span><span></span></div><div class="ticket-item"><span>Puntos ganados</span><span>+${loyalty.earned}</span></div><div class="ticket-item"><span>Saldo de puntos</span><span>${Math.round(loyalty.newBalance)}</span></div>` : '';
     // FASE 2: cabecera fiscal + numero de ticket correlativo
-    const fiscalHeader = `<div class="ticket-header"><h3>${(restaurantSettings.business_name || 'TPV PUNTO VERDE').toUpperCase()}</h3>${restaurantSettings.nif ? `<p>NIF: ${restaurantSettings.nif}</p>` : ''}${restaurantSettings.address ? `<p>${restaurantSettings.address}${restaurantSettings.postal_code ? ', ' + restaurantSettings.postal_code : ''} ${restaurantSettings.city || ''}</p>` : ''}<p>${date}</p><p>Pedido #${order.id}${tableText}${dinerText}</p><p>Cajero: ${currentProfile?.full_name || currentUser?.email || 'N/A'}</p>${vf ? `<p style="font-weight:bold;">TICKET: ${vf.invoice_number}</p>` : ''}</div>`;
+    const fiscalHeader = `<div class="ticket-header"><h3>${(restaurantSettings.business_name || 'TPV PUNTO VERDE').toUpperCase()}</h3>${restaurantSettings.nif ? `<p>NIF: ${restaurantSettings.nif}</p>` : ''}${restaurantSettings.address ? `<p>${restaurantSettings.address}${restaurantSettings.postal_code ? ', ' + restaurantSettings.postal_code : ''} ${restaurantSettings.city || ''}</p>` : ''}<p>${date}</p><p>Pedido #${order.id}${tableText}${dinerText}${addrText}</p><p>Cajero: ${currentProfile?.full_name || currentUser?.email || 'N/A'}</p>${vf ? `<p style="font-weight:bold;">TICKET: ${vf.invoice_number}</p>` : ''}</div>`;
     // FASE 2: bloque Verifactu (firma + QR de verificacion AEAT)
     const verifactuHtml = vf ? `<div class="ticket-divider"></div><div class="ticket-item"><span>Firma electrónica</span><span>${vf.current_hash.substring(0, 12)}…</span></div><div class="ticket-footer"><p style="font-size:10px; font-weight:bold;">${vf.local ? '⚠️ SIN CONEXIÓN — pendiente de envío al registro' : 'VERIFICACIÓN VERIFACTU'}</p>${vf.local ? '' : `<div id="qr-verifactu"></div><p style="font-size:8px; word-break:break-all;">${vf.verification_url}</p>`}</div>` : '';
     printArea.innerHTML = `${fiscalHeader}<div class="ticket-divider"></div>${items.map(i => `<div class="ticket-item"><span>${i.qty}x ${i.name.substring(0, 20)}</span><span>${fmt(i.price * i.qty)}</span></div>`).join('')}<div class="ticket-divider"></div><div class="ticket-item"><span>Base imponible</span><span>${fmt(iva.subtotal)}</span></div><div class="ticket-item"><span>IVA</span><span>${fmt(iva.tax)}</span></div><div class="ticket-total">TOTAL: ${fmt(order.total)}</div>${loyaltyHtml}<div class="ticket-footer"><p>¡Gracias!</p><div id="qr-code"></div></div>${verifactuHtml}`;
@@ -1702,6 +1707,133 @@ function printTicket(order, items, loyalty, vf = null) {
         }
         setTimeout(() => window.print(), 500);
     }, 100);
+}
+
+// ============ REPARTO A DOMICILIO (FASE 7) ============
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+let deliveryOrders = [];
+let drivers = [];
+
+async function loadDrivers() {
+    const { data } = await supabaseClient.from('drivers').select('*').order('name');
+    drivers = data || [];
+}
+async function loadDelivery() {
+    await loadDrivers();
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const { data } = await supabaseClient.from('orders').select('*, order_items(*)')
+        .eq('type', 'domicilio').gte('created_at', start.toISOString())
+        .order('created_at', { ascending: false });
+    deliveryOrders = data || [];
+    renderDriverManager();
+    renderDelivery();
+}
+function renderDriverManager() {
+    const box = document.getElementById('drivers-list');
+    if (!box) return;
+    const active = drivers.filter(d => d.active);
+    box.innerHTML = active.length === 0
+        ? '<span style="color: var(--text-gray); font-size: 0.85rem;">Sin repartidores activos — da de alta al menos uno</span>'
+        : active.map(d => `<span style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">🛵 ${escHtml(d.name)} <button onclick="toggleDriver(${d.id}, false)" title="Quitar del turno" style="background: none; border: none; cursor: pointer; color: #065f46; font-weight: 800;">✕</button></span>`).join(' ');
+}
+async function toggleDriver(id, active) {
+    await supabaseClient.from('drivers').update({ active }).eq('id', id);
+    loadDelivery();
+}
+async function addDriverFromUI() {
+    const input = document.getElementById('new-driver-name');
+    const name = (input.value || '').trim();
+    if (!name) return;
+    await supabaseClient.from('drivers').insert([{ name }]);
+    input.value = '';
+    loadDelivery();
+    showToast('pago', '✓ Repartidor añadido', name);
+}
+function deliveryCard(o) {
+    const items = (o.order_items || []).map(i => `${i.qty}x ${escHtml(i.name)}`).join(' · ');
+    const time = new Date(o.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const paidPill = o.paid ? '<span style="font-size:0.65rem; font-weight:800; padding:2px 8px; border-radius:999px; background:#d1fae5; color:#065f46;">PAGADO</span>' : '<span style="font-size:0.65rem; font-weight:800; padding:2px 8px; border-radius:999px; background:#fee2e2; color:#991b1b;">POR COBRAR</span>';
+    const driverSel = `<select id="drv-${o.id}" style="padding: 7px; border-radius: 8px; border: 1.5px solid var(--border); flex: 1; font-size: 0.85rem;">` +
+        `<option value="">Sin asignar…</option>` +
+        drivers.filter(d => d.active).map(d => `<option value="${escHtml(d.name)}" ${o.driver === d.name ? 'selected' : ''}>${escHtml(d.name)}</option>`).join('') + '</select>';
+    const payBtns = o.paid ? '' : `<div style="display: flex; gap: 6px; margin-top: 8px;">
+        <button style="flex: 1; border: none; border-radius: 8px; padding: 8px; cursor: pointer; font-weight: 700; background: #d1fae5; color: #065f46;" onclick="collectDelivery(${o.id}, 'efectivo')">💵 Cobrar efectivo</button>
+        <button style="flex: 1; border: none; border-radius: 8px; padding: 8px; cursor: pointer; font-weight: 700; background: #dbeafe; color: #1e40af;" onclick="collectDelivery(${o.id}, 'tarjeta')">💳 Cobrar tarjeta</button>
+    </div>`;
+    return `<div class="order-card" style="margin-bottom: 12px;">
+        <div class="order-header"><div class="order-id">Pedido #${o.id} · ${time}</div><div>${paidPill}</div></div>
+        <div class="order-time" style="font-size: 0.85rem;">👤 ${escHtml(o.name || '')} · 📞 ${escHtml(o.phone || '')}</div>
+        <div class="order-time" style="font-size: 0.85rem;">📍 ${escHtml(o.addr || '')}</div>
+        <div class="order-items" style="margin: 8px 0;"><div class="order-item"><span>${items}</span></div></div>
+        <div style="display: flex; justify-content: flex-end; font-size: 1rem; font-weight: 800; color: var(--primary);">${fmt(o.total)}</div>
+        <div style="display: flex; gap: 6px; margin-top: 6px; align-items: center;">${driverSel}</div>
+        ${payBtns}
+    </div>`;
+}
+function renderDelivery() {
+    const pend = deliveryOrders.filter(o => !['reparto', 'entregado'].includes(o.status));
+    const en = deliveryOrders.filter(o => o.status === 'reparto');
+    const done = deliveryOrders.filter(o => o.status === 'entregado');
+    const porCobrar = deliveryOrders.filter(o => !o.paid && o.status !== 'entregado').reduce((s, o) => s + (o.total || 0), 0);
+    const stats = document.getElementById('delivery-stats');
+    if (stats) stats.innerHTML = `<div class="summary-grid">
+        <div class="summary-card"><div class="summary-label">Pendientes</div><div class="summary-value">${pend.length}</div></div>
+        <div class="summary-card"><div class="summary-label">En reparto</div><div class="summary-value">${en.length}</div></div>
+        <div class="summary-card"><div class="summary-label">Entregados hoy</div><div class="summary-value">${done.length}</div></div>
+        <div class="summary-card" style="background: #fef3c7;"><div class="summary-label">Por cobrar</div><div class="summary-value">${fmt(porCobrar)}</div></div>
+    </div>`;
+    const c1 = document.getElementById('delivery-pendientes');
+    const c2 = document.getElementById('delivery-reparto');
+    const c3 = document.getElementById('delivery-entregados');
+    if (c1) c1.innerHTML = pend.length ? pend.map(o => deliveryCard(o) + `<button class="action-btn-kitchen btn-cocina" style="width: 100%; margin-top: 4px;" onclick="startDelivery(${o.id})">🛵 Asignar repartidor y salir</button>`).join('') : '<div class="empty-cart">Nada pendiente</div>';
+    if (c2) c2.innerHTML = en.length ? en.map(o => deliveryCard(o) + `<button class="action-btn-kitchen btn-listo" style="width: 100%; margin-top: 4px;" onclick="completeDelivery(${o.id})">✅ Marcar entregado</button>`).join('') : '<div class="empty-cart">Nada en reparto</div>';
+    if (c3) c3.innerHTML = done.length ? done.map(o => deliveryCard(o)).join('') : '<div class="empty-cart">Sin entregas hoy</div>';
+}
+async function startDelivery(orderId) {
+    const sel = document.getElementById('drv-' + orderId);
+    const driver = sel ? sel.value : '';
+    if (!driver) return alert('Elige un repartidor en el desplegable primero');
+    await supabaseClient.from('orders').update({ driver, status: 'reparto' }).eq('id', orderId);
+    addNotification('nuevo', `🛵 Pedido #${orderId} sale a reparto`, driver);
+    loadDelivery();
+}
+async function completeDelivery(orderId) {
+    await supabaseClient.from('orders').update({ status: 'entregado' }).eq('id', orderId);
+    addNotification('pago', `✅ Pedido #${orderId} entregado`, '');
+    loadDelivery();
+}
+async function collectDelivery(orderId, method) {
+    await supabaseClient.from('orders').update({ paid: true, pay_method: method }).eq('id', orderId);
+    addNotification('pago', `✓ Pedido #${orderId} cobrado`, method.toUpperCase());
+    const cashView = document.getElementById('view-cash');
+    if (cashView && cashView.classList.contains('active')) loadCashStatus();
+    loadDelivery();
+}
+
+// ============ CONFIGURACION DEL TPV (FASE 7) ============
+function setupConfigEvents() {
+    const btn = document.getElementById('btn-save-config');
+    if (btn) btn.addEventListener('click', saveConfigView);
+    const add = document.getElementById('btn-add-driver-go');
+    if (add) add.addEventListener('click', addDriverFromUI);
+}
+async function loadConfigView() {
+    const { data } = await supabaseClient.from('settings').select('key, value').in('key', ['webOpen', 'webDomicilio', 'deliveryFee', 'pickupTime']);
+    const m = {}; (data || []).forEach(s => m[s.key] = s.value);
+    document.getElementById('cfg-webOpen').checked = m.webOpen !== '0';
+    document.getElementById('cfg-webDomicilio').checked = m.webDomicilio === '1';
+    document.getElementById('cfg-deliveryFee').value = m.deliveryFee || '0';
+    document.getElementById('cfg-pickupTime').value = m.pickupTime || '20';
+}
+async function saveConfigView() {
+    const rows = [
+        { key: 'webOpen', value: document.getElementById('cfg-webOpen').checked ? '1' : '0' },
+        { key: 'webDomicilio', value: document.getElementById('cfg-webDomicilio').checked ? '1' : '0' },
+        { key: 'deliveryFee', value: String(parseFloat(document.getElementById('cfg-deliveryFee').value) || 0) },
+        { key: 'pickupTime', value: String(parseInt(document.getElementById('cfg-pickupTime').value) || 20) }
+    ];
+    for (const r of rows) await supabaseClient.from('settings').upsert(r);
+    showToast('pago', '✓ Configuración guardada', 'Aplica al instante al menú QR');
 }
 
 // ============ FASE 3: MODO OFFLINE (cola IndexedDB + sincronizacion) ============
@@ -2680,6 +2812,10 @@ function setupRealtimeGlobal() {
         if (waiterView.classList.contains('active') && !waiterSelectedTable) {
             loadWaiterTables();
         }
+        const deliveryView = document.getElementById('view-reparto');
+        if (deliveryView && deliveryView.classList.contains('active')) {
+            loadDelivery();
+        }
         if (navigator.onLine) syncOfflineQueue();
     }, 3000);
 
@@ -2693,6 +2829,10 @@ function setupRealtimeGlobal() {
             addNotification('nuevo', `🆕 Nuevo Pedido #${order.id}${tableText}`, `Tipo: ${order.type.toUpperCase()}${webText} | Total: ${fmt(order.total)}`);
             loadTables();
             loadKitchenOrders();
+            if (order.type === 'domicilio') {
+                const dv = document.getElementById('view-reparto');
+                if (dv && dv.classList.contains('active')) loadDelivery();
+            }
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
             const order = payload.new;
@@ -2756,5 +2896,9 @@ window.openProductModalById = openProductModalById;
 window.selectWaiterTable = selectWaiterTable;
 window.addToWaiterCart = addToWaiterCart;
 window.setWaiterCategory = setWaiterCategory;
+window.toggleDriver = toggleDriver;
+window.startDelivery = startDelivery;
+window.completeDelivery = completeDelivery;
+window.collectDelivery = collectDelivery;
 
 init();

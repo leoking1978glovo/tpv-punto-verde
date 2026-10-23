@@ -49,6 +49,10 @@
                     <span class="nav-icon">👨‍🍳</span>
                     <span>Cocina</span>
                 </li>
+                <li class="nav-item" data-view="reparto" data-perm="reparto">
+                    <span class="nav-icon">🛵</span>
+                    <span>Reparto</span>
+                </li>
                 <li class="nav-item" data-view="reservations" data-perm="reservations">
                     <span class="nav-icon">📅</span>
                     <span>Reservas</span>
@@ -84,6 +88,10 @@
                 <li class="nav-item" data-view="staff" data-perm="staff">
                     <span class="nav-icon">👥</span>
                     <span>Personal</span>
+                </li>
+                <li class="nav-item" data-view="config" data-perm="config">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Configuración</span>
                 </li>
             </ul>
             <div class="sidebar-footer">
@@ -199,6 +207,28 @@
                     <div class="column"><h2 class="column-header status-nuevo">🔴 Nuevos</h2><div class="orders-list" id="orders-nuevo"></div></div>
                     <div class="column"><h2 class="column-header status-cocina">🟠 En Cocina</h2><div class="orders-list" id="orders-cocina"></div></div>
                     <div class="column"><h2 class="column-header status-listo">🟢 Listos</h2><div class="orders-list" id="orders-listo"></div></div>
+                </div>
+            </section>
+
+            <section id="view-reparto" class="view">
+                <header class="view-header">
+                    <h1>🛵 Reparto a domicilio</h1>
+                </header>
+                <div class="inventory-container">
+                    <div class="status-card" style="margin-bottom: 1rem;">
+                        <h3>👤 Repartidores del turno</h3>
+                        <div id="drivers-list" style="display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0;"></div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="new-driver-name" placeholder="Nombre del nuevo repartidor" style="flex: 1; padding: 9px; border: 1.5px solid var(--border); border-radius: 9px;">
+                            <button class="btn-primary" id="btn-add-driver-go" style="margin: 0;">+ Alta</button>
+                        </div>
+                    </div>
+                    <div id="delivery-stats" style="margin-bottom: 1rem;"></div>
+                    <div class="kitchen-container">
+                        <div class="column"><h2 class="column-header status-nuevo">🕐 Pendientes</h2><div class="orders-list" id="delivery-pendientes"></div></div>
+                        <div class="column"><h2 class="column-header status-cocina">🛵 En reparto</h2><div class="orders-list" id="delivery-reparto"></div></div>
+                        <div class="column"><h2 class="column-header status-listo">✅ Entregados hoy</h2><div class="orders-list" id="delivery-entregados"></div></div>
+                    </div>
                 </div>
             </section>
 
@@ -396,6 +426,34 @@
                         <div id="summary-content"></div>
                     </div>
                     <div class="action-buttons" id="action-buttons"></div>
+                </div>
+            </section>
+            <section id="view-config" class="view">
+                <header class="view-header">
+                    <h1>⚙️ Configuración</h1>
+                </header>
+                <div class="inventory-container">
+                    <div class="status-card" style="max-width: 560px;">
+                        <h3>🌐 Pedidos web (menú QR)</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border);">
+                            <span>Aceptar pedidos online</span>
+                            <input type="checkbox" id="cfg-webOpen" style="width: 20px; height: 20px; cursor: pointer;">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border);">
+                            <span>Reparto a domicilio activo</span>
+                            <input type="checkbox" id="cfg-webDomicilio" style="width: 20px; height: 20px; cursor: pointer;">
+                        </div>
+                        <div class="input-group" style="margin-top: 12px;">
+                            <label>Precio de envío (€):</label>
+                            <input type="number" id="cfg-deliveryFee" step="0.5" min="0" placeholder="0">
+                        </div>
+                        <div class="input-group">
+                            <label>Tiempo estimado de recogida (minutos):</label>
+                            <input type="number" id="cfg-pickupTime" step="5" min="5" placeholder="20">
+                        </div>
+                        <button class="btn-primary" id="btn-save-config" style="margin-top: 8px;">💾 Guardar configuración</button>
+                        <p style="font-size: 0.78rem; color: var(--text-gray); margin-top: 10px;">Estos ajustes aplican al instante al menú QR de los clientes. La activación de domicilio muestra el botón "A domicilio" y el precio de envío en el carrito.</p>
+                    </div>
                 </div>
             </section>
         </main>

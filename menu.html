@@ -95,6 +95,7 @@
                 total: 'Total', sending: 'Enviando…', ok: '¡Pedido enviado!',
                 okSub: 'Te llamaremos cuando esté listo. Nº de pedido: #',
                 err: 'No se pudo enviar. Revisa los campos e inténtalo de nuevo.', another: 'Hacer otro pedido',
+                fee: 'Gastos de envío', eta: '🕐 Tiempo estimado',
                 namePh: 'Ej: María', phonePh: '600 123 456', addrPh: 'Calle, número, piso'
             },
             en: {
@@ -106,6 +107,7 @@
                 total: 'Total', sending: 'Sending…', ok: 'Order sent!',
                 okSub: 'We will call you when it is ready. Order #: ',
                 err: 'Could not send. Check the fields and try again.', another: 'Place another order',
+                fee: 'Delivery fee', eta: '🕐 Estimated time',
                 namePh: 'E.g. Maria', phonePh: '600 123 456', addrPh: 'Street, number, floor'
             }
         };
@@ -114,6 +116,7 @@
 
         let products = [], allergenMap = {}, cart = {}, cats = [], currentCat = 'all';
         let webOpen = '1', webDomicilio = '0';
+        let deliveryFee = 0, pickupTime = 20;
 
         const fmtEUR = n => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n || 0);
         const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
@@ -127,8 +130,13 @@
             document.getElementById('btn-en').classList.toggle('active', lang === 'en');
             document.getElementById('t-sub').textContent = t('sub');
 
-            const { data: sett } = await sb.from('settings').select('key, value').in('key', ['webOpen', 'webDomicilio']);
-            (sett || []).forEach(s => { if (s.key === 'webOpen') webOpen = s.value; if (s.key === 'webDomicilio') webDomicilio = s.value; });
+            const { data: sett } = await sb.from('settings').select('key, value').in('key', ['webOpen', 'webDomicilio', 'deliveryFee', 'pickupTime']);
+            (sett || []).forEach(s => {
+                if (s.key === 'webOpen') webOpen = s.value;
+                if (s.key === 'webDomicilio') webDomicilio = s.value;
+                if (s.key === 'deliveryFee') deliveryFee = parseFloat(s.value) || 0;
+                if (s.key === 'pickupTime') pickupTime = parseInt(s.value) || 20;
+            });
             if (webOpen !== '1') {
                 document.getElementById('closed').textContent = t('closed');
                 document.getElementById('closed').style.display = 'block';
@@ -204,6 +212,7 @@
             if (!items.length) return;
             let orderType = 'recogida';
             const sheet = document.getElementById('sheet');
+            const fee = () => (orderType === 'domicilio' && webDomicilio === '1') ? deliveryFee : 0;
             const draw = () => {
                 sheet.innerHTML = `
                     <h2>${esc(t('cart'))}</h2>
@@ -219,7 +228,8 @@
                         <label>${esc(t('addr'))}</label><input id="f-addr" placeholder="${esc(t('addrPh'))}">
                     </div>
                     <label>${esc(t('notes'))}</label><textarea id="f-notes" rows="2"></textarea>
-                    <div class="total"><span>${esc(t('total'))}</span><span>${fmtEUR(cartTotal())}</span></div>
+                    ${fee() > 0 ? `<div class="item"><span>🛵 ${esc(t('fee'))}</span><span>${fmtEUR(fee())}</span></div>` : ''}
+                    <div class="total"><span>${esc(t('total'))}</span><span>${fmtEUR(cartTotal() + fee())}</span></div>
                     <button class="send" id="f-send">${esc(t('send'))}</button>
                     <button class="close" id="f-close">✕</button>`;
                 document.getElementById('f-close').onclick = closeSheet;
@@ -260,6 +270,7 @@
                     <div class="big">✅</div>
                     <h2>${esc(t('ok'))}</h2>
                     <p>${esc(t('okSub'))}<strong>#${orderId}</strong></p>
+                    <p style="margin-top:8px;">${esc(t('eta'))}: ~${pickupTime} min</p>
                     <br><button class="send" id="f-again">${esc(t('another'))}</button>
                 </div>`;
             document.getElementById('f-again').onclick = () => { closeSheet(); };
