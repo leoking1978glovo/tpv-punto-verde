@@ -214,9 +214,11 @@
             const sheet = document.getElementById('sheet');
             const fee = () => (orderType === 'domicilio' && webDomicilio === '1') ? deliveryFee : 0;
             const draw = () => {
-                sheet.innerHTML = `
-                    <h2>${esc(t('cart'))}</h2>
-                    ${items.map(i => `<div class="item"><span>${i.qty}x ${esc(lang === 'en' ? (products.find(p => p.id === i.product_id) || {}).name_en || i.name : i.name)}</span><span>${fmtEUR(i.price * i.qty)}</span></div>`).join('')}
+                // FASE 8: si viene de QR de mesa, solo notas: el pedido va a la mesa
+                const mesaHtml = mesa
+                    ? `<div style="background: #FFF0E6; border: 1px solid #FFC9A8; border-radius: 10px; padding: 12px; text-align: center; font-weight: 800; color: #C2410C; margin-bottom: 4px;">🪑 ${lang === 'en' ? 'Order for table' : 'Pedido para la'} Mesa ${esc(mesa)}</div>`
+                    : '';
+                const contacto = mesa ? '' : `
                     <label>${esc(t('name'))}</label><input id="f-name" placeholder="${esc(t('namePh'))}">
                     <label>${esc(t('phone'))}</label><input id="f-phone" type="tel" placeholder="${esc(t('phonePh'))}">
                     <label>${esc(t('type'))}</label>
@@ -226,17 +228,24 @@
                     </div>
                     <div id="f-addr-wrap" style="display:${orderType === 'domicilio' ? 'block' : 'none'}">
                         <label>${esc(t('addr'))}</label><input id="f-addr" placeholder="${esc(t('addrPh'))}">
-                    </div>
+                    </div>`;
+                sheet.innerHTML = `
+                    <h2>${esc(t('cart'))}</h2>
+                    ${items.map(i => `<div class="item"><span>${i.qty}x ${esc(lang === 'en' ? (products.find(p => p.id === i.product_id) || {}).name_en || i.name : i.name)}</span><span>${fmtEUR(i.price * i.qty)}</span></div>`).join('')}
+                    ${mesaHtml}
+                    ${contacto}
                     <label>${esc(t('notes'))}</label><textarea id="f-notes" rows="2"></textarea>
                     ${fee() > 0 ? `<div class="item"><span>🛵 ${esc(t('fee'))}</span><span>${fmtEUR(fee())}</span></div>` : ''}
                     <div class="total"><span>${esc(t('total'))}</span><span>${fmtEUR(cartTotal() + fee())}</span></div>
                     <button class="send" id="f-send">${esc(t('send'))}</button>
                     <button class="close" id="f-close">✕</button>`;
                 document.getElementById('f-close').onclick = closeSheet;
-                const pu = document.getElementById('bt-pickup');
-                pu.onclick = () => { orderType = 'recogida'; draw(); };
-                const de = document.getElementById('bt-del');
-                if (de) de.onclick = () => { orderType = 'domicilio'; draw(); };
+                if (!mesa) {
+                    const pu = document.getElementById('bt-pickup');
+                    pu.onclick = () => { orderType = 'recogida'; draw(); };
+                    const de = document.getElementById('bt-del');
+                    if (de) de.onclick = () => { orderType = 'domicilio'; draw(); };
+                }
                 document.getElementById('f-send').onclick = () => send(orderType);
             };
             draw();
@@ -247,16 +256,21 @@
         async function send(orderType) {
             const btn = document.getElementById('f-send');
             btn.textContent = t('sending'); btn.disabled = true;
-            const notesRaw = document.getElementById('f-notes').value.trim();
-            const notes = mesa ? `Mesa ${mesa}${notesRaw ? ' - ' + notesRaw : ''}` : notesRaw;
-            const payload = {
-                name: document.getElementById('f-name').value,
-                phone: document.getElementById('f-phone').value,
-                type: orderType,
-                addr: orderType === 'domicilio' ? document.getElementById('f-addr').value : '',
-                pickup: '', notes,
-                items: cartItems().map(i => ({ product_id: i.product_id, qty: i.qty }))
-            };
+            const notesRaw = (document.getElementById('f-notes')?.value || '').trim();
+            const items = cartItems().map(i => ({ product_id: i.product_id, qty: i.qty }));
+            let payload;
+            if (mesa) {
+                // FASE 8: pedido vinculado a la mesa
+                payload = { table_id: parseInt(mesa), pickup: '', notes: notesRaw, items };
+            } else {
+                payload = {
+                    name: document.getElementById('f-name').value,
+                    phone: document.getElementById('f-phone').value,
+                    type: orderType,
+                    addr: orderType === 'domicilio' ? document.getElementById('f-addr').value : '',
+                    pickup: '', notes: notesRaw, items
+                };
+            }
             const { data, error } = await sb.rpc('place_order', { payload });
             if (error || !data || !data.ok) {
                 toast(t('err') + (data && data.error ? ' (' + data.error + ')' : ''));
@@ -265,11 +279,14 @@
             }
             const orderId = data.id;
             cart = {}; render();
+            const okLine = mesa
+                ? (lang === 'en' ? 'We will bring it to your table. Order #' : 'Lo traeremos a tu mesa. Nº de pedido: #') + orderId
+                : esc(t('okSub')) + '<strong>#' + orderId + '</strong>';
             document.getElementById('sheet').innerHTML = `
                 <div class="success">
                     <div class="big">✅</div>
                     <h2>${esc(t('ok'))}</h2>
-                    <p>${esc(t('okSub'))}<strong>#${orderId}</strong></p>
+                    <p>${okLine}</p>
                     <p style="margin-top:8px;">${esc(t('eta'))}: ~${pickupTime} min</p>
                     <br><button class="send" id="f-again">${esc(t('another'))}</button>
                 </div>`;
