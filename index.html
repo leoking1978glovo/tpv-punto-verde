@@ -181,6 +181,13 @@
                         <h3 id="waiter-table-name">Mesa</h3>
                         <div class="waiter-categories" id="waiter-categories"></div>
                         <div class="waiter-products" id="waiter-products"></div>
+                        <div class="existing-section" id="existing-section" style="display: none; background: #F5F2EC; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                            <h4 style="margin-bottom: 0.5rem; font-size: 0.85rem; color: #8A8478;">📋 Ya pedido en esta mesa</h4>
+                            <div id="existing-items-container"></div>
+                            <div style="display: flex; justify-content: space-between; font-weight: 800; padding-top: 0.5rem; border-top: 1px dashed var(--border); font-size: 0.9rem;">
+                                <span>Total acumulado:</span><span id="existing-total">€0</span>
+                            </div>
+                        </div>
                         <div class="waiter-cart" id="waiter-cart">
                             <h4>📋 Pedido actual</h4>
                             <div id="waiter-cart-items"></div>
@@ -795,6 +802,10 @@
                         <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
                     </div>
                 </div>
+                <div class="input-group" id="modal-addr-group" style="display: none;">
+                    <label>📍 Dirección de entrega:</label>
+                    <input type="text" id="modal-addr" placeholder="Calle, número, piso">
+                </div>
                 <div class="payment-method">
                     <h3>Método de Pago</h3>
                     <div class="method-buttons">
@@ -1015,7 +1026,7 @@
                 <div class="input-group"><label>Comisión (% sobre ventas):</label><input type="number" id="staff-commission" placeholder="0" step="0.1" min="0" max="100"></div>
                 <div class="input-group">
                     <label>Estado:</label>
-                    <select id="staff-active">
+                    <select id="staff-active-sel">
                         <option value="true">✅ Activo</option>
                         <option value="false">⛔ Inactivo</option>
                     </select>

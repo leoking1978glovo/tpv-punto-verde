@@ -1321,7 +1321,7 @@ function openStaffModal(staff = null) {
     document.getElementById('staff-password').value = '';
     document.getElementById('staff-role').value = staff ? staff.role : 'cajero';
     document.getElementById('staff-commission').value = staff ? (staff.commission_rate || 0) : 0;
-    document.getElementById('staff-active').value = staff ? String(staff.active) : 'true';
+    document.getElementById('staff-active-sel').value = staff ? String(staff.active) : 'true';
     document.getElementById('staff-modal').classList.add('active');
 }
 
@@ -1332,15 +1332,20 @@ async function saveStaff() {
     const password = document.getElementById('staff-password').value;
     const role = document.getElementById('staff-role').value;
     const commission_rate = parseFloat(document.getElementById('staff-commission').value) || 0;
-    const active = document.getElementById('staff-active').value === 'true';
+    const active = document.getElementById('staff-active-sel').value === 'true';
     if (!full_name || !email) return alert('Nombre y email son obligatorios');
     try {
         if (id) { await supabaseClient.from('profiles').update({ full_name, email, role, commission_rate, active }).eq('id', id); }
         else {
             if (!password || password.length < 6) return alert('La contraseña debe tener al menos 6 caracteres');
+            const { data: { session: adminSession } } = await supabaseClient.auth.getSession();
             const { data: newUser, error: authError } = await supabaseClient.auth.signUp({ email, password });
             if (authError) throw authError;
             await supabaseClient.from('profiles').insert([{ id: newUser.user.id, email, full_name, role, commission_rate, active }]);
+            // FIX AUDITORIA: si el signUp cambio la sesion activa, restaurar la del admin
+            if (adminSession && newUser.user && newUser.user.id !== adminSession.user.id) {
+                await supabaseClient.auth.setSession({ access_token: adminSession.access_token, refresh_token: adminSession.refresh_token });
+            }
         }
         closeModal('staff-modal'); loadStaff(); showToast('pago', '✓ Empleado guardado', full_name);
     } catch (error) { alert('Error: ' + error.message); }
@@ -1447,7 +1452,14 @@ function setupPOSEvents() {
     document.getElementById('btn-pay').addEventListener('click', () => { if (activeTableId) addToTable(); else openPayModal(); });
     document.getElementById('btn-close-modal').addEventListener('click', () => closeModal('pay-modal'));
     document.getElementById('btn-cancel-pay').addEventListener('click', () => closeModal('pay-modal'));
-    document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); orderType = e.target.dataset.type; }));
+    document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        orderType = e.target.dataset.type;
+        // FIX AUDITORIA: pedir direccion si el pedido es a domicilio
+        const addrGroup = document.getElementById('modal-addr-group');
+        if (addrGroup) addrGroup.style.display = orderType === 'domicilio' ? 'block' : 'none';
+    }));
     document.querySelectorAll('.method-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); payMethod = e.target.dataset.method; document.getElementById('cash-section').style.display = payMethod === 'efectivo' ? 'block' : 'none'; }));
     document.getElementById('cash-received').addEventListener('input', (e) => {
         const base = getBaseTotal();
@@ -1638,7 +1650,10 @@ async function confirmPayment() {
     if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
     const items = cart.map(item => ({ product_id: item.id, name: item.name, price: item.price, qty: item.qty }));
     const loyal = selectedCustomer ? { customer_id: selectedCustomer.id, redeem: redeemPoints, finalTotal: total } : null;
-    const result = await processSale({ type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, source: 'tpv', user_email: currentUser?.email, table_id: null }, items, loyal);
+    // FIX AUDITORIA: direccion obligatoria en pedidos a domicilio desde mostrador
+    const addrVal = orderType === 'domicilio' ? (document.getElementById('modal-addr')?.value || '').trim() : '';
+    if (orderType === 'domicilio' && addrVal.length < 5) return alert('Escribe la dirección de entrega');
+    const result = await processSale({ type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, source: 'tpv', user_email: currentUser?.email, table_id: null, addr: addrVal }, items, loyal);
     if (!result) return;
     printTicket(result.order, items, result.loyalty, result.vf);
     cart = []; renderCart(); renderTableOrder(); closeModal('pay-modal');
