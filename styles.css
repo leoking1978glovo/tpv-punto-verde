@@ -738,3 +738,76 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
     flex: 0 0 auto;
     white-space: nowrap;
 }
+
+/* ============================================================
+   TEMA FUEGO — adaptado de la web (punto-verde-orders)
+   Naranja #FF6B35 · Amarillo #F7C137 · Tinta #0A0A0A · Crema #FAFAFA
+   Este bloque redefine el tema. El CSS original queda intacto arriba.
+   ============================================================ */
+:root {
+    --bg-main: #FAFAFA;
+    --bg-card: #ffffff;
+    --primary: #FF6B35;
+    --primary-hover: #E1521F;
+    --text-dark: #0A0A0A;
+    --text-gray: #7A7468;
+    --border: #E8E2D6;
+    --fire: linear-gradient(90deg, #FF6B35, #F7C137);
+    --ink: #0A0A0A;
+    /* Colores de estado (libre/ocupada/pendiente/reservada) sin cambios: semanticos */
+}
+
+::selection { background: #FF6B35; color: #ffffff; }
+
+/* ---- Login ---- */
+.login-overlay { background: var(--fire); }
+.login-card h2 { color: var(--primary); }
+.login-card button { background: var(--ink); color: #F7C137; font-weight: 800; letter-spacing: 0.5px; }
+.login-card button:hover { background: #262626; }
+
+/* ---- Sidebar oscura (tinta) ---- */
+.sidebar { background: var(--ink); border-right: 1px solid #262626; }
+.sidebar-header { border-bottom: 1px solid #262626; }
+.sidebar-header h2 { color: #F7C137; }
+.nav-item { color: #B8B2A7; }
+.nav-item:hover { background: #1A1A1A; color: #FAFAFA; }
+.nav-item.active { background: var(--fire); color: var(--ink); font-weight: 800; }
+.sidebar-footer { border-top: 1px solid #262626; }
+.user-info { color: #B8B2A7; }
+.user-role-badge { background: var(--fire); color: var(--ink); }
+.logout-btn { background: #1A1A1A; color: #FAFAFA; }
+.logout-btn:hover { background: #2A2A2A; }
+
+/* ---- Botones de accion con degradado de marca ---- */
+.pay-btn { background: var(--fire); color: var(--ink); font-weight: 800; letter-spacing: 0.3px; }
+.pay-btn:hover { background: var(--fire); filter: brightness(1.05); }
+.btn-primary { background: var(--fire); color: var(--ink); }
+.btn-primary:hover { background: var(--fire); filter: brightness(1.05); }
+.confirm-btn { background: var(--fire); color: var(--ink); }
+.confirm-btn:hover { background: var(--fire); filter: brightness(1.05); }
+.btn-pay-all { background: var(--fire); color: var(--ink); }
+.btn-pay-all:hover { background: var(--fire); filter: brightness(1.05); }
+.btn-cobrar-mesa-card { background: var(--fire); color: var(--ink); }
+.btn-cobrar-mesa-card:hover { background: var(--fire); filter: brightness(1.05); }
+.btn-cobrar-diner { background: var(--fire); color: var(--ink); }
+.btn-cobrar-diner:hover { background: var(--fire); filter: brightness(1.05); }
+.btn-add-diner { background: var(--fire); color: var(--ink); }
+.btn-add-recipe-item { background: var(--fire); color: var(--ink); }
+.btn-add-recipe-item:hover { background: var(--fire); filter: brightness(1.05); }
+.action-btn.btn-open { background: var(--fire); color: var(--ink); }
+
+/* ---- Chips / filtros / selecciones activas ---- */
+.cat-btn.active, .cat-btn:hover { background: var(--fire); color: var(--ink); border-color: transparent; font-weight: 700; }
+.type-btn.active, .method-btn.active { border-color: transparent; background: var(--fire); color: var(--ink); font-weight: 700; }
+.report-filter-btn.active { background: var(--fire); color: var(--ink); border-color: transparent; font-weight: 700; }
+.summary-card.highlight { background: var(--fire); color: var(--ink); }
+.summary-card.highlight .summary-label { color: rgba(10, 10, 10, 0.7); }
+.summary-card.highlight .summary-value { color: var(--ink); }
+
+/* ---- Mesero ---- */
+.waiter-table-btn.selected { box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.35); border-color: var(--primary); }
+.waiter-prod-btn:hover { border-color: var(--primary); background: #FFF3EC; }
+
+/* ---- Tarjetas: acento calido en hover ---- */
+.table-card:hover { box-shadow: 0 10px 15px -3px rgba(255, 107, 53, 0.15); }
+.product-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px -2px rgba(255, 107, 53, 0.18); }
