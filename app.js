@@ -109,6 +109,8 @@ async function init() {
     setupRealtimeGlobal();
     // FASE 7: configuracion
     setupConfigEvents();
+    // SEGMENTO 2: salas (zoom / editar mapa)
+    setupTablesEvents();
     // FASE 3: modo offline
     updateConnIndicator();
     window.addEventListener('online', () => { updateConnIndicator(); syncOfflineQueue(); });
@@ -979,7 +981,8 @@ function refreshPayTotals() {
     const discount = redeemPoints * loyaltySettings.point_value;
     const final = Math.max(0, base - discount);
     document.getElementById('modal-total').textContent = fmt(final);
-    const received = parseFloat(document.getElementById('cash-received').value) || 0;
+    document.getElementById('checkout-total').textContent = fmt(final);
+    const received = parseFloat(document.getElementById('pay-efectivo').value) || 0;
     document.getElementById('change-amount').textContent = fmt(Math.max(0, received - final));
 }
 
@@ -1461,22 +1464,39 @@ function setupPOSEvents() {
         if (addrGroup) addrGroup.style.display = orderType === 'domicilio' ? 'block' : 'none';
     }));
     document.querySelectorAll('.method-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); payMethod = e.target.dataset.method; document.getElementById('cash-section').style.display = payMethod === 'efectivo' ? 'block' : 'none'; }));
-    document.getElementById('cash-received').addEventListener('input', (e) => {
-        const base = getBaseTotal();
-        const discount = redeemPoints * loyaltySettings.point_value;
-        const final = Math.max(0, base - discount);
-        const received = parseFloat(e.target.value) || 0;
-        document.getElementById('change-amount').textContent = fmt(Math.max(0, received - final));
+    document.getElementById('pay-efectivo').addEventListener('input', refreshPayTotals);
+    document.getElementById('pay-tarjeta').addEventListener('input', refreshPayTotals);
+    document.getElementById('btn-pos-cash').addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.querySelector('[data-view="cash"]').classList.add('active');
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-cash').classList.add('active');
+        loadCashStatus();
+    });
+    document.getElementById('btn-preprint').addEventListener('click', () => {
+        const items = (currentTableOrder && currentTableOrder.order_items && currentTableOrder.order_items.length) ? currentTableOrder.order_items : cart;
+        if (!items.length) return alert('No hay productos para imprimir');
+        printTicket({
+            id: currentTableOrder ? currentTableOrder.id : 0,
+            table_id: activeTableId,
+            total: currentTableOrder ? currentTableOrder.total : cart.reduce((s, i) => s + i.price * i.qty, 0),
+            created_at: new Date().toISOString(), diner_name: null
+        }, items, null, null);
     });
     document.getElementById('btn-confirm-pay').addEventListener('click', () => { if (currentTableOrder) confirmPaymentForTable(); else confirmPayment(); });
 }
 
 // ============ MESAS ============
+let currentRoom = null;
+let mapEditMode = false;
+let mapScale = 1;
+
 async function loadTables() {
     const { data: tablesData, error: tablesError } = await supabaseClient.from('tables').select('*').order('id');
     if (tablesError) return;
-    const { data: ordersData, error: ordersError } = await supabaseClient.from('orders').select('*, order_items(*)').eq('paid', false).neq('status', 'entregado');
+    const { data: ordersData, error: ordersError } = await supabaseClient.from('orders').select('*, order_items(*)').eq('paid', false).neq('status', 'entregado').neq('status', 'cancelado');
     if (ordersError) return;
+    const { data: resData } = await supabaseClient.from('reservations').select('table_id, reservation_date, status').eq('status', 'confirmada');
     const ordersByTable = {};
     (ordersData || []).forEach(order => {
         if (order.table_id) {
@@ -1484,36 +1504,105 @@ async function loadTables() {
             ordersByTable[order.table_id].push(order);
         }
     });
+    const today = new Date().toISOString().split('T')[0];
     tables = (tablesData || []).map(table => {
         const tableOrders = ordersByTable[table.id] || [];
         const pendingItems = tableOrders.flatMap(o => o.order_items || []);
         const pendingTotal = tableOrders.reduce((sum, o) => sum + (o.total || 0), 0);
         let visualStatus = pendingItems.length > 0 ? 'ocupada' : 'libre';
-        const today = new Date().toISOString().split('T')[0];
-        if (reservations.some(r => r.table_id === table.id && r.reservation_date === today && r.status === 'confirmada')) visualStatus = 'reservada';
+        if ((resData || []).some(r => r.table_id === table.id && r.reservation_date === today)) visualStatus = 'reservada';
         return { ...table, pendingOrders: tableOrders, pendingItems, pendingTotal, visualStatus };
     });
-    renderTables(); renderMiniTables();
+    const rooms = [...new Set(tables.map(t => t.room || 'Sala'))];
+    if (!currentRoom || !rooms.includes(currentRoom)) currentRoom = rooms[0];
+    renderRoomTabs(rooms);
+    renderMap();
+    renderMiniTables();
 }
 
-function renderTables() {
-    const grid = document.getElementById('tables-grid');
-    if (!grid) return;
-    if (tables.length === 0) { grid.innerHTML = '<p style="text-align:center; color: #6b7280; padding: 2rem;">No hay mesas disponibles</p>'; return; }
-    grid.innerHTML = tables.map(table => {
-        const hasOrders = table.pendingItems && table.pendingItems.length > 0;
-        const status = hasOrders ? table.visualStatus : (table.visualStatus === 'reservada' ? 'reservada' : 'libre');
-        const itemsGrouped = {};
-        (table.pendingItems || []).forEach(item => { const key = item.name; if (!itemsGrouped[key]) itemsGrouped[key] = { name: item.name, qty: 0, price: item.price }; itemsGrouped[key].qty += item.qty; });
-        const itemsHtml = hasOrders ? Object.values(itemsGrouped).map(item => `<div class="table-order-item"><span>${item.qty}x ${item.name}</span><span>${fmt(item.price * item.qty)}</span></div>`).join('') : '';
-        const statusText = status === 'reservada' ? 'RESERVADA' : (hasOrders ? 'OCUPADA' : 'LIBRE');
-        return `<div class="table-card status-${status}" onclick="selectTable(${table.id}, '${table.name}')">
-            <button style="position:absolute; top:0.5rem; right:0.5rem; background:#3b82f6; color:white; border:none; padding:0.3rem 0.6rem; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.7rem; z-index:10;" onclick="event.stopPropagation(); openTableQR(${table.id}, '${table.name}')">📱 QR</button>
-            <div class="table-name">${table.name}</div><div class="table-status">${statusText}</div>
-            ${hasOrders ? `<div class="table-orders-list">${itemsHtml}</div><div class="table-order-total"><span>Total:</span><span>${fmt(table.pendingTotal)}</span></div><button class="btn-cobrar-mesa-card" onclick="event.stopPropagation(); cobrarMesaDirecta(${table.id})">💰 COBRAR</button>` : '<div style="flex:1;"></div>'}
-        </div>`;
-    }).join('');
+function renderRoomTabs(rooms) {
+    const bar = document.getElementById('room-tabs');
+    if (!bar) return;
+    bar.innerHTML = rooms.map(r => `<button class="room-tab ${r === currentRoom ? 'active' : ''}" data-room="${escHtml(r)}">🍴 ${escHtml(r)}</button>`).join('');
+    bar.querySelectorAll('.room-tab').forEach(btn => {
+        btn.onclick = () => { currentRoom = btn.dataset.room; renderRoomTabs(rooms); renderMap(); };
+    });
 }
+
+function renderMap() {
+    const map = document.getElementById('sala-map');
+    if (!map) return;
+    const roomTables = tables.filter(t => (t.room || 'Sala') === currentRoom);
+    roomTables.forEach((t, i) => {
+        if (!t.pos_x && !t.pos_y) { t.pos_x = 4 + (i % 5) * 19; t.pos_y = 6 + Math.floor(i / 5) * 26; }
+    });
+    const color = t => t.visualStatus === 'ocupada' ? '#FF6B35' : (t.visualStatus === 'reservada' ? '#8B5CF6' : '#B9B3A8');
+    map.innerHTML = roomTables.map(t => `
+        <div class="map-table ${mapEditMode ? 'edit' : ''} ${t.id === activeTableId ? 'sel' : ''}" data-id="${t.id}"
+             style="left:${t.pos_x}%; top:${t.pos_y}%; background:${color(t)};">
+            <button class="map-qr" title="QR de la mesa">📱</button>
+            <span class="map-table-name">${escHtml(t.name)}</span>
+            ${t.pendingTotal > 0 ? `<span class="map-table-total">${fmt(t.pendingTotal)}</span>` : `<span class="map-table-state">${t.visualStatus === 'reservada' ? 'RESERVADA' : 'LIBRE'}</span>`}
+        </div>`).join('') || '<div class="empty-cart">Esta sala no tiene mesas</div>';
+    map.querySelectorAll('.map-table').forEach(el => {
+        const id = parseInt(el.dataset.id);
+        el.addEventListener('click', e => {
+            if (mapEditMode || e.target.classList.contains('map-qr')) return;
+            const t = tables.find(x => x.id === id);
+            if (t) selectTable(t.id, t.name);
+        });
+        const qr = el.querySelector('.map-qr');
+        if (qr) qr.addEventListener('click', e => {
+            e.stopPropagation();
+            const t = tables.find(x => x.id === id);
+            if (t) openTableQR(t.id, t.name);
+        });
+        if (mapEditMode) enableDrag(el, id);
+    });
+}
+
+function enableDrag(el, id) {
+    el.addEventListener('pointerdown', e => {
+        if (e.target.classList.contains('map-qr')) return;
+        e.preventDefault();
+        try { el.setPointerCapture(e.pointerId); } catch (err) {}
+        const map = document.getElementById('sala-map');
+        const move = ev => {
+            const r = map.getBoundingClientRect();
+            let x = ((ev.clientX - r.left) / r.width) * 100 - 6;
+            let y = ((ev.clientY - r.top) / r.height) * 100 - 8;
+            x = Math.max(0, Math.min(92, x)); y = Math.max(0, Math.min(88, y));
+            el.style.left = x + '%'; el.style.top = y + '%';
+            el._x = x; el._y = y;
+        };
+        const up = async () => {
+            el.removeEventListener('pointermove', move);
+            el.removeEventListener('pointerup', up);
+            if (el._x !== undefined) {
+                const t = tables.find(x => x.id === id);
+                if (t) { t.pos_x = Math.round(el._x); t.pos_y = Math.round(el._y); }
+                await supabaseClient.from('tables').update({ pos_x: Math.round(el._x), pos_y: Math.round(el._y) }).eq('id', id);
+            }
+        };
+        el.addEventListener('pointermove', move);
+        el.addEventListener('pointerup', up);
+    });
+}
+
+function setupTablesEvents() {
+    const map = document.getElementById('sala-map');
+    const zi = document.getElementById('zoom-in');
+    const zo = document.getElementById('zoom-out');
+    if (zi) zi.onclick = () => { mapScale = Math.min(1.8, mapScale + 0.2); if (map) map.style.transform = `scale(${mapScale})`; };
+    if (zo) zo.onclick = () => { mapScale = Math.max(0.5, mapScale - 0.2); if (map) map.style.transform = `scale(${mapScale})`; };
+    const em = document.getElementById('btn-edit-map');
+    if (em) em.onclick = () => {
+        mapEditMode = !mapEditMode;
+        em.textContent = mapEditMode ? '✓ Terminar edición' : '✏️ Editar mapa';
+        renderMap();
+    };
+}
+
 
 function renderMiniTables() {
     const bar = document.getElementById('mini-tables-bar');
@@ -1542,6 +1631,7 @@ async function selectTable(id, name) {
     } else { currentTableOrder = null; }
     renderCart(); renderTableOrder(); renderMiniTables();
     document.getElementById('pos-title').textContent = `Caja - ${name}`;
+    if (document.getElementById('sala-map')) renderMap();
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     const cajaItem = document.querySelector('[data-view="pos"]');
     if (cajaItem) cajaItem.classList.add('active');
@@ -1610,38 +1700,50 @@ async function addToTable() {
     } catch (error) { alert('Error: ' + error.message); }
 }
 
+function fillCheckoutItems(items, total) {
+    const g = {};
+    items.forEach(i => { const k = i.name; if (!g[k]) g[k] = { name: i.name, qty: 0, price: i.price }; g[k].qty += i.qty; });
+    document.getElementById('checkout-items').innerHTML = `<thead><tr><th>Ud.</th><th>Producto</th><th style="text-align:right">Precio Unit.</th><th style="text-align:right">Importe</th></tr></thead><tbody>` +
+        Object.values(g).map(i => `<tr><td>x${i.qty}</td><td>${escHtml(i.name)}</td><td style="text-align:right">${fmt(i.price)}</td><td style="text-align:right"><b>${fmt(i.price * i.qty)}</b></td></tr>`).join('') + '</tbody>';
+    document.getElementById('checkout-total').textContent = fmt(total);
+}
+
 function openPayModal() {
     if (cart.length === 0) return alert('Carrito vacío');
     resetLoyaltyUI();
-    document.getElementById('modal-title').textContent = 'Finalizar Pedido (Mostrador)';
-    document.getElementById('modal-cart-items').innerHTML = cart.map(item => `<div class="cart-item"><div class="cart-item-name">${item.name} x${item.qty}</div><div class="cart-item-price">${fmt(item.price * item.qty)}</div></div>`).join('');
-    const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-    // FIX FASE 1: IVA real por producto (antes 19% fijo)
-    const iva = calcIVA(cart);
-    document.getElementById('modal-subtotal').textContent = fmt(iva.subtotal);
-    document.getElementById('modal-tax').textContent = fmt(iva.tax);
-    document.getElementById('modal-total').textContent = fmt(total);
-    document.getElementById('cash-received').value = '';
+    fillCheckoutItems(cart, cart.reduce((sum, i) => sum + (i.price * i.qty), 0));
+    document.getElementById('pay-efectivo').value = '';
+    document.getElementById('pay-tarjeta').value = '';
     document.getElementById('change-amount').textContent = fmt(0);
+    document.getElementById('pay-tab-cuenta').classList.add('active');
+    document.getElementById('pay-tab-dividir').classList.remove('active');
+    refreshPayTotals();
     document.getElementById('pay-modal').classList.add('active');
 }
 
 function openPayModalForTable() {
     if (!currentTableOrder) return;
     resetLoyaltyUI();
-    document.getElementById('modal-title').textContent = `Cobrar Mesa ${tables.find(t => t.id === activeTableId)?.name}`;
-    const itemsGrouped = {};
-    currentTableOrder.order_items.forEach(item => { const key = item.name; if (!itemsGrouped[key]) itemsGrouped[key] = { name: item.name, qty: 0, price: item.price }; itemsGrouped[key].qty += item.qty; });
-    document.getElementById('modal-cart-items').innerHTML = Object.values(itemsGrouped).map(item => `<div class="cart-item"><div class="cart-item-name">${item.name} x${item.qty}</div><div class="cart-item-price">${fmt(item.price * item.qty)}</div></div>`).join('');
-    // FIX FASE 1: IVA real por producto
-    const iva = calcIVA(currentTableOrder.order_items);
-    document.getElementById('modal-subtotal').textContent = fmt(iva.subtotal);
-    document.getElementById('modal-tax').textContent = fmt(iva.tax);
-    document.getElementById('modal-total').textContent = fmt(currentTableOrder.total);
-    document.getElementById('cash-received').value = '';
+    fillCheckoutItems(currentTableOrder.order_items, currentTableOrder.total);
+    document.getElementById('pay-efectivo').value = '';
+    document.getElementById('pay-tarjeta').value = '';
     document.getElementById('change-amount').textContent = fmt(0);
+    document.getElementById('pay-tab-cuenta').classList.add('active');
+    document.getElementById('pay-tab-dividir').classList.remove('active');
+    refreshPayTotals();
     document.getElementById('pay-modal').classList.add('active');
 }
+
+function switchPayTab(tab) {
+    document.getElementById('pay-tab-cuenta').classList.toggle('active', tab === 'cuenta');
+    document.getElementById('pay-tab-dividir').classList.toggle('active', tab === 'dividir');
+    if (tab === 'dividir') {
+        closeModal('pay-modal');
+        if (currentTableOrder && currentTableOrder.order_items && currentTableOrder.order_items.length) openDivideModal();
+        else alert('La división solo aplica a pedidos de mesa con productos.');
+    }
+}
+
 
 async function confirmPayment() {
     const base = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
@@ -1650,10 +1752,15 @@ async function confirmPayment() {
     if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
     const items = cart.map(item => ({ product_id: item.id, name: item.name, price: item.price, qty: item.qty }));
     const loyal = selectedCustomer ? { customer_id: selectedCustomer.id, redeem: redeemPoints, finalTotal: total } : null;
-    // FIX AUDITORIA: direccion obligatoria en pedidos a domicilio desde mostrador
     const addrVal = orderType === 'domicilio' ? (document.getElementById('modal-addr')?.value || '').trim() : '';
     if (orderType === 'domicilio' && addrVal.length < 5) return alert('Escribe la dirección de entrega');
-    const result = await processSale({ type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, source: 'tpv', user_email: currentUser?.email, table_id: null, addr: addrVal }, items, loyal);
+    // SEGMENTO 2: pago mixto efectivo/tarjeta
+    const ef = Math.round((parseFloat(document.getElementById('pay-efectivo').value) || 0) * 100) / 100;
+    const ta = Math.round((parseFloat(document.getElementById('pay-tarjeta').value) || 0) * 100) / 100;
+    if (ef <= 0 && ta <= 0) return alert('Indica el importe cobrado (efectivo y/o tarjeta)');
+    if (ef > 0 && ta <= 0 && ef < total) return alert('Efectivo insuficiente');
+    payMethod = (ef > 0 && ta > 0) ? 'mixto' : (ef > 0 ? 'efectivo' : 'tarjeta');
+    const result = await processSale({ type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, pago_efectivo: ef, pago_tarjeta: ta, source: 'tpv', user_email: currentUser?.email, table_id: null, addr: addrVal }, items, loyal);
     if (!result) return;
     printTicket(result.order, items, result.loyalty, result.vf);
     cart = []; renderCart(); renderTableOrder(); closeModal('pay-modal');
@@ -1665,7 +1772,13 @@ async function confirmPaymentForTable() {
     const base = currentTableOrder.total;
     const discount = redeemPoints * loyaltySettings.point_value;
     const total = Math.max(0, base - discount);
-    if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
+    // SEGMENTO 2: pago mixto efectivo/tarjeta
+    const efT = Math.round((parseFloat(document.getElementById('pay-efectivo').value) || 0) * 100) / 100;
+    const taT = Math.round((parseFloat(document.getElementById('pay-tarjeta').value) || 0) * 100) / 100;
+    if (efT <= 0 && taT <= 0) return alert('Indica el importe cobrado (efectivo y/o tarjeta)');
+    if (efT > 0 && taT <= 0 && efT < total) return alert('Efectivo insuficiente');
+    payMethod = (efT > 0 && taT > 0) ? 'mixto' : (efT > 0 ? 'efectivo' : 'tarjeta');
+    const pagoFields = { pago_efectivo: efT, pago_tarjeta: taT };
     // FASE 3: sin conexion, el cobro se guarda y la mesa se libera al sincronizar
     if (!navigator.onLine) {
         const items = currentTableOrder.order_items.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, qty: i.qty }));
@@ -1681,7 +1794,7 @@ async function confirmPaymentForTable() {
     try {
         const orderIds = currentTableOrder._allOrderIds || [currentTableOrder.id];
         for (let i = 0; i < orderIds.length; i++) {
-            const updateData = { paid: true, pay_method: payMethod };
+            const updateData = { paid: true, pay_method: payMethod, ...pagoFields };
             if (i === 0) updateData.total = total;
             await supabaseClient.from('orders').update(updateData).eq('id', orderIds[i]);
         }
@@ -2240,7 +2353,7 @@ async function loadCashSummary() {
     if (!currentSession) return;
     const since = currentSession.opened_at;
     const [{ data: orders }, { data: movements }] = await Promise.all([
-        supabaseClient.from('orders').select('id, type, status, total, paid, pay_method, table_id, user_email, created_at').gte('created_at', since).order('created_at', { ascending: false }),
+        supabaseClient.from('orders').select('id, type, status, total, paid, pay_method, table_id, user_email, created_at, pago_efectivo, pago_tarjeta').gte('created_at', since).order('created_at', { ascending: false }),
         supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id).order('created_at', { ascending: false })
     ]);
     const all = orders || [];
@@ -2248,7 +2361,12 @@ async function loadCashSummary() {
     const cancelled = all.filter(o => o.status === 'cancelado');
     const movs = movements || [];
     let efectivo = 0, tarjeta = 0, bizum = 0;
-    paidOrders.forEach(o => { if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; });
+    paidOrders.forEach(o => {
+        const ef = o.pago_efectivo || 0, ta = o.pago_tarjeta || 0;
+        if (ef > 0 || ta > 0) { efectivo += ef; tarjeta += ta; }
+        else { if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; }
+        if (o.pay_method === 'bizum') bizum += o.total;
+    });
     let entradas = 0, salidas = 0;
     movs.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; });
     document.getElementById('cash-efectivo').textContent = fmt(efectivo);
@@ -3077,5 +3195,6 @@ window.cancelOrder = cancelOrder;
 window.viewSale = viewSale;
 window.reprintSale = reprintSale;
 window.cancelSaleFromView = cancelSaleFromView;
+window.switchPayTab = switchPayTab;
 
 init();

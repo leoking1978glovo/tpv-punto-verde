@@ -106,49 +106,53 @@
         <main class="main-content">
             <section id="view-tables" class="view active">
                 <header class="view-header">
-                    <h1>Mapa de Mesas</h1>
-                    <div class="legend">
-                        <span class="legend-item"><span class="dot status-libre"></span> Libre</span>
-                        <span class="legend-item"><span class="dot status-ocupada"></span> Ocupada</span>
-                        <span class="legend-item"><span class="dot status-pendiente"></span> Pendiente</span>
-                        <span class="legend-item"><span class="dot status-reservada"></span> Reservada</span>
+                    <h1>Salas</h1>
+                    <div class="header-actions">
+                        <button class="ft-btn" id="btn-edit-map">✏️ Editar mapa</button>
                     </div>
                 </header>
-                <div class="tables-grid" id="tables-grid"></div>
+                <div class="room-tabs" id="room-tabs"></div>
+                <div class="map-wrap">
+                    <div class="map-zoom">
+                        <button id="zoom-in" title="Acercar">+</button>
+                        <button id="zoom-out" title="Alejar">−</button>
+                    </div>
+                    <div class="sala-map" id="sala-map"></div>
+                </div>
+                <div class="legend" style="margin-top:0.5rem;">
+                    <span class="legend-item"><span class="dot" style="background:#B9B3A8"></span> Libre</span>
+                    <span class="legend-item"><span class="dot" style="background:#FF6B35"></span> Ocupada</span>
+                    <span class="legend-item"><span class="dot" style="background:#8B5CF6"></span> Reservada</span>
+                </div>
             </section>
 
             <section id="view-pos" class="view">
                 <header class="view-header">
-                    <div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <button class="btn-secondary" id="btn-back-to-tables">← Salas</button>
                         <h1 id="pos-title">Caja - Mostrador</h1>
-                        <div class="mini-tables-bar" id="mini-tables-bar"></div>
                     </div>
                     <div class="header-actions">
-                        <button class="btn-secondary" id="btn-back-to-tables">← Volver a Mesas</button>
+                        <button class="ft-btn" id="btn-pos-cash">Abrir caja</button>
                         <button class="notification-bell" id="btn-notifications">
                             🔔
                             <span class="notification-badge" id="notif-badge">0</span>
                         </button>
                     </div>
                 </header>
+                <div class="mini-tables-bar" id="mini-tables-bar"></div>
                 <div class="pos-container">
-                    <div class="products-section">
-                        <div class="categories" id="categories-bar">
-                            <button class="cat-btn active" data-cat="all">Todos</button>
-                        </div>
-                        <div class="product-grid" id="product-grid"></div>
-                    </div>
                     <div class="cart-section">
                         <div class="cart-header">
-                            <span>Pedido Actual (Carrito)</span>
-                            <span class="clear-btn" id="btn-clear">🗑️ Limpiar</span>
+                            <span>Pedido actual</span>
+                            <span class="clear-btn" id="btn-clear">Limpiar</span>
                         </div>
                         <div class="cart-items" id="cart-items">
                             <div class="empty-cart">Añade productos para empezar</div>
                         </div>
                         <div class="table-order-section" id="table-order-section" style="display: none;">
                             <div class="table-order-header">
-                                <h3>📋 Pedido Acumulado de la Mesa</h3>
+                                <h3>📋 Pedido acumulado de la mesa</h3>
                                 <button class="btn-divide-account" id="btn-divide-account" style="display: none;">✂️ Dividir Cuenta</button>
                             </div>
                             <div class="table-order-items" id="table-order-items"></div>
@@ -160,9 +164,15 @@
                         <div class="cart-footer">
                             <div class="summary-row"><span>Subtotal</span><span id="subtotal">€0</span></div>
                             <div class="summary-row"><span>IVA</span><span id="tax">€0</span></div>
-                            <div class="summary-row total"><span>TOTAL CARRITO</span><span id="total">€0</span></div>
-                            <button class="pay-btn" id="btn-pay">COBRAR (€0)</button>
+                            <div class="summary-row total"><span>TOTAL</span><span id="total">€0</span></div>
+                            <button class="pay-btn" id="btn-pay">Comandar y cobrar</button>
                         </div>
+                    </div>
+                    <div class="products-section">
+                        <div class="categories" id="categories-bar">
+                            <button class="cat-btn active" data-cat="all">Todos</button>
+                        </div>
+                        <div class="product-grid" id="product-grid"></div>
                     </div>
                 </div>
             </section>
@@ -802,76 +812,73 @@
     </div>
 
     <!-- MODAL COBRO -->
+    <!-- MODAL CHECKOUT (Comandar y cobrar) -->
     <div id="pay-modal" class="modal-overlay">
-        <div class="modal-content">
+        <div class="modal-content modal-large">
             <div class="modal-header">
-                <h2 id="modal-title">Finalizar Pedido</h2>
+                <button class="btn-secondary" id="btn-cancel-pay">← Cancelar</button>
+                <div class="pay-tabs">
+                    <button class="pay-tab active" id="pay-tab-cuenta" onclick="switchPayTab('cuenta')">Cuenta completa</button>
+                    <button class="pay-tab" id="pay-tab-dividir" onclick="switchPayTab('dividir')">Dividir cuenta</button>
+                </div>
                 <button class="close-btn" id="btn-close-modal">✕</button>
             </div>
-            <div class="modal-body">
-                <div class="order-summary">
-                    <h3>Resumen</h3>
-                    <div id="modal-cart-items"></div>
-                    <div class="modal-totals">
-                        <div class="summary-row"><span>Subtotal</span><span id="modal-subtotal">€0</span></div>
-                        <div class="summary-row"><span>IVA</span><span id="modal-tax">€0</span></div>
-                        <div class="summary-row" id="modal-discount-row" style="display:none; color: var(--primary);"><span>Descuento puntos</span><span id="modal-discount">-€0</span></div>
-                        <div class="summary-row total"><span>TOTAL</span><span id="modal-total">€0</span></div>
-                    </div>
-                </div>
-                <div class="loyalty-section">
-                    <h3>🎁 Cliente Fidelidad (opcional)</h3>
-                    <div id="loyalty-search-box">
-                        <input type="text" id="customer-search" placeholder="Buscar por nombre o teléfono..." class="loyalty-search">
-                        <div class="customer-suggestions" id="customer-suggestions"></div>
-                    </div>
-                    <div class="selected-customer" id="selected-customer" style="display:none;">
-                        <div class="selected-customer-info">
-                            <strong id="sel-cust-name"></strong>
-                            <span id="sel-cust-points" class="sel-points"></span>
+            <div class="modal-body pay-body">
+                <div class="pay-left">
+                    <table class="ft-table" id="checkout-items"></table>
+                    <div class="pay-total-line"><span>TOTAL</span><b id="checkout-total">0,00 €</b></div>
+                    <div class="loyalty-section">
+                        <h3>🎁 Cliente fidelidad (opcional)</h3>
+                        <div id="loyalty-search-box">
+                            <input type="text" id="customer-search" placeholder="Buscar por nombre o teléfono..." class="loyalty-search">
+                            <div class="customer-suggestions" id="customer-suggestions"></div>
                         </div>
-                        <button class="remove-customer" id="btn-remove-customer">✕</button>
+                        <div class="selected-customer" id="selected-customer" style="display:none;">
+                            <div class="selected-customer-info">
+                                <strong id="sel-cust-name"></strong>
+                                <span id="sel-cust-points" class="sel-points"></span>
+                            </div>
+                            <button class="remove-customer" id="btn-remove-customer">✕</button>
+                        </div>
+                        <div class="redeem-row" id="redeem-row" style="display:none;">
+                            <label id="redeem-label">Canjear puntos:</label>
+                            <input type="number" id="redeem-points" placeholder="0" min="0">
+                            <div class="redeem-discount">Descuento: <span id="redeem-discount">€0</span></div>
+                        </div>
                     </div>
-                    <div class="redeem-row" id="redeem-row" style="display:none;">
-                        <label id="redeem-label">Canjear puntos:</label>
-                        <input type="number" id="redeem-points" placeholder="0" min="0">
-                        <div class="redeem-discount">Descuento: <span id="redeem-discount">€0</span></div>
+                    <div class="order-type" style="margin-top: 0.75rem;">
+                        <div class="type-buttons">
+                            <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
+                            <button class="type-btn" data-type="recogida">📦 Recogida</button>
+                            <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
+                        </div>
                     </div>
-                </div>
-                <div class="order-type">
-                    <h3>Tipo de Pedido</h3>
-                    <div class="type-buttons">
-                        <button class="type-btn active" data-type="mostrador">🏪 Mostrador</button>
-                        <button class="type-btn" data-type="recogida">📦 Recogida</button>
-                        <button class="type-btn" data-type="domicilio">🛵 Domicilio</button>
+                    <div class="input-group" id="modal-addr-group" style="display: none;">
+                        <label>📍 Dirección de entrega:</label>
+                        <input type="text" id="modal-addr" placeholder="Calle, número, piso">
                     </div>
+                    <button class="ft-btn" id="btn-preprint" style="margin-top: 0.5rem;">🖨 Imprimir ticket (pre-cuenta)</button>
                 </div>
-                <div class="input-group" id="modal-addr-group" style="display: none;">
-                    <label>📍 Dirección de entrega:</label>
-                    <input type="text" id="modal-addr" placeholder="Calle, número, piso">
-                </div>
-                <div class="payment-method">
-                    <h3>Método de Pago</h3>
-                    <div class="method-buttons">
-                        <button class="method-btn active" data-method="efectivo">💵 Efectivo</button>
-                        <button class="method-btn" data-method="tarjeta">💳 Tarjeta</button>
-                        <button class="method-btn" data-method="bizum">📱 Bizum</button>
+                <div class="pay-right">
+                    <div class="pay-big-total" id="modal-total">0,00 €</div>
+                    <div class="summary-row" id="modal-discount-row" style="display:none; color: var(--primary);"><span>Descuento puntos</span><span id="modal-discount">-€0</span></div>
+                    <div class="pay-methods">
+                        <div class="pay-input-row">
+                            <span>Efectivo</span>
+                            <div class="pay-input-wrap"><input type="number" id="pay-efectivo" placeholder="0.00" step="0.01" min="0"><em>€</em></div>
+                        </div>
+                        <div class="pay-input-row">
+                            <span>Tarjeta</span>
+                            <div class="pay-input-wrap"><input type="number" id="pay-tarjeta" placeholder="0.00" step="0.01" min="0"><em>€</em></div>
+                        </div>
+                        <div class="pay-input-row pay-change-row"><span>Cambio</span><b id="change-amount">0,00 €</b></div>
                     </div>
+                    <button class="pay-btn pay-cobrar" id="btn-confirm-pay">Cobrar</button>
                 </div>
-                <div class="cash-input" id="cash-section">
-                    <label>Efectivo recibido:</label>
-                    <input type="number" id="cash-received" placeholder="0" step="0.01">
-                    <div class="change-display"><span>Cambio:</span><span id="change-amount" class="change-amount">€0</span></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="cancel-btn" id="btn-cancel-pay">Cancelar</button>
-                <button class="confirm-btn" id="btn-confirm-pay">✓ Confirmar Pago</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DIVIDIR CUENTA -->
     <div id="divide-modal" class="modal-overlay">
         <div class="modal-content modal-large">
             <div class="modal-header">
