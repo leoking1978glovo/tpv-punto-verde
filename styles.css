@@ -991,3 +991,20 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 .product-card .pc-noimg { font-size: 3rem; color: #C9C4BB; }
 .product-card .pc-price { font-size: 0.85rem; padding: 3px 10px; top: 8px; right: 8px; }
 .product-card .product-name { text-align: center; font-size: 0.78rem; padding: 0.6rem 0.6rem 0.7rem; min-height: 2.6em; }
+
+/* FIX SEGMENTO 2d — scroll garantizado y tarjetas siempre grandes (colores Fuego) */
+.view.active { min-height: 0; }
+.products-section { min-height: 0; overflow: hidden; }
+.product-grid {
+    overflow-y: auto !important;
+    min-height: 0;
+    align-content: start;
+    padding-right: 0.6rem;
+    scrollbar-width: thin;
+    scrollbar-color: #C9C4BB transparent;
+}
+.product-grid::-webkit-scrollbar { width: 8px; }
+.product-grid::-webkit-scrollbar-thumb { background: #C9C4BB; border-radius: 4px; }
+.product-grid::-webkit-scrollbar-track { background: transparent; }
+.product-card .pc-img-wrap { height: 160px; }
+.product-card .pc-noimg { font-size: 3.2rem; }
