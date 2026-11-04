@@ -1450,15 +1450,14 @@ function updateTotals(total) {
     document.getElementById('tax').textContent = fmt(iva.tax);
     document.getElementById('total').textContent = fmt(total);
     const btnPay = document.getElementById('btn-pay');
-    if (activeTableId) { btnPay.textContent = currentTableOrder ? `AÑADIR MÁS A MESA (${fmt(total)})` : `AÑADIR A MESA (${fmt(total)})`; }
-    else { btnPay.textContent = `COBRAR (${fmt(total)})`; }
+    btnPay.textContent = `Comandar y cobrar (${fmt(total)})`;
 }
 
 function setupPOSEvents() {
     document.getElementById('product-grid').addEventListener('click', e => { const card = e.target.closest('.product-card'); if (card) addToCart(Number(card.dataset.id)); });
     document.getElementById('categories-bar').addEventListener('click', e => { const btn = e.target.closest('.cat-btn'); if (btn) { document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentCategory = btn.dataset.cat; renderProducts(); } });
     document.getElementById('btn-clear').addEventListener('click', () => { if (cart.length > 0 && confirm('¿Limpiar carrito?')) { cart = []; renderCart(); renderTableOrder(); } });
-    document.getElementById('btn-pay').addEventListener('click', () => { if (activeTableId) addToTable(); else openPayModal(); });
+    document.getElementById('btn-pay').addEventListener('click', () => { if (currentTableOrder) openPayModalForTable(); else openPayModal(); });
     document.getElementById('btn-close-modal').addEventListener('click', () => closeModal('pay-modal'));
     document.getElementById('btn-cancel-pay').addEventListener('click', () => closeModal('pay-modal'));
     document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', (e) => {
@@ -1690,8 +1689,7 @@ function renderTableOrder() {
     const btnDivide = document.getElementById('btn-divide-account');
     if (!currentTableOrder || !currentTableOrder.order_items || currentTableOrder.order_items.length === 0) {
         section.style.display = 'none';
-        if (activeTableId) btnPay.textContent = `AÑADIR A MESA (${fmt(cart.reduce((sum, i) => sum + (i.price * i.qty), 0))})`;
-        else btnPay.textContent = `COBRAR (${fmt(cart.reduce((sum, i) => sum + (i.price * i.qty), 0))})`;
+        btnPay.textContent = `Comandar y cobrar (${fmt(cart.reduce((sum, i) => sum + (i.price * i.qty), 0))})`;
         if (btnDivide) btnDivide.style.display = 'none';
         return;
     }
@@ -1701,7 +1699,7 @@ function renderTableOrder() {
     currentTableOrder.order_items.forEach(item => { const key = item.name; if (!itemsGrouped[key]) itemsGrouped[key] = { name: item.name, qty: 0, price: item.price }; itemsGrouped[key].qty += item.qty; });
     itemsContainer.innerHTML = Object.values(itemsGrouped).map(item => `<div class="order-item"><span>${item.qty}x ${item.name}</span><span>${fmt(item.price * item.qty)}</span></div>`).join('');
     totalElement.textContent = fmt(currentTableOrder.total);
-    btnPay.textContent = `AÑADIR MÁS A MESA (${fmt(cart.reduce((sum, i) => sum + (i.price * i.qty), 0))})`;
+    btnPay.textContent = `Comandar y cobrar (${fmt(cart.reduce((sum, i) => sum + (i.price * i.qty), 0))})`;
 }
 
 async function addToTable() {

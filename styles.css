@@ -983,3 +983,11 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 
 /* Fidelidad oculta hasta activar Descuento */
 #pay-modal .loyalty-section { display: none; }
+
+/* FIX SEGMENTO 2c — tarjetas como la guia (foto protagonista) */
+.product-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)) !important; gap: 0.9rem !important; }
+.product-card { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.product-card .pc-img-wrap { height: 150px; background: #F1EDE4; }
+.product-card .pc-noimg { font-size: 3rem; color: #C9C4BB; }
+.product-card .pc-price { font-size: 0.85rem; padding: 3px 10px; top: 8px; right: 8px; }
+.product-card .product-name { text-align: center; font-size: 0.78rem; padding: 0.6rem 0.6rem 0.7rem; min-height: 2.6em; }
