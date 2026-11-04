@@ -849,3 +849,37 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
 
 /* QR de mesa: azul funcional pasa a tinta (marca) */
 .btn-qr-mesa, .table-card button[style*="3b82f6"] { background: var(--ink) !important; }
+
+/* ============================================================
+   SEGMENTO CAJA — diseno plataforma (colores Fuego)
+   ============================================================ */
+.ft-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.ft-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+.ft-card h3 { font-size: 0.95rem; color: var(--text-gray); font-weight: 700; margin-bottom: 1rem; }
+.ft-kv { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; font-size: 0.85rem; }
+.ft-kv span { color: var(--text-gray); }
+.ft-kv b { color: var(--text-dark); font-weight: 700; }
+.ft-kv.ft-kv-total b { color: var(--primary); font-size: 1.02rem; }
+.ft-hr { border: none; border-top: 1px solid var(--border); margin: 0.5rem 0; }
+.ft-search { width: 230px; max-width: 100%; padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.85rem; background: #fff; }
+.ft-search:focus { outline: none; border-color: var(--primary); }
+.ft-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.ft-table th { text-align: left; color: var(--text-dark); font-weight: 700; padding: 0.6rem 0.5rem; border-bottom: 2px solid var(--border); white-space: nowrap; }
+.ft-table td { padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-gray); }
+.ft-table td b { color: var(--text-dark); }
+.ft-empty { background: #F5F2EC; border-radius: 8px; padding: 0.9rem 1rem; color: var(--text-gray); font-size: 0.85rem; margin-top: 0.5rem; }
+.ft-btn { background: #fff; border: 1.5px solid var(--border); color: var(--text-dark); padding: 0.5rem 1.1rem; border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: 0.15s; }
+.ft-btn:hover { border-color: var(--primary); color: var(--primary); }
+.ft-btn-primary { background: var(--ink); border-color: var(--ink); color: #F7C137; }
+.ft-btn-primary:hover { background: #262626; color: #F7C137; }
+.ft-btn-danger:hover { border-color: #dc2626; color: #dc2626; }
+@media (max-width: 900px) { .ft-grid-2 { grid-template-columns: 1fr; } }
+
+/* SEGMENTO 1b — detalle de venta ("Ver venta") */
+.ft-link { color: var(--primary); font-weight: 700; cursor: pointer; font-size: 0.8rem; white-space: nowrap; }
+.ft-link:hover { text-decoration: underline; }
+.sale-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.9rem 1.5rem; }
+.sale-item small { display: block; color: var(--text-gray); font-size: 0.75rem; margin-bottom: 2px; }
+.sale-item span { color: var(--text-dark); font-weight: 600; font-size: 0.88rem; }
+.sale-total-row td { font-weight: 800; color: var(--text-dark); border-top: 2px solid var(--primary); }
+@media (max-width: 900px) { .sale-grid { grid-template-columns: 1fr 1fr; } }

@@ -421,18 +421,62 @@
 
             <section id="view-cash" class="view">
                 <header class="view-header">
-                    <h1>💰 Gestión de Caja</h1>
+                    <h1>Caja</h1>
+                    <div class="header-actions" id="cash-header-actions"></div>
                 </header>
                 <div class="cash-container">
-                    <div class="status-card" id="status-card">
-                        <h3>Estado de Caja</h3>
-                        <div id="cash-status">Cargando...</div>
+                    <div class="ft-grid-2">
+                        <div class="ft-card">
+                            <h3>Apertura de caja</h3>
+                            <div class="ft-kv"><span>Fecha apertura</span><b id="cash-open-date">—</b></div>
+                            <div class="ft-kv"><span>Usuario apertura</span><b id="cash-open-user">—</b></div>
+                            <div class="ft-kv"><span>Saldo apertura</span><b id="cash-open-fund">—</b></div>
+                            <div class="ft-kv"><span>Descuadre apertura</span><b id="cash-open-diff">0,00 €</b></div>
+                        </div>
+                        <div class="ft-card">
+                            <h3>Balance</h3>
+                            <div class="ft-kv"><span>Cobros efectivo</span><b id="cash-efectivo">0,00 €</b></div>
+                            <div class="ft-kv"><span>Cobros tarjeta</span><b id="cash-tarjeta">0,00 €</b></div>
+                            <div class="ft-kv"><span>Cobros Bizum</span><b id="cash-bizum">0,00 €</b></div>
+                            <div class="ft-kv ft-kv-total"><span>Total cobrado</span><b id="cash-total-cobrado">0,00 €</b></div>
+                            <hr class="ft-hr">
+                            <div class="ft-kv"><span>Saldo apertura</span><b id="cash-b-fund">0,00 €</b></div>
+                            <div class="ft-kv"><span>Saldo en cobros efectivo</span><b id="cash-b-efectivo">0,00 €</b></div>
+                            <div class="ft-kv"><span>Saldo de entradas</span><b id="cash-b-entradas">0,00 €</b></div>
+                            <div class="ft-kv"><span>Saldo de retiradas</span><b id="cash-b-salidas">0,00 €</b></div>
+                            <div class="ft-kv ft-kv-total"><span>Saldo total en caja</span><b id="cash-b-total">0,00 €</b></div>
+                            <hr class="ft-hr">
+                            <div class="ft-kv"><span>Número de cancelaciones</span><b id="cash-ncancel">0</b></div>
+                            <div class="ft-kv"><span>Total de cancelaciones</span><b id="cash-tcancel">0,00 €</b></div>
+                        </div>
                     </div>
-                    <div id="cash-summary" class="status-card" style="display: none;">
-                        <h3>Resumen de Ventas</h3>
-                        <div id="summary-content"></div>
+                    <div class="ft-card">
+                        <h3>Cobros</h3>
+                        <input class="ft-search" id="cash-search-payments" placeholder="Buscar...">
+                        <table class="ft-table">
+                            <thead><tr><th>Hora</th><th>Método de pago</th><th>Importe</th><th>Cobrado</th><th>Usuario</th><th>Referencia</th><th>Mesa</th><th></th></tr></thead>
+                            <tbody id="cash-payments-body"></tbody>
+                        </table>
+                        <div class="ft-empty" id="cash-payments-empty" style="display:none;">ⓘ No hay cobros</div>
                     </div>
-                    <div class="action-buttons" id="action-buttons"></div>
+                    <div class="ft-card">
+                        <h3>Movimientos</h3>
+                        <input class="ft-search" id="cash-search-movs" placeholder="Buscar...">
+                        <table class="ft-table">
+                            <thead><tr><th>Hora</th><th>Tipo</th><th>Método</th><th>Importe</th><th>Nota</th></tr></thead>
+                            <tbody id="cash-movs-body"></tbody>
+                        </table>
+                        <div class="ft-empty" id="cash-movs-empty">ⓘ No hay movimientos</div>
+                    </div>
+                    <div class="ft-card">
+                        <h3>Servicios cancelados</h3>
+                        <input class="ft-search" id="cash-search-cancel" placeholder="Buscar...">
+                        <table class="ft-table">
+                            <thead><tr><th>Hora</th><th>Importe</th><th>Usuario</th><th>Referencia</th><th>Mesa</th></tr></thead>
+                            <tbody id="cash-cancel-body"></tbody>
+                        </table>
+                        <div class="ft-empty" id="cash-cancel-empty">ⓘ No hay servicios cancelados</div>
+                    </div>
                 </div>
             </section>
             <section id="view-config" class="view">
@@ -1072,6 +1116,18 @@
             <div class="input-group"><label>Nota:</label><input type="text" id="movement-note" placeholder="Concepto"></div>
             <button class="btn-primary" id="btn-confirm-movement">Registrar</button>
             <button class="btn-secondary" onclick="closeModal('modal-movement')">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL: DETALLE DE VENTA (Ver venta) -->
+    <div id="sale-modal" class="modal-overlay">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="sale-modal-title">Venta</h2>
+                <div class="header-actions" id="sale-modal-actions" style="margin-right: 0.5rem;"></div>
+                <button class="close-btn" onclick="closeModal('sale-modal')">✕</button>
+            </div>
+            <div class="modal-body" id="sale-modal-body"></div>
         </div>
     </div>
 

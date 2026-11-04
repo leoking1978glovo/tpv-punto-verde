@@ -2092,9 +2092,11 @@ async function loadKitchenOrders() {
 }
 
 function renderKitchenOrders() {
+    // SEGMENTO CAJA: los servicios cancelados no aparecen en cocina
+    const activeOrders = kitchenOrders.filter(o => o.status !== 'cancelado');
     // Agrupar pedidos por mesa
     const ordersByTable = {};
-    kitchenOrders.forEach(order => {
+    activeOrders.forEach(order => {
         if (order.table_id) {
             if (!ordersByTable[order.table_id]) {
                 ordersByTable[order.table_id] = {
@@ -2153,6 +2155,7 @@ function renderKitchenOrders() {
             if (status === 'nuevo') actionBtn = `<button class="action-btn-kitchen btn-cocina" onclick="updateOrderStatus(${tableOrder.order_ids[0]}, 'cocina')">→ Cocina</button>`;
             else if (status === 'cocina') actionBtn = `<button class="action-btn-kitchen btn-listo" onclick="updateOrderStatus(${tableOrder.order_ids[0]}, 'listo')">✓ Listo</button>`;
             else if (status === 'listo') actionBtn = `<button class="action-btn-kitchen btn-entregado" onclick="updateOrderStatus(${tableOrder.order_ids[0]}, 'entregado')">✓ Entregado</button>`;
+            const cancelBtn = (status !== 'entregado') ? `<button class="action-btn-kitchen" style="background: #B9B3A8; margin-top: 6px;" onclick="cancelOrder(${tableOrder.order_ids[0]})">✕ Cancelar servicio</button>` : '';
 
             return `<div class="order-card status-${status}">
                 <div class="order-header">
@@ -2161,16 +2164,27 @@ function renderKitchenOrders() {
                 </div>
                 <div class="order-time">${time}</div>
                 <div class="order-items">${itemsHtml}</div>
-                <div class="order-actions">${actionBtn}</div>
+                <div class="order-actions">${actionBtn}${cancelBtn}</div>
             </div>`;
         }).join('');
     });
 }
 
 function updateKitchenStats() {
-    document.getElementById('count-nuevo').textContent = kitchenOrders.filter(o => o.status === 'nuevo').length;
-    document.getElementById('count-cocina').textContent = kitchenOrders.filter(o => o.status === 'cocina').length;
-    document.getElementById('count-listo').textContent = kitchenOrders.filter(o => o.status === 'listo').length;
+    const act = kitchenOrders.filter(o => o.status !== 'cancelado');
+    document.getElementById('count-nuevo').textContent = act.filter(o => o.status === 'nuevo').length;
+    document.getElementById('count-cocina').textContent = act.filter(o => o.status === 'cocina').length;
+    document.getElementById('count-listo').textContent = act.filter(o => o.status === 'listo').length;
+}
+
+// SEGMENTO CAJA: cancelar un servicio (queda registrado en "Servicios cancelados")
+async function cancelOrder(orderId) {
+    if (!confirm(`¿Cancelar el servicio #${orderId}? Qedará registrado en Caja → Servicios cancelados.`)) return;
+    await supabaseClient.from('orders').update({ status: 'cancelado', paid: false }).eq('id', orderId);
+    addNotification('alerta', `✕ Servicio #${orderId} cancelado`, '');
+    loadKitchenOrders(); loadTables();
+    const cv = document.getElementById('view-cash');
+    if (cv && cv.classList.contains('active')) loadCashStatus();
 }
 
 async function updateOrderStatus(orderId, newStatus) {
@@ -2196,32 +2210,176 @@ async function updateOrderStatus(orderId, newStatus) {
 
 // ============ CAJA / ARQUEOS ============
 async function loadCashStatus() {
-    const { data: session, error } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single();
-    if (error || !session) {
+    const { data: session } = await supabaseClient.from('cash_sessions').select('*').is('closed_at', null).single();
+    const actions = document.getElementById('cash-header-actions');
+    if (!session) {
         currentSession = null;
-        document.getElementById('cash-status').innerHTML = '<span class="status-closed">🔴 Caja Cerrada</span>';
-        document.getElementById('action-buttons').innerHTML = '<button class="action-btn btn-open" onclick="openModal(\'modal-open-cash\')">💵 Abrir Caja</button>';
-        document.getElementById('cash-summary').style.display = 'none';
+        if (actions) actions.innerHTML = `<button class="ft-btn ft-btn-primary" onclick="openModal('modal-open-cash')">Abrir caja</button>`;
+        document.getElementById('cash-open-date').textContent = 'Caja cerrada';
+        document.getElementById('cash-open-user').textContent = '—';
+        document.getElementById('cash-open-fund').textContent = '—';
+        ['cash-efectivo','cash-tarjeta','cash-bizum','cash-total-cobrado','cash-b-fund','cash-b-efectivo','cash-b-entradas','cash-b-salidas','cash-b-total','cash-tcancel'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = fmt(0); });
+        const nc = document.getElementById('cash-ncancel'); if (nc) nc.textContent = '0';
+        const pb = document.getElementById('cash-payments-body'); if (pb) pb.innerHTML = '';
+        const mb = document.getElementById('cash-movs-body'); if (mb) mb.innerHTML = '';
+        const cb = document.getElementById('cash-cancel-body'); if (cb) cb.innerHTML = '';
     } else {
         currentSession = session;
-        document.getElementById('cash-status').innerHTML = `<span class="status-open">🟢 Caja Abierta</span><br><small>Abierta: ${new Date(session.opened_at).toLocaleString('es-ES')}</small><br><small>Fondo inicial: ${fmt(session.fondo)}</small>`;
-        document.getElementById('action-buttons').innerHTML = `<button class="action-btn btn-movement" onclick="openModal('modal-movement')">💵 Movimiento</button><button class="action-btn btn-count" onclick="openModal('modal-count')">🔒 Arqueo Ciego</button><button class="action-btn btn-close" onclick="closeCashSession()">🔴 Cerrar Caja</button>`;
+        if (actions) actions.innerHTML = `
+            <button class="ft-btn" onclick="openModal('modal-movement')">Entrada</button>
+            <button class="ft-btn" onclick="openModal('modal-movement')">Retirada</button>
+            <button class="ft-btn ft-btn-danger" onclick="closeCashSession()">Cerrar caja</button>`;
+        document.getElementById('cash-open-date').textContent = new Date(session.opened_at).toLocaleString('es-ES');
+        document.getElementById('cash-open-user').textContent = currentProfile?.full_name || currentUser?.email || '—';
+        document.getElementById('cash-open-fund').textContent = fmt(session.fondo);
         await loadCashSummary();
     }
 }
 
 async function loadCashSummary() {
     if (!currentSession) return;
-    const { data: orders } = await supabaseClient.from('orders').select('*').gte('created_at', currentSession.opened_at).eq('paid', true);
-    const { data: movements } = await supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id);
-    let efectivo = 0, tarjeta = 0, bizum = 0, totalPedidos = 0;
-    orders.forEach(o => { totalPedidos++; if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; });
+    const since = currentSession.opened_at;
+    const [{ data: orders }, { data: movements }] = await Promise.all([
+        supabaseClient.from('orders').select('id, type, status, total, paid, pay_method, table_id, user_email, created_at').gte('created_at', since).order('created_at', { ascending: false }),
+        supabaseClient.from('cash_movements').select('*').eq('session_id', currentSession.id).order('created_at', { ascending: false })
+    ]);
+    const all = orders || [];
+    const paidOrders = all.filter(o => o.paid && o.status !== 'cancelado');
+    const cancelled = all.filter(o => o.status === 'cancelado');
+    const movs = movements || [];
+    let efectivo = 0, tarjeta = 0, bizum = 0;
+    paidOrders.forEach(o => { if (o.pay_method === 'efectivo') efectivo += o.total; if (o.pay_method === 'tarjeta') tarjeta += o.total; if (o.pay_method === 'bizum') bizum += o.total; });
     let entradas = 0, salidas = 0;
-    movements.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; });
-    const totalVentas = efectivo + tarjeta + bizum;
-    const totalCaja = currentSession.fondo + efectivo + entradas - salidas;
-    document.getElementById('cash-summary').style.display = 'block';
-    document.getElementById('summary-content').innerHTML = `<div class="summary-grid"><div class="summary-card"><div class="summary-label">Total Ventas</div><div class="summary-value">${fmt(totalVentas)}</div></div><div class="summary-card"><div class="summary-label">Pedidos</div><div class="summary-value">${totalPedidos}</div></div><div class="summary-card"><div class="summary-label">Efectivo</div><div class="summary-value">${fmt(efectivo)}</div></div><div class="summary-card"><div class="summary-label">Tarjeta</div><div class="summary-value">${fmt(tarjeta)}</div></div><div class="summary-card"><div class="summary-label">Bizum</div><div class="summary-value">${fmt(bizum)}</div></div><div class="summary-card highlight"><div class="summary-label">Total en Caja</div><div class="summary-value">${fmt(totalCaja)}</div></div></div><div class="movements-section"><h4>Movimientos registrados: ${movements.length}</h4>${movements.length > 0 ? movements.map(m => `<div class="movement-item ${m.tipo}"><span>${m.tipo === 'entrada' ? '📥' : '📤'} ${m.nota || m.metodo}</span><span>${fmt(m.importe)}</span></div>`).join('') : '<p style="color: var(--text-gray); font-size: 0.9rem;">Sin movimientos</p>'}</div>`;
+    movs.forEach(m => { if (m.tipo === 'entrada') entradas += m.importe; if (m.tipo === 'salida') salidas += m.importe; });
+    document.getElementById('cash-efectivo').textContent = fmt(efectivo);
+    document.getElementById('cash-tarjeta').textContent = fmt(tarjeta);
+    document.getElementById('cash-bizum').textContent = fmt(bizum);
+    document.getElementById('cash-total-cobrado').textContent = fmt(efectivo + tarjeta + bizum);
+    document.getElementById('cash-b-fund').textContent = fmt(currentSession.fondo);
+    document.getElementById('cash-b-efectivo').textContent = fmt(efectivo);
+    document.getElementById('cash-b-entradas').textContent = fmt(entradas);
+    document.getElementById('cash-b-salidas').textContent = fmt(salidas);
+    document.getElementById('cash-b-total').textContent = fmt(currentSession.fondo + efectivo + entradas - salidas);
+    document.getElementById('cash-ncancel').textContent = cancelled.length;
+    document.getElementById('cash-tcancel').textContent = fmt(cancelled.reduce((s, o) => s + (o.total || 0), 0));
+    window._cashPaid = paidOrders; window._cashMovs = movs; window._cashCancelled = cancelled;
+    renderCashTables();
+    const sp = document.getElementById('cash-search-payments');
+    if (sp) sp.oninput = renderCashTables;
+    const sm = document.getElementById('cash-search-movs');
+    if (sm) sm.oninput = renderCashTables;
+    const sc = document.getElementById('cash-search-cancel');
+    if (sc) sc.oninput = renderCashTables;
+}
+
+// SEGMENTO 1b: detalle de venta ("Ver venta")
+async function fetchSaleData(orderId) {
+    const [{ data: order }, { data: items }, { data: inv }] = await Promise.all([
+        supabaseClient.from('orders').select('*').eq('id', orderId).single(),
+        supabaseClient.from('order_items').select('*').eq('order_id', orderId),
+        supabaseClient.from('invoices').select('*').eq('order_id', orderId).order('id', { ascending: false }).limit(1).maybeSingle()
+    ]);
+    return { order, items: items || [], inv };
+}
+
+async function viewSale(orderId) {
+    const { order, items, inv } = await fetchSaleData(orderId);
+    if (!order) return alert('Venta no encontrada');
+    const usr = u => (u || '').split('@')[0];
+    document.getElementById('sale-modal-title').textContent = `Venta #${order.id}`;
+    document.getElementById('sale-modal-actions').innerHTML = order.status === 'cancelado'
+        ? `<span class="ft-btn" style="cursor: default; border-color: #dc2626; color: #dc2626;">Venta cancelada</span>`
+        : `<button class="ft-btn" onclick="reprintSale(${order.id})">↻ Recuperar venta</button>
+           <button class="ft-btn ft-btn-danger" onclick="cancelSaleFromView(${order.id})">✕ Cancelar venta</button>`;
+    const pagado = order.paid && order.status !== 'cancelado';
+    document.getElementById('sale-modal-body').innerHTML = `
+        <div class="ft-card">
+            <div class="sale-grid">
+                <div class="sale-item"><small>Estado</small><span>${order.status === 'cancelado' ? '✕ Cancelada' : (pagado ? '✓ Completado' : 'Pendiente')}</span></div>
+                <div class="sale-item"><small>Fecha</small><span>${new Date(order.created_at).toLocaleString('es-ES')}</span></div>
+                <div class="sale-item"><small>Pago</small><span>${(order.pay_method || '—').toUpperCase()}</span></div>
+                <div class="sale-item"><small>Cliente</small><span>${escHtml(order.name || 'Consumidor final')}</span></div>
+                <div class="sale-item"><small>Vendedor</small><span>${usr(order.user_email)}</span></div>
+                <div class="sale-item"><small>Factura</small><span>${inv ? inv.invoice_number : '—'}</span></div>
+                <div class="sale-item"><small>Número de comensales</small><span>${escHtml(order.diner_name || '—')}</span></div>
+                <div class="sale-item"><small>Precio medio por comensal</small><span>—</span></div>
+                <div class="sale-item"><small>Observaciones</small><span>${escHtml(order.notes || '—')}</span></div>
+            </div>
+        </div>
+        <div class="ft-card">
+            <h3>Productos</h3>
+            <table class="ft-table">
+                <thead><tr><th>Ud.</th><th>Producto</th><th style="text-align:right">Precio Unit.</th><th style="text-align:right">Importe</th></tr></thead>
+                <tbody>
+                    ${items.map(i => `<tr><td>x${i.qty}</td><td>${escHtml(i.name)}</td><td style="text-align:right">${fmt(i.price)}</td><td style="text-align:right"><b>${fmt(i.price * i.qty)}</b></td></tr>`).join('')}
+                    <tr class="sale-total-row"><td></td><td>Total</td><td></td><td style="text-align:right">${fmt(order.total)}</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="ft-card">
+            <h3>Pagos</h3>
+            <table class="ft-table">
+                <thead><tr><th>Fecha</th><th>Ticket</th><th>Usuario</th><th>Comentario</th><th>Pago</th><th style="text-align:right">Importe</th></tr></thead>
+                <tbody><tr>
+                    <td>${new Date(order.created_at).toLocaleString('es-ES')}</td>
+                    <td>${inv ? inv.invoice_number : '—'}</td>
+                    <td>${usr(order.user_email)}</td>
+                    <td>${inv ? escHtml(inv.notes || '—') : '—'}</td>
+                    <td>${(order.pay_method || '—').toUpperCase()}</td>
+                    <td style="text-align:right"><b>${fmt(order.total)}</b></td>
+                </tr></tbody>
+            </table>
+        </div>`;
+    openModal('sale-modal');
+}
+
+async function reprintSale(orderId) {
+    const { order, items, inv } = await fetchSaleData(orderId);
+    if (!order) return;
+    const vf = inv ? {
+        invoice_number: inv.invoice_number,
+        verification_url: `${window.location.origin}/verifactu.html?n=${encodeURIComponent(inv.invoice_number)}`,
+        current_hash: inv.current_hash || 'VERIFICADO', local: false
+    } : null;
+    printTicket(order, items, null, vf);
+}
+
+async function cancelSaleFromView(orderId) {
+    closeModal('sale-modal');
+    await cancelOrder(orderId);
+    loadCashStatus();
+}
+
+function renderCashTables() {
+    const q = id => ((document.getElementById(id)?.value) || '').toLowerCase().trim();
+    const usr = u => (u || '').split('@')[0];
+    const ref = o => o.table_id ? `Mesa ${o.table_id}` : (o.type === 'domicilio' ? 'Domicilio' : (o.type === 'recogida' ? 'Recogida' : 'Mostrador'));
+    // Cobros
+    const paid = (window._cashPaid || []).filter(o => !q('cash-search-payments') || `${o.id} ${o.pay_method} ${usr(o.user_email)} ${ref(o)}`.toLowerCase().includes(q('cash-search-payments')));
+    document.getElementById('cash-payments-body').innerHTML = paid.map(o => `<tr>
+        <td><b>${new Date(o.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</b></td>
+        <td>${(o.pay_method || '—').charAt(0).toUpperCase() + (o.pay_method || '').slice(1)}</td>
+        <td><b>${fmt(o.total)}</b></td><td>${fmt(o.total)}</td>
+        <td>${usr(o.user_email)}</td><td>Pedido #${o.id} (${ref(o)})</td><td>${o.table_id ? 'Mesa ' + o.table_id : '—'}</td>
+        <td><span class="ft-link" onclick="viewSale(${o.id})">Ver venta</span></td>
+    </tr>`).join('') || '';
+    document.getElementById('cash-payments-empty').style.display = paid.length ? 'none' : 'block';
+    // Movimientos
+    const movs = (window._cashMovs || []).filter(m => !q('cash-search-movs') || `${m.tipo} ${m.metodo} ${m.nota}`.toLowerCase().includes(q('cash-search-movs')));
+    document.getElementById('cash-movs-body').innerHTML = movs.map(m => `<tr>
+        <td><b>${new Date(m.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</b></td>
+        <td>${m.tipo === 'entrada' ? 'Entrada' : 'Retirada'}</td>
+        <td>${(m.metodo || '—').charAt(0).toUpperCase() + (m.metodo || '').slice(1)}</td>
+        <td><b>${fmt(m.importe)}</b></td><td>${m.nota || '—'}</td>
+    </tr>`).join('');
+    document.getElementById('cash-movs-empty').style.display = movs.length ? 'none' : 'block';
+    // Cancelados
+    const canc = (window._cashCancelled || []).filter(o => !q('cash-search-cancel') || `${o.id} ${usr(o.user_email)} ${ref(o)}`.toLowerCase().includes(q('cash-search-cancel')));
+    document.getElementById('cash-cancel-body').innerHTML = canc.map(o => `<tr>
+        <td><b>${new Date(o.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</b></td>
+        <td><b>${fmt(o.total)}</b></td><td>${usr(o.user_email)}</td><td>Pedido #${o.id} (${ref(o)})</td><td>${o.table_id ? 'Mesa ' + o.table_id : '—'}</td>
+    </tr>`).join('');
+    document.getElementById('cash-cancel-empty').style.display = canc.length ? 'none' : 'block';
 }
 
 document.getElementById('btn-confirm-open').addEventListener('click', async () => { const fund = parseFloat(document.getElementById('opening-fund').value) || 0; const { error } = await supabaseClient.from('cash_sessions').insert([{ fondo: fund, user_email: currentUser.email }]); if (error) { alert('Error: ' + error.message); } else { closeModal('modal-open-cash'); loadCashStatus(); } });
@@ -2915,5 +3073,9 @@ window.toggleDriver = toggleDriver;
 window.startDelivery = startDelivery;
 window.completeDelivery = completeDelivery;
 window.collectDelivery = collectDelivery;
+window.cancelOrder = cancelOrder;
+window.viewSale = viewSale;
+window.reprintSale = reprintSale;
+window.cancelSaleFromView = cancelSaleFromView;
 
 init();
