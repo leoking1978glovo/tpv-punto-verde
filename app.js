@@ -1406,10 +1406,16 @@ function renderProducts() {
         const allergenIds = productAllergens[p.id] || [];
         const allergenBadges = allergenIds.map(aid => {
             const allergen = allergens.find(a => a.id === aid);
-            return allergen ? `<span style="font-size:0.7rem; background:#fef3c7; padding:0.1rem 0.3rem; border-radius:3px; margin-left:0.2rem;">${allergen.icon}</span>` : '';
+            return allergen ? `<span style="font-size:0.6rem; background:#FFF3E6; padding:0 0.25rem; border-radius:3px; margin-left:0.15rem;">${allergen.icon}</span>` : '';
         }).join('');
-        const imgUrl = p.image_url || 'https://via.placeholder.com/120x60?text=Sin+Imagen';
-        return `<div class="product-card" data-id="${p.id}"><img class="product-img" src="${imgUrl}" alt="${p.name}"><div class="product-name">${p.name}${allergenBadges}</div><div class="product-price">${fmt(p.price)}</div></div>`;
+        const imgUrl = p.image_url || '';
+        return `<div class="product-card" data-id="${p.id}">
+            <div class="pc-img-wrap">
+                ${imgUrl ? `<img src="${imgUrl}" alt="${escHtml(p.name)}" loading="lazy">` : '<div class="pc-noimg">🍽️</div>'}
+                <span class="pc-price">${fmt(p.price)}</span>
+            </div>
+            <div class="product-name">${escHtml(p.name)}${allergenBadges}</div>
+        </div>`;
     }).join('');
 }
 
@@ -1465,6 +1471,16 @@ function setupPOSEvents() {
     }));
     document.querySelectorAll('.method-btn').forEach(btn => btn.addEventListener('click', (e) => { document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); payMethod = e.target.dataset.method; document.getElementById('cash-section').style.display = payMethod === 'efectivo' ? 'block' : 'none'; }));
     document.getElementById('pay-efectivo').addEventListener('input', refreshPayTotals);
+    document.querySelectorAll('.pay-fill').forEach(btn => btn.addEventListener('click', () => {
+        const final = Math.max(0, getBaseTotal() - redeemPoints * loyaltySettings.point_value);
+        document.getElementById(btn.dataset.target).value = final.toFixed(2);
+        refreshPayTotals();
+    }));
+    document.getElementById('tg-descuento').addEventListener('change', e => {
+        const ls = document.querySelector('#pay-modal .loyalty-section');
+        if (ls) ls.style.display = e.target.checked ? 'block' : 'none';
+    });
+    document.getElementById('btn-aplazar').addEventListener('click', aplazarOrder);
     document.getElementById('pay-tarjeta').addEventListener('input', refreshPayTotals);
     document.getElementById('btn-pos-cash').addEventListener('click', () => {
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -1642,7 +1658,7 @@ async function selectTable(id, name) {
         };
     } else { currentTableOrder = null; }
     renderCart(); renderTableOrder(); renderMiniTables();
-    document.getElementById('pos-title').textContent = `Caja - ${name}`;
+    document.getElementById('pos-title').textContent = `Sala ${name}`;
     if (document.getElementById('sala-map')) renderMap();
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     const cajaItem = document.querySelector('[data-view="pos"]');
@@ -1729,6 +1745,8 @@ function openPayModal() {
     document.getElementById('change-amount').textContent = fmt(0);
     document.getElementById('pay-tab-cuenta').classList.add('active');
     document.getElementById('pay-tab-dividir').classList.remove('active');
+    ['tg-factura', 'tg-descuento', 'tg-invitar'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+    const ls = document.querySelector('#pay-modal .loyalty-section'); if (ls) ls.style.display = 'none';
     refreshPayTotals();
     document.getElementById('pay-modal').classList.add('active');
 }
@@ -1742,6 +1760,8 @@ function openPayModalForTable() {
     document.getElementById('change-amount').textContent = fmt(0);
     document.getElementById('pay-tab-cuenta').classList.add('active');
     document.getElementById('pay-tab-dividir').classList.remove('active');
+    ['tg-factura', 'tg-descuento', 'tg-invitar'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+    const ls = document.querySelector('#pay-modal .loyalty-section'); if (ls) ls.style.display = 'none';
     refreshPayTotals();
     document.getElementById('pay-modal').classList.add('active');
 }
@@ -1757,24 +1777,51 @@ function switchPayTab(tab) {
 }
 
 
+// SEGMENTO 2b: aplazar el servicio (queda pendiente de cobro, sin cerrar ticket)
+async function aplazarOrder() {
+    const items = (currentTableOrder && currentTableOrder.order_items && currentTableOrder.order_items.length)
+        ? currentTableOrder.order_items.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, qty: i.qty }))
+        : cart.map(item => ({ product_id: item.id, name: item.name, price: item.price, qty: item.qty }));
+    if (!items.length) return alert('No hay productos para aplazar');
+    closeModal('pay-modal');
+    if (currentTableOrder) { await addToTable(); return; }
+    const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+    try {
+        const { data: order, error } = await supabaseClient.from('orders').insert([{ type: orderType, status: 'nuevo', total, paid: false, pay_method: 'pendiente', source: 'tpv', user_email: currentUser?.email, table_id: null }]).select().single();
+        if (error) throw error;
+        await supabaseClient.from('order_items').insert(items.map(it => ({ order_id: order.id, ...it })));
+        cart = []; renderCart(); renderTableOrder();
+        addNotification('nuevo', `🕐 Servicio #${order.id} aplazado`, `Pendiente de cobro · ${fmt(total)}`);
+    } catch (e) { alert('Error: ' + e.message); }
+}
+
 async function confirmPayment() {
     const base = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     const discount = redeemPoints * loyaltySettings.point_value;
-    const total = Math.max(0, base - discount);
-    if (payMethod === 'efectivo') { const cashReceived = parseFloat(document.getElementById('cash-received').value); if (!cashReceived || cashReceived < total) return alert('Efectivo insuficiente'); }
+    let total = Math.max(0, base - discount);
+    const invitar = document.getElementById('tg-invitar')?.checked;
+    if (invitar) total = 0;
     const items = cart.map(item => ({ product_id: item.id, name: item.name, price: item.price, qty: item.qty }));
     const loyal = selectedCustomer ? { customer_id: selectedCustomer.id, redeem: redeemPoints, finalTotal: total } : null;
     const addrVal = orderType === 'domicilio' ? (document.getElementById('modal-addr')?.value || '').trim() : '';
     if (orderType === 'domicilio' && addrVal.length < 5) return alert('Escribe la dirección de entrega');
     // SEGMENTO 2: pago mixto efectivo/tarjeta
-    const ef = Math.round((parseFloat(document.getElementById('pay-efectivo').value) || 0) * 100) / 100;
-    const ta = Math.round((parseFloat(document.getElementById('pay-tarjeta').value) || 0) * 100) / 100;
-    if (ef <= 0 && ta <= 0) return alert('Indica el importe cobrado (efectivo y/o tarjeta)');
-    if (ef > 0 && ta <= 0 && ef < total) return alert('Efectivo insuficiente');
-    payMethod = (ef > 0 && ta > 0) ? 'mixto' : (ef > 0 ? 'efectivo' : 'tarjeta');
+    let ef = Math.round((parseFloat(document.getElementById('pay-efectivo').value) || 0) * 100) / 100;
+    let ta = Math.round((parseFloat(document.getElementById('pay-tarjeta').value) || 0) * 100) / 100;
+    if (invitar) { ef = 0; ta = 0; payMethod = 'invitado'; }
+    else {
+        if (ef <= 0 && ta <= 0) return alert('Indica el importe cobrado (efectivo y/o tarjeta)');
+        if (ef > 0 && ta <= 0 && ef < total) return alert('Efectivo insuficiente');
+        payMethod = (ef > 0 && ta > 0) ? 'mixto' : (ef > 0 ? 'efectivo' : 'tarjeta');
+    }
     const result = await processSale({ type: orderType, status: 'nuevo', total, paid: true, pay_method: payMethod, pago_efectivo: ef, pago_tarjeta: ta, source: 'tpv', user_email: currentUser?.email, table_id: null, addr: addrVal }, items, loyal);
     if (!result) return;
     printTicket(result.order, items, result.loyalty, result.vf);
+    if (document.getElementById('tg-factura')?.checked) {
+        openInvoiceModal();
+        invoiceItems = items.map(i => ({ description: i.name, quantity: i.qty, price: i.price, iva_rate: restaurantSettings.iva_default }));
+        renderInvoiceItems();
+    }
     cart = []; renderCart(); renderTableOrder(); closeModal('pay-modal');
     const cashView = document.getElementById('view-cash');
     if (cashView.classList.contains('active')) loadCashStatus();
@@ -3208,5 +3255,6 @@ window.viewSale = viewSale;
 window.reprintSale = reprintSale;
 window.cancelSaleFromView = cancelSaleFromView;
 window.switchPayTab = switchPayTab;
+window.aplazarOrder = aplazarOrder;
 
 init();
