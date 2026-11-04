@@ -1567,25 +1567,37 @@ function enableDrag(el, id) {
         e.preventDefault();
         try { el.setPointerCapture(e.pointerId); } catch (err) {}
         const map = document.getElementById('sala-map');
+        const mapR = map.getBoundingClientRect();
+        const elR = el.getBoundingClientRect();
+        // Punto exacto donde se agarro la mesa (en % del mapa): la mesa sigue el cursor sin saltos
+        const offX = ((e.clientX - elR.left) / mapR.width) * 100;
+        const offY = ((e.clientY - elR.top) / mapR.height) * 100;
+        let moved = false;
         const move = ev => {
+            moved = true;
             const r = map.getBoundingClientRect();
-            let x = ((ev.clientX - r.left) / r.width) * 100 - 6;
-            let y = ((ev.clientY - r.top) / r.height) * 100 - 8;
-            x = Math.max(0, Math.min(92, x)); y = Math.max(0, Math.min(88, y));
+            // Ajuste a reticula entera (1%): la mesa queda firme y alineable
+            let x = Math.round(((ev.clientX - r.left) / r.width) * 100 - offX);
+            let y = Math.round(((ev.clientY - r.top) / r.height) * 100 - offY);
+            x = Math.max(0, Math.min(90, x)); y = Math.max(0, Math.min(86, y));
             el.style.left = x + '%'; el.style.top = y + '%';
             el._x = x; el._y = y;
         };
         const up = async () => {
             el.removeEventListener('pointermove', move);
             el.removeEventListener('pointerup', up);
+            el.removeEventListener('pointercancel', up);
+            if (!moved) return; // fue un clic, no un arrastre
             if (el._x !== undefined) {
                 const t = tables.find(x => x.id === id);
-                if (t) { t.pos_x = Math.round(el._x); t.pos_y = Math.round(el._y); }
-                await supabaseClient.from('tables').update({ pos_x: Math.round(el._x), pos_y: Math.round(el._y) }).eq('id', id);
+                if (t) { t.pos_x = el._x; t.pos_y = el._y; }
+                await supabaseClient.from('tables').update({ pos_x: el._x, pos_y: el._y }).eq('id', id);
+                showToast('pago', '✓ Mesa colocada', `posición ${el._x}%, ${el._y}%`);
             }
         };
         el.addEventListener('pointermove', move);
         el.addEventListener('pointerup', up);
+        el.addEventListener('pointercancel', up);
     });
 }
 
