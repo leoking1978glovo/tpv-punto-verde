@@ -2183,6 +2183,15 @@ body { background: var(--bg-main); color: var(--text-dark); height: 100vh; overf
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="app.js?v=20261105"></script>
-    <!-- Service worker desactivado temporalmente para descartar cache -->
+    <script>
+        // RE-registro del service worker CON VERSION: fuerza al navegador a
+        // descargar el sw.js NUEVO (que purga toda la cache vieja al activarse).
+        // Sin esto, el service worker ANTIGUO sigue vivo sirviendo archivos atrapados.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js?v=20261105').catch(err => console.log('SW:', err));
+            });
+        }
+    </script>
 </body>
 </html>
